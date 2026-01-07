@@ -1,16 +1,547 @@
 ---
-
+const sampleGames = [
+	{ title: "Outer Wilds", tags: ["Exploration", "Puzzle", "Narrative"], length: "16-22 hrs" },
+	{ title: "Hades", tags: ["Roguelike", "Action"], length: "20-30 hrs" },
+	{ title: "Return of the Obra Dinn", tags: ["Mystery", "Puzzle"], length: "10-12 hrs" },
+	{ title: "Chants of Sennaar", tags: ["Puzzle", "Adventure"], length: "8-12 hrs" },
+	{ title: "Pentiment", tags: ["Narrative", "RPG"], length: "15-20 hrs" },
+	{ title: "Celeste", tags: ["Platformer", "Indie"], length: "10-15 hrs" }
+];
+const playedGames = [
+	{ title: "Disco Elysium", month: "Oct 2025" },
+	{ title: "Inside", month: "Nov 2025" },
+	{ title: "Citizen Sleeper", month: "Dec 2025" }
+];
 ---
 
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<meta name="viewport" content="width=device-width" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
+		<meta
+			name="description"
+			content="Invite-only video game club. Curated picks, monthly polls, and thoughtful discussion."
+		/>
+		<title>Game Club</title>
 	</head>
 	<body>
-		<h1>Astro</h1>
+		<header class="site-header">
+			<div class="brand">
+				<span class="brand-mark">GC</span>
+				<span>Game Club</span>
+			</div>
+			<nav class="site-nav">
+				<a href="#now">Current</a>
+				<a href="#games">Games</a>
+				<a href="#poll">Poll</a>
+				<a href="#played">Archive</a>
+			</nav>
+			<div class="header-actions">
+				<a class="ghost" href="#">Sign in</a>
+				<a class="cta" href="#">Submit a game</a>
+			</div>
+		</header>
+
+		<main>
+			<section class="hero">
+				<div class="hero-text">
+					<p class="eyebrow">Monthly video game club</p>
+					<h1>Play together. Talk it out. Pick the next adventure.</h1>
+					<p class="lead">
+						A lightweight, invite-only clubhouse for curated games, shared progress, and
+						deciding what we play next.
+					</p>
+					<div class="hero-actions">
+						<a class="cta" href="#poll">Vote in the poll</a>
+						<a class="ghost" href="#games">Browse the library</a>
+					</div>
+				</div>
+				<div class="hero-card">
+					<h2>Next meetup</h2>
+					<div class="card-row">
+						<span>Feb 22, 7:00 PM</span>
+						<span class="chip">Hybrid</span>
+					</div>
+					<p class="muted">
+						Bring notes, favorite moments, and one question you want the group to chew on.
+					</p>
+					<div class="stack">
+						<div class="stack-item">5 members confirmed</div>
+						<div class="stack-item">2 topics queued</div>
+					</div>
+				</div>
+			</section>
+
+			<section id="now" class="section current">
+				<div class="section-head">
+					<h2>Current game</h2>
+					<p>January pick. Playtime target: 4-6 weeks.</p>
+				</div>
+				<div class="current-card">
+					<div>
+						<h3>Outer Wilds</h3>
+						<p class="muted">
+							Explore a handcrafted solar system of secrets, time loops, and cosmic
+							discovery.
+						</p>
+						<div class="chips">
+							<span>Exploration</span>
+							<span>Puzzle</span>
+							<span>16-22 hrs</span>
+						</div>
+					</div>
+					<div class="current-meta">
+						<div>
+							<span class="label">Status</span>
+							<p>Midway check-in</p>
+						</div>
+						<div>
+							<span class="label">Discussion</span>
+							<p>Feb 22</p>
+						</div>
+						<div>
+							<span class="label">Next poll</span>
+							<p>Opens Feb 10</p>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<section id="poll" class="section poll">
+				<div class="section-head">
+					<h2>Active poll</h2>
+					<p>Vote for up to three games. Equal weight for now.</p>
+				</div>
+				<div class="poll-card">
+					<div class="poll-status">
+						<span class="chip strong">Open</span>
+						<p class="muted">8 of 10 members voted</p>
+					</div>
+					<div class="poll-grid">
+						{sampleGames.slice(0, 4).map((game, index) => (
+							<div class="poll-option" style={`animation-delay: ${index * 80}ms`}>
+								<h3>{game.title}</h3>
+								<p class="muted">{game.tags.join(" · ")}</p>
+							</div>
+						))}
+					</div>
+					<div class="poll-actions">
+						<a class="cta" href="#">Cast votes</a>
+						<a class="ghost" href="#">Close poll</a>
+					</div>
+				</div>
+			</section>
+
+			<section id="games" class="section games">
+				<div class="section-head">
+					<h2>Games library</h2>
+					<p>Curated list submitted by members.</p>
+				</div>
+				<div class="games-grid">
+					{sampleGames.map((game, index) => (
+						<article class="game-card" style={`animation-delay: ${index * 70}ms`}>
+							<h3>{game.title}</h3>
+							<p class="muted">{game.tags.join(" · ")}</p>
+							<div class="card-row">
+								<span class="chip subtle">{game.length}</span>
+								<span class="chip subtle">Submitted by A.</span>
+							</div>
+						</article>
+					))}
+				</div>
+			</section>
+
+			<section id="played" class="section played">
+				<div class="section-head">
+					<h2>Previously played</h2>
+					<p>Great discussions and strong finishes.</p>
+				</div>
+				<div class="played-grid">
+					{playedGames.map((game, index) => (
+						<div class="played-card" style={`animation-delay: ${index * 90}ms`}>
+							<h3>{game.title}</h3>
+							<p class="muted">{game.month}</p>
+						</div>
+					))}
+				</div>
+			</section>
+		</main>
+
+		<footer class="site-footer">
+			<p>Invite-only. Built for thoughtful gaming and shared curiosity.</p>
+			<div class="footer-actions">
+				<a href="#games">Browse games</a>
+				<a href="#poll">Check poll</a>
+			</div>
+		</footer>
 	</body>
 </html>
+
+<style>
+	:root {
+		color-scheme: light;
+		--ink: #1f2933;
+		--muted: #5b6672;
+		--cream: #eef2f6;
+		--tan: #dbe2ea;
+		--sun: #8bb5e1;
+		--ink-soft: #364152;
+		--shadow: rgba(13, 30, 48, 0.18);
+		--border: rgba(33, 51, 70, 0.14);
+		--accent: #3b6ea5;
+		--accent-dark: #2a5581;
+		--radius: 22px;
+		font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+		background: radial-gradient(circle at top right, #f7fbff 0%, #eef2f6 55%, #e2e8f0 100%);
+	}
+
+	* {
+		box-sizing: border-box;
+	}
+
+	body {
+		margin: 0;
+		color: var(--ink);
+		background: linear-gradient(120deg, #f6f9fc 0%, #e9eff6 60%, #dde5ef 100%);
+		min-height: 100vh;
+		position: relative;
+	}
+
+	body::before {
+		content: "";
+		position: fixed;
+		inset: 0;
+		background: radial-gradient(circle at 10% 20%, rgba(255, 255, 255, 0.7) 0%, transparent 55%),
+			radial-gradient(circle at 80% 10%, rgba(143, 179, 220, 0.4) 0%, transparent 50%),
+			linear-gradient(160deg, rgba(255, 255, 255, 0.5) 0%, transparent 60%);
+		pointer-events: none;
+		z-index: -1;
+	}
+
+	a {
+		color: inherit;
+		text-decoration: none;
+	}
+
+	h1,
+	h2,
+	h3 {
+		margin: 0 0 0.6rem;
+	}
+
+	p {
+		margin: 0;
+		line-height: 1.6;
+	}
+
+	.site-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 1.5rem 5vw 1rem;
+		position: sticky;
+		top: 0;
+		background: rgba(238, 242, 246, 0.9);
+		backdrop-filter: blur(14px);
+		z-index: 10;
+		border-bottom: 1px solid var(--border);
+	}
+
+	.brand {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		font-weight: 600;
+		letter-spacing: 0.02em;
+	}
+
+	.brand-mark {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 42px;
+		height: 42px;
+		border-radius: 14px;
+		background: var(--ink);
+		color: #e9f2fb;
+		font-weight: 700;
+	}
+
+	.site-nav {
+		display: flex;
+		gap: 1.5rem;
+		font-size: 0.95rem;
+	}
+
+	.site-nav a {
+		color: var(--ink-soft);
+	}
+
+	.header-actions {
+		display: flex;
+		gap: 0.8rem;
+		align-items: center;
+	}
+
+	.cta,
+	.ghost {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0.7rem 1.4rem;
+		border-radius: 999px;
+		font-weight: 600;
+		font-size: 0.9rem;
+		transition: transform 0.2s ease, box-shadow 0.2s ease;
+	}
+
+	.cta {
+		background: var(--accent);
+		color: #fff;
+		box-shadow: 0 12px 20px -16px var(--accent-dark);
+	}
+
+	.ghost {
+		border: 1px solid var(--border);
+		background: rgba(255, 255, 255, 0.7);
+	}
+
+	.cta:hover,
+	.ghost:hover {
+		transform: translateY(-1px);
+		box-shadow: 0 18px 30px -22px var(--accent-dark);
+	}
+
+	main {
+		padding: 2rem 6vw 4rem;
+	}
+
+	.hero {
+		display: grid;
+		gap: 2rem;
+		grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+		align-items: center;
+		margin-top: 1rem;
+	}
+
+	.eyebrow {
+		text-transform: uppercase;
+		letter-spacing: 0.22em;
+		font-size: 0.72rem;
+		color: var(--muted);
+		font-weight: 600;
+	}
+
+	.lead {
+		font-size: 1.1rem;
+		color: var(--ink-soft);
+		max-width: 36rem;
+	}
+
+	.hero-actions {
+		margin-top: 1.5rem;
+		display: flex;
+		gap: 1rem;
+		flex-wrap: wrap;
+	}
+
+	.hero-card,
+	.current-card,
+	.poll-card {
+		background: rgba(255, 255, 255, 0.78);
+		border-radius: var(--radius);
+		padding: 1.8rem;
+		box-shadow: 0 24px 50px -30px var(--shadow);
+		border: 1px solid var(--border);
+	}
+
+	.card-row {
+		display: flex;
+		gap: 1rem;
+		align-items: center;
+		flex-wrap: wrap;
+		margin: 0.6rem 0 1rem;
+	}
+
+	.stack {
+		display: grid;
+		gap: 0.6rem;
+		margin-top: 1rem;
+	}
+
+	.stack-item {
+		padding: 0.6rem 0.9rem;
+		border-radius: 12px;
+		background: var(--tan);
+		font-weight: 500;
+	}
+
+	.section {
+		margin-top: 4rem;
+	}
+
+	.section-head {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 2rem;
+		margin-bottom: 1.5rem;
+		flex-wrap: wrap;
+	}
+
+	.section-head p {
+		color: var(--muted);
+		max-width: 30rem;
+	}
+
+	.current-card {
+		display: grid;
+		grid-template-columns: minmax(240px, 1.4fr) minmax(200px, 1fr);
+		gap: 2rem;
+	}
+
+	.current-meta {
+		display: grid;
+		gap: 1rem;
+	}
+
+	.label {
+		text-transform: uppercase;
+		font-size: 0.7rem;
+		letter-spacing: 0.18em;
+		color: var(--muted);
+		font-weight: 600;
+	}
+
+	.chips,
+	.chip {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.chips span,
+	.chip {
+		border-radius: 999px;
+		padding: 0.4rem 0.85rem;
+		font-size: 0.75rem;
+		background: var(--tan);
+		font-weight: 500;
+	}
+
+	.chip.subtle {
+		background: rgba(255, 255, 255, 0.7);
+		border: 1px solid var(--border);
+	}
+
+	.chip.strong {
+		background: var(--accent);
+		color: #fff;
+	}
+
+	.poll-card {
+		display: grid;
+		gap: 1.5rem;
+	}
+
+	.poll-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+		gap: 1rem;
+	}
+
+	.poll-option,
+	.game-card,
+	.played-card {
+		padding: 1.2rem;
+		border-radius: 18px;
+		border: 1px solid var(--border);
+		background: rgba(255, 255, 255, 0.72);
+		animation: rise 0.5s ease both;
+	}
+
+	.games-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+		gap: 1.2rem;
+	}
+
+	.played-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+		gap: 1rem;
+	}
+
+	.muted {
+		color: var(--muted);
+	}
+
+	.site-footer {
+		padding: 2rem 6vw 3rem;
+		border-top: 1px solid var(--border);
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1.5rem;
+		flex-wrap: wrap;
+		background: rgba(238, 242, 246, 0.85);
+	}
+
+	.footer-actions {
+		display: flex;
+		gap: 1rem;
+	}
+
+	@media (max-width: 900px) {
+		.site-header {
+			flex-direction: column;
+			gap: 1rem;
+		}
+
+		.site-nav {
+			flex-wrap: wrap;
+			justify-content: center;
+		}
+
+		.current-card {
+			grid-template-columns: 1fr;
+		}
+	}
+
+	@media (max-width: 600px) {
+		.header-actions {
+			width: 100%;
+			justify-content: center;
+			flex-wrap: wrap;
+		}
+
+		.hero-actions {
+			justify-content: center;
+		}
+
+		.section-head {
+			flex-direction: column;
+			align-items: flex-start;
+		}
+	}
+
+	@keyframes rise {
+		from {
+			opacity: 0;
+			transform: translateY(12px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		* {
+			animation: none !important;
+			transition: none !important;
+		}
+	}
+</style>
