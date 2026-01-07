@@ -1,0 +1,37 @@
+# Game Club Architecture
+
+## Goals
+- Lightweight, invite-only web app.
+- Desktop + mobile friendly.
+- Minimal dependencies and hosting complexity.
+
+## Platform
+- Hosting: Cloudflare Pages.
+- Auth: Cloudflare Access (Google) with email allowlist.
+- API: Cloudflare Pages Functions (TypeScript).
+- Data: Cloudflare D1 (SQLite).
+
+## Auth & Admin
+- Cloudflare Access gates authenticated routes.
+- Admin-only routes live under `/admin/*` and are protected by a stricter Access policy.
+- App verifies Access JWT on API requests when needed.
+
+## Core Entities (Draft)
+- users: email, display_name, created_at, is_member, is_admin
+- games: title, submitted_by, status (candidate|active|played), metadata_json
+- polls: created_by, status (active|closed|archived), created_at, closed_at
+- poll_options: poll_id, game_id
+- votes: poll_id, user_id, game_id, created_at
+- confirmations: poll_id, user_id, confirmed_at
+- audit_logs: user_id, action, target_type, target_id, created_at
+
+## Key Rules
+- Single active poll at a time.
+- Any authenticated user can start or close a poll.
+- Voting: up to 3 selections per user per poll, equal weight for now.
+- Poll ends when all members vote or when closed.
+- Winner requires 2 confirmations to become current game (admin override allowed).
+- Admin can delete games submitted by others.
+
+## Notes
+- If everyone becomes admin later, relax the `/admin/*` Access policy to include all members.
