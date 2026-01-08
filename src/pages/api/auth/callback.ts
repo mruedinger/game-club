@@ -46,7 +46,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
 		}
 
 		if (!isAllowedEmail(env, email)) {
-			return new Response("Invite required.", { status: 403 });
+			return new Response(null, {
+				status: 302,
+				headers: { Location: "/auth/denied" }
+			});
 		}
 
 		const role = getRole(env, email);
@@ -71,6 +74,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 			headers
 		});
 	} catch (error) {
+		console.error("OAuth callback failed", error);
 		return new Response("Authentication failed.", { status: 500 });
 	}
 };
