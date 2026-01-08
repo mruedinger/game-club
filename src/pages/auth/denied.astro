@@ -1,0 +1,144 @@
+---
+import SiteHeader from "../../components/SiteHeader.astro";
+
+export const prerender = false;
+---
+
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Game Club | Access</title>
+	</head>
+	<body>
+		<SiteHeader />
+
+		<main>
+			<section class="card">
+				<h1>Looks like you are not a member of Game Club.</h1>
+				<p class="muted">
+					Please contact an administrator if you believe you've reached this page in error.
+				</p>
+				<a class="cta" href="/">Return Home</a>
+			</section>
+		</main>
+	</body>
+</html>
+
+<style>
+	:root {
+		color-scheme: light;
+		--ink: #1f2933;
+		--muted: #5b6672;
+		--tan: #dbe2ea;
+		--ink-soft: #364152;
+		--shadow: rgba(13, 30, 48, 0.18);
+		--border: rgba(33, 51, 70, 0.14);
+		--accent: #3b6ea5;
+		--accent-dark: #2a5581;
+		--radius: 22px;
+		font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+		background: radial-gradient(circle at top right, #f7fbff 0%, #eef2f6 55%, #e2e8f0 100%);
+	}
+
+	* {
+		box-sizing: border-box;
+	}
+
+	body {
+		margin: 0;
+		color: var(--ink);
+		background: linear-gradient(120deg, #f6f9fc 0%, #e9eff6 60%, #dde5ef 100%);
+		min-height: 100vh;
+	}
+
+	.site-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 1.5rem 5vw 1rem;
+		background: rgba(238, 242, 246, 0.9);
+		border-bottom: 1px solid var(--border);
+	}
+
+	.brand {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		font-weight: 600;
+		letter-spacing: 0.02em;
+		color: inherit;
+		text-decoration: none;
+	}
+
+	.brand-mark {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 42px;
+		height: 42px;
+		border-radius: 14px;
+		background: var(--ink);
+		color: #e9f2fb;
+		font-weight: 700;
+	}
+
+	.site-nav a {
+		color: var(--ink-soft);
+		text-decoration: none;
+		font-size: 0.95rem;
+	}
+
+	main {
+		display: grid;
+		place-items: center;
+		padding: 4rem 6vw;
+	}
+
+	.card {
+		max-width: 520px;
+		background: rgba(255, 255, 255, 0.78);
+		border-radius: var(--radius);
+		padding: 2rem;
+		box-shadow: 0 24px 50px -30px var(--shadow);
+		border: 1px solid var(--border);
+		display: grid;
+		gap: 1rem;
+		text-align: center;
+	}
+
+	.card h1,
+	.card p,
+	.card a {
+		text-align: center;
+	}
+
+	.card .cta {
+		margin: 0 auto;
+	}
+
+	h1 {
+		margin: 0;
+		font-size: 1.7rem;
+	}
+
+	.muted {
+		color: var(--muted);
+		line-height: 1.6;
+	}
+
+	.cta {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0.7rem 1.4rem;
+		border-radius: 999px;
+		font-weight: 600;
+		font-size: 0.9rem;
+		text-decoration: none;
+		background: var(--accent);
+		color: #fff;
+		box-shadow: 0 12px 20px -16px var(--accent-dark);
+	}
+</style>
