@@ -39,7 +39,15 @@ const playedGames = [
 				<a href="#played">Archive</a>
 			</nav>
 			<div class="header-actions">
-				<a class="ghost" href="#">Sign in</a>
+				<div class="auth-status" aria-live="polite">
+					<div class="auth-details" data-auth-status="loading">
+						<span class="chip subtle">Checking...</span>
+					</div>
+				</div>
+				<a class="ghost auth-signin" href="/api/auth/login">Sign in</a>
+				<form class="auth-signout" action="/api/auth/logout" method="post">
+					<button class="ghost" type="submit">Sign out</button>
+				</form>
 				<a class="cta" href="#">Submit a game</a>
 			</div>
 		</header>
@@ -176,6 +184,51 @@ const playedGames = [
 				<a href="#poll">Check poll</a>
 			</div>
 		</footer>
+		<script>
+			const authDetails = document.querySelector(".auth-details");
+			const signIn = document.querySelector(".auth-signin");
+			const signOut = document.querySelector(".auth-signout");
+
+			if (authDetails) {
+				fetch("/api/me")
+					.then((response) => {
+						if (!response.ok) {
+							throw new Error("Not authenticated");
+						}
+						return response.json();
+					})
+					.then((data) => {
+						authDetails.dataset.authStatus = "ready";
+						if (data.picture) {
+							const title = `${data.role === "admin" ? "Admin" : "Member"}\n${data.name || ""}\n${data.email}`;
+							authDetails.innerHTML = `
+								<img
+									class="auth-avatar"
+									src="${data.picture}"
+									alt=""
+									referrerpolicy="no-referrer"
+									decoding="async"
+									width="32"
+									height="32"
+									title="${title}"
+									style="width:32px;height:32px;border-radius:50%;object-fit:cover;display:block;"
+								/>
+							`;
+						} else {
+							const title = `${data.role === "admin" ? "Admin" : "Member"}\n${data.name || ""}\n${data.email}`;
+							authDetails.innerHTML = `<span class="auth-fallback" title="${title}" aria-hidden="true"></span>`;
+						}
+						if (signIn) signIn.style.display = "none";
+						if (signOut) signOut.style.display = "inline-flex";
+					})
+					.catch(() => {
+						authDetails.dataset.authStatus = "error";
+						authDetails.innerHTML = '<span class="chip subtle">Logged out</span>';
+						if (signIn) signIn.style.display = "inline-flex";
+						if (signOut) signOut.style.display = "none";
+					});
+			}
+		</script>
 	</body>
 </html>
 
@@ -283,6 +336,34 @@ const playedGames = [
 		display: flex;
 		gap: 0.8rem;
 		align-items: center;
+	}
+
+	.header-actions form {
+		margin: 0;
+	}
+
+	.header-actions button {
+		border: none;
+		cursor: pointer;
+		font: inherit;
+	}
+
+	.auth-details {
+		display: flex;
+		gap: 0.6rem;
+		align-items: center;
+	}
+
+	.auth-fallback {
+		width: 28px;
+		height: 28px;
+		border-radius: 50%;
+		display: inline-block;
+		background: #2f9e6d;
+	}
+
+	.auth-signout {
+		display: none;
 	}
 
 	.cta,

@@ -5,7 +5,7 @@
 - Status: todo | doing | done
 
 ## P0 (MVP)
-- Auth gating via Cloudflare Access (Google), invite-only.
+- Auth via Google OAuth (invite-only allowlist).
 - Public pages: home, games list, current game, previously played.
 - Games: submit (auth), remove own submissions (auth), delete others (admin).
 - Polls: create (auth), vote (auth, up to 3 choices), close (auth).

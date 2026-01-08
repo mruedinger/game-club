@@ -13,3 +13,7 @@
   - Reason: Early-stage control while the product stabilizes.
 - Voting: Up to 3 selections per user, equal weight.
   - Reason: Simple MVP flow; leaves room for weighted voting later.
+
+## 2026-01-08
+- Auth: Switch to Google OAuth (Authorization Code + PKCE) with allowlists.
+  - Reason: Hosting-agnostic, simpler multi-project user management.
