@@ -7,14 +7,14 @@
 
 ## Platform
 - Hosting: Cloudflare Pages.
-- Auth: Cloudflare Access (Google) with email allowlist.
+- Auth: Google OAuth (Authorization Code + PKCE).
 - API: Cloudflare Pages Functions (TypeScript).
 - Data: Cloudflare D1 (SQLite).
 
 ## Auth & Admin
-- Cloudflare Access gates authenticated routes.
-- Admin-only routes live under `/admin/*` and are protected by a stricter Access policy.
-- App verifies Access JWT on API requests when needed.
+- OAuth login uses Google accounts with a strict email allowlist.
+- Sessions are stored in a signed, HttpOnly cookie.
+- Admin-only routes check an `ADMIN_EMAILS` allowlist.
 
 ## Core Entities (Draft)
 - users: email, display_name, created_at, is_member, is_admin
@@ -34,4 +34,4 @@
 - Admin can delete games submitted by others.
 
 ## Notes
-- If everyone becomes admin later, relax the `/admin/*` Access policy to include all members.
+- If everyone becomes admin later, widen the admin allowlist or remove role checks.
