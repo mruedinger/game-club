@@ -1,6 +1,14 @@
 import { createRemoteJWKSet, jwtVerify } from "jose";
 
-type AuthEnv = Record<string, string | undefined | boolean>;
+type AuthEnv = Record<string, unknown>;
+
+type D1Database = {
+	prepare: (query: string) => {
+		bind: (...args: unknown[]) => {
+			first: <T>(colName?: string) => Promise<T | null>;
+		};
+	};
+};
 
 type OAuthState = {
 	state: string;
@@ -128,6 +136,18 @@ export async function exchangeGoogleCode(
 		picture: payload.picture as string | undefined,
 		emailVerified: payload.email_verified === true || payload.email_verified === "true"
 	};
+}
+
+export async function getMember(env: AuthEnv, email: string) {
+	const db = getDb(env);
+	if (!db) {
+		return null;
+	}
+	const row = await db
+		.prepare("select email, name, role from members where email = ?1 and active = 1")
+		.bind(email.toLowerCase())
+		.first<{ email: string; name?: string; role: "admin" | "member" }>();
+	return row ?? null;
 }
 
 export async function createSession(env: AuthEnv, data: SessionData, secureCookie: boolean) {
@@ -296,6 +316,14 @@ function getEnv(env: AuthEnv, key: string): string | undefined {
 	const value = env[key];
 	if (typeof value === "string") {
 		return value;
+	}
+	return undefined;
+}
+
+function getDb(env: AuthEnv): D1Database | undefined {
+	const value = env.DB;
+	if (value && typeof value === "object") {
+		return value as D1Database;
 	}
 	return undefined;
 }

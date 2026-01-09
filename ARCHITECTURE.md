@@ -12,9 +12,13 @@
 - Data: Cloudflare D1 (SQLite).
 
 ## Auth & Admin
-- OAuth login uses Google accounts with a strict email allowlist.
+- OAuth login uses Google accounts with a strict membership allowlist.
 - Sessions are stored in a signed, HttpOnly cookie.
-- Admin-only routes check an `ADMIN_EMAILS` allowlist.
+- Admin-only routes check a `role` stored on the member record.
+
+## D1 Members
+- Table: `members` with `email`, `name`, `role`, `active`.
+- OAuth checks D1 first; env allowlists are a fallback until members are migrated.
 
 ## Core Entities (Draft)
 - users: email, display_name, created_at, is_member, is_admin
