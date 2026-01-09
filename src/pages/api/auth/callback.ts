@@ -5,10 +5,9 @@ import {
 	exchangeGoogleCode,
 	getRedirectUri,
 	getMember,
-	getRole,
 	getRuntimeEnv,
-	isAllowedEmail,
-	readOAuthState
+	readOAuthState,
+	updateMemberName
 } from "../../../lib/auth";
 
 export const prerender = false;
@@ -47,19 +46,24 @@ export const GET: APIRoute = async ({ request, locals }) => {
 		}
 
 		const member = await getMember(env, email);
-		if (!member && !isAllowedEmail(env, email)) {
+		if (!member && !env.DB) {
+			return new Response("Members database not configured.", { status: 500 });
+		}
+		if (!member) {
 			return new Response(null, {
 				status: 302,
 				headers: { Location: "/auth/denied" }
 			});
 		}
 
-		const role = member?.role ?? getRole(env, email);
+		const role = member.role;
+		await updateMemberName(env, email, name);
 		const sessionCookie = await createSession(
 			env,
 			{
 				email,
-				name: member?.name || name,
+				name: member.name || name,
+				alias: member.alias,
 				picture,
 				role,
 				exp: Date.now() + 1000 * 60 * 60 * 24 * 7

@@ -6,6 +6,7 @@ type D1Database = {
 	prepare: (query: string) => {
 		bind: (...args: unknown[]) => {
 			first: <T>(colName?: string) => Promise<T | null>;
+			run: () => Promise<{ success: boolean }>;
 		};
 	};
 };
@@ -20,6 +21,7 @@ type OAuthState = {
 type SessionData = {
 	email: string;
 	name?: string;
+	alias?: string;
 	picture?: string;
 	role: "admin" | "member";
 	exp: number;
@@ -144,10 +146,38 @@ export async function getMember(env: AuthEnv, email: string) {
 		return null;
 	}
 	const row = await db
-		.prepare("select email, name, role from members where email = ?1 and active = 1")
+		.prepare("select email, name, alias, role from members where email = ?1 and active = 1")
 		.bind(email.toLowerCase())
-		.first<{ email: string; name?: string; role: "admin" | "member" }>();
+		.first<{ email: string; name?: string; alias?: string; role: "admin" | "member" }>();
 	return row ?? null;
+}
+
+export async function createMember(
+	env: AuthEnv,
+	data: { email: string; name?: string; role: "admin" | "member" }
+) {
+	const db = getDb(env);
+	if (!db) {
+		return;
+	}
+	await db
+		.prepare("insert into members (email, name, role, active) values (?1, ?2, ?3, 1)")
+		.bind(data.email.toLowerCase(), data.name || null, data.role)
+		.run();
+}
+
+export async function updateMemberName(env: AuthEnv, email: string, name?: string) {
+	if (!name) {
+		return;
+	}
+	const db = getDb(env);
+	if (!db) {
+		return;
+	}
+	await db
+		.prepare("update members set name = ?1 where email = ?2")
+		.bind(name, email.toLowerCase())
+		.run();
 }
 
 export async function createSession(env: AuthEnv, data: SessionData, secureCookie: boolean) {
@@ -196,20 +226,6 @@ export function getRedirectUri(env: AuthEnv): string {
 		throw new Error("Missing GOOGLE_REDIRECT_URI.");
 	}
 	return redirectUri;
-}
-
-export function isAllowedEmail(env: AuthEnv, email: string): boolean {
-	const allowed = parseList(getEnv(env, "ALLOWED_EMAILS"));
-	const admins = parseList(getEnv(env, "ADMIN_EMAILS"));
-	if (admins.includes(email.toLowerCase())) {
-		return true;
-	}
-	return allowed.includes(email.toLowerCase());
-}
-
-export function getRole(env: AuthEnv, email: string): "admin" | "member" {
-	const admins = parseList(getEnv(env, "ADMIN_EMAILS"));
-	return admins.includes(email.toLowerCase()) ? "admin" : "member";
 }
 
 export function getSessionCookieName(env: AuthEnv): string {
@@ -302,14 +318,6 @@ function parseCookies(header: string): Record<string, string> {
 		acc[key] = rest.join("=");
 		return acc;
 	}, {} as Record<string, string>);
-}
-
-function parseList(value?: string): string[] {
-	if (!value) return [];
-	return value
-		.split(",")
-		.map((entry) => entry.trim().toLowerCase())
-		.filter(Boolean);
 }
 
 function getEnv(env: AuthEnv, key: string): string | undefined {
