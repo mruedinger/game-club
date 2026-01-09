@@ -4,6 +4,7 @@ import {
 	createSession,
 	exchangeGoogleCode,
 	getRedirectUri,
+	getMember,
 	getRole,
 	getRuntimeEnv,
 	isAllowedEmail,
@@ -45,19 +46,20 @@ export const GET: APIRoute = async ({ request, locals }) => {
 			return new Response("Email not verified.", { status: 403 });
 		}
 
-		if (!isAllowedEmail(env, email)) {
+		const member = await getMember(env, email);
+		if (!member && !isAllowedEmail(env, email)) {
 			return new Response(null, {
 				status: 302,
 				headers: { Location: "/auth/denied" }
 			});
 		}
 
-		const role = getRole(env, email);
+		const role = member?.role ?? getRole(env, email);
 		const sessionCookie = await createSession(
 			env,
 			{
 				email,
-				name,
+				name: member?.name || name,
 				picture,
 				role,
 				exp: Date.now() + 1000 * 60 * 60 * 24 * 7

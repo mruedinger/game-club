@@ -20,6 +20,11 @@ npm run dev
 - Configure the same values in Cloudflare Pages environment variables.
 - Redirect URI should be `/api/auth/callback` on your chosen domain.
 
+## Members (D1)
+- OAuth checks the `members` table in D1 first.
+- `ALLOWED_EMAILS` and `ADMIN_EMAILS` remain as a fallback until you migrate members.
+- Migration file: `migrations/0001_members.sql`.
+
 ## Project Docs
 - `ARCHITECTURE.md` for platform and data model notes
 - `BACKLOG.md` for prioritized work items
