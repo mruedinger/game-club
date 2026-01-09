@@ -166,18 +166,35 @@ export async function createMember(
 		.run();
 }
 
-export async function updateMemberName(env: AuthEnv, email: string, name?: string) {
-	if (!name) {
+export async function updateMemberProfile(
+	env: AuthEnv,
+	email: string,
+	name?: string,
+	picture?: string
+) {
+	if (!name && !picture) {
 		return;
 	}
 	const db = getDb(env);
 	if (!db) {
 		return;
 	}
-	await db
-		.prepare("update members set name = ?1 where email = ?2")
-		.bind(name, email.toLowerCase())
-		.run();
+	const fields: string[] = [];
+	const values: unknown[] = [];
+
+	if (name) {
+		fields.push(`name = ?${values.length + 1}`);
+		values.push(name);
+	}
+
+	if (picture) {
+		fields.push(`picture = ?${values.length + 1}`);
+		values.push(picture);
+	}
+
+	const sql = `update members set ${fields.join(", ")} where email = ?${values.length + 1}`;
+	values.push(email.toLowerCase());
+	await db.prepare(sql).bind(...values).run();
 }
 
 export async function createSession(env: AuthEnv, data: SessionData, secureCookie: boolean) {

@@ -27,11 +27,11 @@ export const prerender = false;
 		<main class="admin-shell is-hidden">
 			<section class="hero">
 				<p class="eyebrow">Admin</p>
-				<h1>Game Club control room</h1>
+				<h1>Control Room</h1>
 				<p class="muted">Manage members, content, and club operations.</p>
 			</section>
 
-			<section class="card">
+			<section class="card members-card">
 				<div class="section-head">
 					<h2>Members</h2>
 					<p class="muted">View and manage member access.</p>
@@ -46,10 +46,12 @@ export const prerender = false;
 		</main>
 
 		<dialog class="modal" id="invite-modal">
-			<form method="dialog" class="modal-card invite-form">
+			<form method="dialog" class="modal-card invite-form" novalidate>
 				<header>
 					<h3>Add a new member</h3>
-					<button class="ghost icon-button" value="cancel" aria-label="Close">×</button>
+					<button class="ghost icon-button" type="button" data-action="close-invite" aria-label="Close">
+						×
+					</button>
 				</header>
 				<div class="field">
 					<label for="invite-email">Email</label>
@@ -70,29 +72,34 @@ export const prerender = false;
 		</dialog>
 
 		<dialog class="modal" id="member-modal">
-			<form method="dialog" class="modal-card member-detail">
+			<form class="modal-card member-detail" novalidate>
 				<header>
 					<div>
 						<h3 id="member-name">Member</h3>
 						<p class="muted small" id="member-email">email@example.com</p>
 					</div>
-					<button class="ghost icon-button" value="cancel" aria-label="Close">×</button>
+					<button class="ghost icon-button" type="button" data-action="close-member" aria-label="Close">
+						×
+					</button>
 				</header>
-				<div class="toggle-row">
-					<label class="switch">
-						<input type="checkbox" data-action="role-toggle" />
-						<span class="slider"></span>
-						<span class="switch-label">Admin</span>
-					</label>
-					<label class="switch">
-						<input type="checkbox" data-action="active-toggle" />
-						<span class="slider"></span>
-						<span class="switch-label">Enabled</span>
-					</label>
+				<div class="field">
+					<label for="edit-role">Role</label>
+					<select id="edit-role" name="role" required>
+						<option value="member">Member</option>
+						<option value="admin">Admin</option>
+					</select>
+				</div>
+				<div class="field">
+					<label for="edit-alias">Alias</label>
+					<input id="edit-alias" name="alias" type="text" placeholder="Optional" />
 				</div>
 				<div class="actions">
 					<button class="ghost danger small-button" data-action="delete" type="button">Delete member</button>
 				</div>
+				<footer>
+					<button class="ghost" type="button" data-action="close-member">Cancel</button>
+					<button class="cta" type="submit">Submit</button>
+				</footer>
 			</form>
 		</dialog>
 
@@ -104,9 +111,9 @@ export const prerender = false;
 			const memberModal = document.querySelector("#member-modal");
 			const memberName = document.querySelector("#member-name");
 			const memberEmail = document.querySelector("#member-email");
+			const editRole = document.querySelector("#edit-role");
+			const editAlias = document.querySelector("#edit-alias");
 			let activeMember = null;
-			let roleUpdateTimer;
-			let roleUpdateInFlight = false;
 
 			let currentUserEmail = null;
 
@@ -150,9 +157,13 @@ export const prerender = false;
 
 				const rows = members
 					.map((member) => {
+						const initial = (member.name || member.email).charAt(0).toUpperCase();
+						const avatar = member.picture
+							? `<img class="avatar-img" src="${member.picture}" alt="" referrerpolicy="no-referrer" decoding="async" />`
+							: `<span class="avatar-fallback">${initial}</span>`;
 						return `
 							<button class="member-row" type="button" data-email="${member.email}">
-								<div class="avatar">${(member.name || member.email).charAt(0).toUpperCase()}</div>
+								<div class="avatar">${avatar}</div>
 								<div>
 									<div class="member-name">${member.name || "—"}</div>
 									<div class="member-email">${member.email}</div>
@@ -179,6 +190,10 @@ export const prerender = false;
 				const closeInvite = target.closest("[data-action='close-invite']");
 				if (closeInvite && inviteModal) {
 					inviteModal.close();
+				}
+				const closeMember = target.closest("[data-action='close-member']");
+				if (closeMember && memberModal) {
+					memberModal.close();
 				}
 				const row = target.closest(".member-row");
 				if (row && memberModal) {
@@ -224,33 +239,37 @@ export const prerender = false;
 				const members = await response.json();
 				const member = members.find((item) => item.email === email);
 				if (!member) return;
-				const roleToggle = memberModal?.querySelector("[data-action='role-toggle']");
-				const activeToggle = memberModal?.querySelector("[data-action='active-toggle']");
-				if (roleToggle) roleToggle.checked = member.role === "admin";
-				if (activeToggle) activeToggle.checked = !!member.active;
+				if (editRole) editRole.value = member.role;
+				if (editAlias) editAlias.value = member.alias || "";
 				const isSelf = currentUserEmail && member.email === currentUserEmail;
-				if (roleToggle) roleToggle.disabled = isSelf;
-				if (activeToggle) activeToggle.disabled = isSelf;
+				if (editRole) editRole.disabled = isSelf;
 				const deleteButton = memberModal?.querySelector("[data-action='delete']");
 				if (deleteButton) deleteButton.disabled = isSelf;
 			}
 
 			if (memberModal) {
-				memberModal.addEventListener("change", (event) => {
-					const target = event.target;
-					if (!target || !(target instanceof HTMLInputElement)) return;
+				memberModal.addEventListener("submit", async (event) => {
+					event.preventDefault();
 					if (!activeMember) return;
-					if (target.dataset.action === "role-toggle") {
-						const newRole = target.checked ? "admin" : "member";
-						queueUpdate({ email: activeMember, role: newRole }, "Role updated.", "Unable to update role.");
+					const isSelf = currentUserEmail && activeMember === currentUserEmail;
+					const payload = {
+						email: activeMember,
+						alias: editAlias?.value || ""
+					};
+					if (!isSelf) {
+						payload.role = editRole?.value || "member";
 					}
-					if (target.dataset.action === "active-toggle") {
-						const newActive = target.checked;
-						queueUpdate(
-							{ email: activeMember, active: newActive },
-							newActive ? "Member enabled." : "Member disabled.",
-							"Unable to update status."
-						);
+					const response = await fetch("/api/admin/members", {
+						method: "PATCH",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify(payload)
+					});
+					if (response.ok) {
+						showToast("Member updated.");
+						memberModal.close();
+						loadMembers();
+					} else {
+						showToast("Unable to update member.", true);
 					}
 				});
 
@@ -271,28 +290,6 @@ export const prerender = false;
 					}
 				});
 			}
-
-				function queueUpdate(payload, successMessage, errorMessage) {
-					if (roleUpdateTimer) {
-						clearTimeout(roleUpdateTimer);
-					}
-					roleUpdateTimer = setTimeout(async () => {
-						if (roleUpdateInFlight) return;
-						roleUpdateInFlight = true;
-						const response = await fetch("/api/admin/members", {
-							method: "PATCH",
-							headers: { "Content-Type": "application/json" },
-							body: JSON.stringify(payload)
-						});
-						roleUpdateInFlight = false;
-						if (response.ok) {
-							showToast(successMessage);
-							loadMembers();
-						} else {
-							showToast(errorMessage, true);
-						}
-					}, 350);
-				}
 
 				function showToast(message, isError = false) {
 					const toast = document.querySelector(".toast");
@@ -337,6 +334,17 @@ export const prerender = false;
 		min-height: 100vh;
 	}
 
+	h1,
+	h2,
+	h3 {
+		margin: 0 0 0.6rem;
+	}
+
+	p {
+		margin: 0;
+		line-height: 1.6;
+	}
+
 	main {
 		padding: 2rem 6vw 4rem;
 		display: grid;
@@ -345,12 +353,8 @@ export const prerender = false;
 
 	.hero {
 		display: grid;
-		gap: 0.6rem;
-		padding: 1.5rem 1.8rem;
-		border-radius: var(--radius);
-		background: var(--glass);
-		border: 1px solid var(--border);
-		box-shadow: 0 18px 40px -30px var(--shadow);
+		gap: 0.35rem;
+		max-width: 520px;
 	}
 
 	.eyebrow {
@@ -359,6 +363,10 @@ export const prerender = false;
 		font-size: 0.72rem;
 		color: var(--muted);
 		font-weight: 600;
+	}
+
+	.hero .muted {
+		max-width: 34rem;
 	}
 
 	.card {
@@ -371,15 +379,13 @@ export const prerender = false;
 		gap: 1rem;
 	}
 
+	.members-card {
+		max-width: 600px;
+	}
+
 	.invite-form {
 		display: grid;
-		grid-template-columns: minmax(200px, 1.5fr) minmax(120px, 0.6fr) auto;
 		gap: 1rem;
-		align-items: end;
-		padding: 1rem;
-		border-radius: 16px;
-		background: rgba(255, 255, 255, 0.55);
-		border: 1px solid var(--border);
 	}
 
 	label {
@@ -418,42 +424,60 @@ export const prerender = false;
 		gap: 1rem;
 	}
 
-	.member-grid {
+	:global(.member-grid) {
 		display: grid;
-		gap: 0.6rem;
+		gap: 0.8rem;
 	}
 
-	.member-row {
+	:global(.member-row) {
+		appearance: none;
+		border: none;
 		display: grid;
 		grid-template-columns: auto 1fr auto;
 		align-items: center;
 		gap: 1rem;
-		padding: 0.85rem 1rem;
+		padding: 0.9rem 1.1rem;
 		border-radius: 16px;
 		border: 1px solid var(--border);
-		background: rgba(255, 255, 255, 0.7);
+		background: var(--glass-strong);
 		text-align: left;
 		cursor: pointer;
+		width: 100%;
 		transition: transform 0.2s ease, box-shadow 0.2s ease;
 	}
 
-	.member-row:hover {
+	:global(.member-row:hover) {
 		transform: translateY(-1px);
-		box-shadow: 0 16px 30px -28px var(--shadow);
+		box-shadow: 0 18px 36px -30px var(--shadow);
 	}
 
-	.avatar {
-		width: 38px;
-		height: 38px;
+	:global(.avatar) {
+		width: 40px;
+		height: 40px;
 		border-radius: 50%;
-		background: rgba(59, 110, 165, 0.16);
+		background: rgba(59, 110, 165, 0.18);
 		display: grid;
 		place-items: center;
 		font-weight: 700;
 		color: var(--ink-soft);
+		overflow: hidden;
 	}
 
-	.role-pill {
+	:global(.avatar-img) {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		display: block;
+	}
+
+	:global(.avatar-fallback) {
+		display: grid;
+		place-items: center;
+		width: 100%;
+		height: 100%;
+	}
+
+	:global(.role-pill) {
 		padding: 0.25rem 0.7rem;
 		border-radius: 999px;
 		border: 1px solid var(--border);
@@ -461,7 +485,7 @@ export const prerender = false;
 		background: rgba(255, 255, 255, 0.7);
 	}
 
-	.toast {
+	:global(.toast) {
 		margin-bottom: 0.8rem;
 		padding: 0.4rem 0.8rem;
 		border-radius: 999px;
@@ -477,12 +501,12 @@ export const prerender = false;
 		transition: opacity 0.2s ease, transform 0.2s ease;
 	}
 
-	.toast.is-visible {
+	:global(.toast.is-visible) {
 		opacity: 1;
 		transform: translateY(0);
 	}
 
-	.toast.is-error {
+	:global(.toast.is-error) {
 		background: rgba(200, 90, 90, 0.18);
 		color: #8a2f2f;
 		border-color: rgba(200, 90, 90, 0.4);
@@ -638,6 +662,12 @@ export const prerender = false;
 		border: none;
 		box-shadow: 0 12px 20px -16px var(--accent-dark);
 		cursor: pointer;
+		transition: transform 0.2s ease, box-shadow 0.2s ease;
+	}
+
+	.cta:hover {
+		transform: translateY(-1px);
+		box-shadow: 0 18px 30px -22px var(--accent-dark);
 	}
 
 	.invite-cta {
