@@ -22,3 +22,4 @@
 - Time-to-beat, pricing, and historical data.
 - Weighted voting options (future).
 - User ratings and comments on games.
+- Users can set their own alias.

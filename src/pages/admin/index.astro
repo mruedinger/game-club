@@ -34,23 +34,81 @@ export const prerender = false;
 			<section class="card">
 				<div class="section-head">
 					<h2>Members</h2>
-					<p class="muted">View, add, edit, disable, or delete members.</p>
+					<p class="muted">View and manage member access.</p>
 				</div>
-				<div class="actions">
-					<span class="chip">View</span>
-					<span class="chip">Add</span>
-					<span class="chip">Edit</span>
-					<span class="chip">Disable</span>
-					<span class="chip">Delete</span>
+				<button class="cta invite-cta" type="button" data-action="open-invite">
+					Add a new member
+				</button>
+				<div class="member-list" aria-live="polite">
+					<p class="muted small">Loading members…</p>
 				</div>
-				<p class="muted small">
-					Member management tools will live here. For now this is a scaffold.
-				</p>
 			</section>
 		</main>
 
+		<dialog class="modal" id="invite-modal">
+			<form method="dialog" class="modal-card invite-form">
+				<header>
+					<h3>Add a new member</h3>
+					<button class="ghost icon-button" value="cancel" aria-label="Close">×</button>
+				</header>
+				<div class="field">
+					<label for="invite-email">Email</label>
+					<input id="invite-email" name="email" type="email" placeholder="name@example.com" required />
+				</div>
+				<div class="field">
+					<label for="invite-role">Role</label>
+					<select id="invite-role" name="role" required>
+						<option value="member" selected>Member</option>
+						<option value="admin">Admin</option>
+					</select>
+				</div>
+				<footer>
+					<button class="ghost" value="cancel" type="button" data-action="close-invite">Cancel</button>
+					<button class="cta" type="submit">Submit</button>
+				</footer>
+			</form>
+		</dialog>
+
+		<dialog class="modal" id="member-modal">
+			<form method="dialog" class="modal-card member-detail">
+				<header>
+					<div>
+						<h3 id="member-name">Member</h3>
+						<p class="muted small" id="member-email">email@example.com</p>
+					</div>
+					<button class="ghost icon-button" value="cancel" aria-label="Close">×</button>
+				</header>
+				<div class="toggle-row">
+					<label class="switch">
+						<input type="checkbox" data-action="role-toggle" />
+						<span class="slider"></span>
+						<span class="switch-label">Admin</span>
+					</label>
+					<label class="switch">
+						<input type="checkbox" data-action="active-toggle" />
+						<span class="slider"></span>
+						<span class="switch-label">Enabled</span>
+					</label>
+				</div>
+				<div class="actions">
+					<button class="ghost danger small-button" data-action="delete" type="button">Delete member</button>
+				</div>
+			</form>
+		</dialog>
+
 		<script>
 			const shell = document.querySelector(".admin-shell");
+			const inviteForm = document.querySelector("#invite-modal .invite-form");
+			const memberList = document.querySelector(".member-list");
+			const inviteModal = document.querySelector("#invite-modal");
+			const memberModal = document.querySelector("#member-modal");
+			const memberName = document.querySelector("#member-name");
+			const memberEmail = document.querySelector("#member-email");
+			let activeMember = null;
+			let roleUpdateTimer;
+			let roleUpdateInFlight = false;
+
+			let currentUserEmail = null;
 
 			fetch("/api/me")
 				.then((response) => {
@@ -65,9 +123,187 @@ export const prerender = false;
 						window.location.href = "/auth/denied";
 						return;
 					}
+					currentUserEmail = data.email;
 					if (shell) shell.classList.remove("is-hidden");
+					loadMembers();
 				})
 				.catch(() => {});
+
+			async function loadMembers() {
+				if (!memberList) return;
+				memberList.innerHTML = '<p class="muted small">Loading members…</p>';
+				const response = await fetch("/api/admin/members");
+				if (!response.ok) {
+					memberList.innerHTML = '<p class="muted small">Unable to load members.</p>';
+					return;
+				}
+				const members = await response.json();
+				renderMembers(members);
+			}
+
+			function renderMembers(members) {
+				if (!memberList) return;
+				if (!members || members.length === 0) {
+					memberList.innerHTML = '<p class="muted small">No members yet.</p>';
+					return;
+				}
+
+				const rows = members
+					.map((member) => {
+						return `
+							<button class="member-row" type="button" data-email="${member.email}">
+								<div class="avatar">${(member.name || member.email).charAt(0).toUpperCase()}</div>
+								<div>
+									<div class="member-name">${member.name || "—"}</div>
+									<div class="member-email">${member.email}</div>
+								</div>
+								<span class="role-pill">${member.role === "admin" ? "Admin" : "Member"}</span>
+							</button>
+						`;
+					})
+					.join("");
+
+				memberList.innerHTML = `
+					<div class="toast" aria-live="polite"></div>
+					<div class="member-grid">${rows}</div>
+				`;
+			}
+
+			document.addEventListener("click", (event) => {
+				const target = event.target;
+				if (!(target instanceof HTMLElement)) return;
+				const openInvite = target.closest("[data-action='open-invite']");
+				if (openInvite && inviteModal) {
+					inviteModal.showModal();
+				}
+				const closeInvite = target.closest("[data-action='close-invite']");
+				if (closeInvite && inviteModal) {
+					inviteModal.close();
+				}
+				const row = target.closest(".member-row");
+				if (row && memberModal) {
+					const email = row.dataset.email;
+					if (!email) return;
+					openMemberModal(email);
+				}
+			});
+
+			if (inviteForm) {
+				inviteForm.addEventListener("submit", async (event) => {
+					event.preventDefault();
+					const formData = new FormData(inviteForm);
+					const email = formData.get("email");
+					const role = formData.get("role");
+					const response = await fetch("/api/admin/members", {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ email, role })
+					});
+					if (response.ok) {
+						inviteForm.reset();
+						if (inviteModal) inviteModal.close();
+						loadMembers();
+					}
+				});
+			}
+
+			function openMemberModal(email) {
+				activeMember = email;
+				const row = document.querySelector(`.member-row[data-email="${email}"]`);
+				if (!row || !memberModal) return;
+				const name = row.querySelector(".member-name")?.textContent || "Member";
+				if (memberName) memberName.textContent = name;
+				if (memberEmail) memberEmail.textContent = email;
+				memberModal.showModal();
+				loadMemberDetail(email);
+			}
+
+			async function loadMemberDetail(email) {
+				const response = await fetch("/api/admin/members");
+				if (!response.ok) return;
+				const members = await response.json();
+				const member = members.find((item) => item.email === email);
+				if (!member) return;
+				const roleToggle = memberModal?.querySelector("[data-action='role-toggle']");
+				const activeToggle = memberModal?.querySelector("[data-action='active-toggle']");
+				if (roleToggle) roleToggle.checked = member.role === "admin";
+				if (activeToggle) activeToggle.checked = !!member.active;
+				const isSelf = currentUserEmail && member.email === currentUserEmail;
+				if (roleToggle) roleToggle.disabled = isSelf;
+				if (activeToggle) activeToggle.disabled = isSelf;
+				const deleteButton = memberModal?.querySelector("[data-action='delete']");
+				if (deleteButton) deleteButton.disabled = isSelf;
+			}
+
+			if (memberModal) {
+				memberModal.addEventListener("change", (event) => {
+					const target = event.target;
+					if (!target || !(target instanceof HTMLInputElement)) return;
+					if (!activeMember) return;
+					if (target.dataset.action === "role-toggle") {
+						const newRole = target.checked ? "admin" : "member";
+						queueUpdate({ email: activeMember, role: newRole }, "Role updated.", "Unable to update role.");
+					}
+					if (target.dataset.action === "active-toggle") {
+						const newActive = target.checked;
+						queueUpdate(
+							{ email: activeMember, active: newActive },
+							newActive ? "Member enabled." : "Member disabled.",
+							"Unable to update status."
+						);
+					}
+				});
+
+				memberModal.addEventListener("click", async (event) => {
+					const target = event.target;
+					if (!(target instanceof HTMLElement)) return;
+					const action = target.dataset.action;
+					if (action === "delete" && activeMember) {
+						const confirmed = window.confirm("Delete this member? This cannot be undone.");
+						if (!confirmed) return;
+						await fetch("/api/admin/members", {
+							method: "DELETE",
+							headers: { "Content-Type": "application/json" },
+							body: JSON.stringify({ email: activeMember })
+						});
+						memberModal.close();
+						loadMembers();
+					}
+				});
+			}
+
+				function queueUpdate(payload, successMessage, errorMessage) {
+					if (roleUpdateTimer) {
+						clearTimeout(roleUpdateTimer);
+					}
+					roleUpdateTimer = setTimeout(async () => {
+						if (roleUpdateInFlight) return;
+						roleUpdateInFlight = true;
+						const response = await fetch("/api/admin/members", {
+							method: "PATCH",
+							headers: { "Content-Type": "application/json" },
+							body: JSON.stringify(payload)
+						});
+						roleUpdateInFlight = false;
+						if (response.ok) {
+							showToast(successMessage);
+							loadMembers();
+						} else {
+							showToast(errorMessage, true);
+						}
+					}, 350);
+				}
+
+				function showToast(message, isError = false) {
+					const toast = document.querySelector(".toast");
+					if (!toast) return;
+					toast.textContent = message;
+					toast.classList.toggle("is-error", isError);
+					toast.classList.add("is-visible");
+					setTimeout(() => {
+						toast.classList.remove("is-visible");
+					}, 2000);
+				}
 		</script>
 	</body>
 </html>
@@ -84,6 +320,8 @@ export const prerender = false;
 		--accent: #3b6ea5;
 		--accent-dark: #2a5581;
 		--radius: 22px;
+		--glass: rgba(255, 255, 255, 0.7);
+		--glass-strong: rgba(255, 255, 255, 0.88);
 		font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 		background: radial-gradient(circle at top right, #f7fbff 0%, #eef2f6 55%, #e2e8f0 100%);
 	}
@@ -108,6 +346,11 @@ export const prerender = false;
 	.hero {
 		display: grid;
 		gap: 0.6rem;
+		padding: 1.5rem 1.8rem;
+		border-radius: var(--radius);
+		background: var(--glass);
+		border: 1px solid var(--border);
+		box-shadow: 0 18px 40px -30px var(--shadow);
 	}
 
 	.eyebrow {
@@ -119,13 +362,223 @@ export const prerender = false;
 	}
 
 	.card {
-		background: rgba(255, 255, 255, 0.78);
+		background: var(--glass-strong);
 		border-radius: var(--radius);
 		padding: 1.8rem;
 		box-shadow: 0 24px 50px -30px var(--shadow);
 		border: 1px solid var(--border);
 		display: grid;
 		gap: 1rem;
+	}
+
+	.invite-form {
+		display: grid;
+		grid-template-columns: minmax(200px, 1.5fr) minmax(120px, 0.6fr) auto;
+		gap: 1rem;
+		align-items: end;
+		padding: 1rem;
+		border-radius: 16px;
+		background: rgba(255, 255, 255, 0.55);
+		border: 1px solid var(--border);
+	}
+
+	label {
+		display: block;
+		font-weight: 600;
+		margin-bottom: 0.4rem;
+		font-size: 0.85rem;
+		color: var(--ink-soft);
+	}
+
+	input,
+	select {
+		width: 100%;
+		border-radius: 12px;
+		border: 1px solid var(--border);
+		padding: 0.65rem 0.9rem;
+		font-size: 0.9rem;
+		font-family: inherit;
+		background: rgba(255, 255, 255, 0.8);
+		transition: border-color 0.2s ease, box-shadow 0.2s ease;
+	}
+
+	input:focus,
+	select:focus {
+		outline: none;
+		border-color: rgba(59, 110, 165, 0.6);
+		box-shadow: 0 0 0 3px rgba(59, 110, 165, 0.15);
+	}
+
+	.member-table {
+		overflow-x: auto;
+	}
+
+	.member-list {
+		display: grid;
+		gap: 1rem;
+	}
+
+	.member-grid {
+		display: grid;
+		gap: 0.6rem;
+	}
+
+	.member-row {
+		display: grid;
+		grid-template-columns: auto 1fr auto;
+		align-items: center;
+		gap: 1rem;
+		padding: 0.85rem 1rem;
+		border-radius: 16px;
+		border: 1px solid var(--border);
+		background: rgba(255, 255, 255, 0.7);
+		text-align: left;
+		cursor: pointer;
+		transition: transform 0.2s ease, box-shadow 0.2s ease;
+	}
+
+	.member-row:hover {
+		transform: translateY(-1px);
+		box-shadow: 0 16px 30px -28px var(--shadow);
+	}
+
+	.avatar {
+		width: 38px;
+		height: 38px;
+		border-radius: 50%;
+		background: rgba(59, 110, 165, 0.16);
+		display: grid;
+		place-items: center;
+		font-weight: 700;
+		color: var(--ink-soft);
+	}
+
+	.role-pill {
+		padding: 0.25rem 0.7rem;
+		border-radius: 999px;
+		border: 1px solid var(--border);
+		font-size: 0.75rem;
+		background: rgba(255, 255, 255, 0.7);
+	}
+
+	.toast {
+		margin-bottom: 0.8rem;
+		padding: 0.4rem 0.8rem;
+		border-radius: 999px;
+		font-size: 0.8rem;
+		background: rgba(43, 177, 120, 0.2);
+		color: #1b6346;
+		border: 1px solid rgba(43, 177, 120, 0.4);
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+		opacity: 0;
+		transform: translateY(-4px);
+		transition: opacity 0.2s ease, transform 0.2s ease;
+	}
+
+	.toast.is-visible {
+		opacity: 1;
+		transform: translateY(0);
+	}
+
+	.toast.is-error {
+		background: rgba(200, 90, 90, 0.18);
+		color: #8a2f2f;
+		border-color: rgba(200, 90, 90, 0.4);
+	}
+
+	.member-name {
+		font-weight: 600;
+	}
+
+	.member-email {
+		color: var(--muted);
+		font-size: 0.82rem;
+	}
+
+	.switch {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.6rem;
+		font-weight: 600;
+		font-size: 0.85rem;
+	}
+
+	.switch input {
+		display: none;
+	}
+
+	.switch .slider {
+		position: relative;
+		width: 38px;
+		height: 20px;
+		background: rgba(33, 51, 70, 0.18);
+		border-radius: 999px;
+		transition: background 0.2s ease;
+	}
+
+	.switch .slider::before {
+		content: "";
+		position: absolute;
+		top: 2px;
+		left: 2px;
+		width: 16px;
+		height: 16px;
+		background: #fff;
+		border-radius: 50%;
+		transition: transform 0.2s ease;
+		box-shadow: 0 4px 8px rgba(31, 41, 51, 0.25);
+	}
+
+	.switch input:checked + .slider {
+		background: rgba(59, 110, 165, 0.7);
+	}
+
+	.switch input:checked + .slider::before {
+		transform: translateX(18px);
+	}
+
+	.switch-label {
+		color: var(--ink-soft);
+	}
+
+	.status {
+		display: inline-flex;
+		align-items: center;
+		padding: 0.2rem 0.6rem;
+		border-radius: 999px;
+		font-size: 0.75rem;
+		background: rgba(255, 255, 255, 0.6);
+		border: 1px solid var(--border);
+	}
+
+	.status-active {
+		color: #1b6346;
+		background: rgba(43, 177, 120, 0.15);
+		border-color: rgba(43, 177, 120, 0.4);
+	}
+
+	.status-disabled {
+		color: #7a4c4c;
+		background: rgba(200, 90, 90, 0.12);
+		border-color: rgba(200, 90, 90, 0.4);
+	}
+
+	.actions {
+		display: flex;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+	}
+
+	.small-button {
+		padding: 0.4rem 0.7rem;
+		font-size: 0.75rem;
+	}
+
+	.ghost.danger {
+		border-color: rgba(200, 90, 90, 0.5);
+		color: #8a2f2f;
 	}
 
 	.section-head {
@@ -170,6 +623,100 @@ export const prerender = false;
 		border: 1px solid var(--border);
 		background: rgba(255, 255, 255, 0.7);
 		cursor: pointer;
+	}
+
+	.cta {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0.7rem 1.4rem;
+		border-radius: 999px;
+		font-weight: 600;
+		font-size: 0.9rem;
+		background: var(--accent);
+		color: #fff;
+		border: none;
+		box-shadow: 0 12px 20px -16px var(--accent-dark);
+		cursor: pointer;
+	}
+
+	.invite-cta {
+		width: fit-content;
+	}
+
+	.modal {
+		border: none;
+		border-radius: 20px;
+		padding: 0;
+		max-width: 520px;
+		width: min(90vw, 520px);
+		background: transparent;
+	}
+
+	.modal::backdrop {
+		background: rgba(15, 25, 36, 0.4);
+	}
+
+	.modal-card {
+		background: var(--glass-strong);
+		border-radius: 20px;
+		padding: 1.6rem;
+		border: 1px solid var(--border);
+		box-shadow: 0 30px 60px -40px var(--shadow);
+		display: grid;
+		gap: 1rem;
+	}
+
+	.modal-card header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+	}
+
+	.modal-card footer {
+		display: flex;
+		justify-content: flex-end;
+		gap: 0.8rem;
+	}
+
+	.icon-button {
+		width: 36px;
+		height: 36px;
+		padding: 0;
+		font-size: 1.2rem;
+		line-height: 1;
+	}
+
+	.field {
+		display: grid;
+		gap: 0.3rem;
+	}
+
+	.toggle-row {
+		display: grid;
+		gap: 0.8rem;
+	}
+
+	.ghost:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	.switch input:disabled + .slider {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	@media (max-width: 900px) {
+		.invite-form {
+			grid-template-columns: 1fr;
+		}
+
+		.actions {
+			flex-direction: column;
+			align-items: flex-start;
+		}
 	}
 
 	.is-hidden {
