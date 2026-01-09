@@ -22,7 +22,6 @@ npm run dev
 
 ## Members (D1)
 - OAuth checks the `members` table in D1 first.
-- `ALLOWED_EMAILS` and `ADMIN_EMAILS` remain as a fallback until you migrate members.
 - Migration file: `migrations/0001_members.sql`.
 
 ## Project Docs
