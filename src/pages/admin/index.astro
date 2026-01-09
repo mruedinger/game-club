@@ -114,6 +114,7 @@ export const prerender = false;
 			const editRole = document.querySelector("#edit-role");
 			const editAlias = document.querySelector("#edit-alias");
 			let activeMember = null;
+			let cachedMembers = [];
 
 			let currentUserEmail = null;
 
@@ -145,6 +146,7 @@ export const prerender = false;
 					return;
 				}
 				const members = await response.json();
+				cachedMembers = members;
 				renderMembers(members);
 			}
 
@@ -155,29 +157,54 @@ export const prerender = false;
 					return;
 				}
 
-				const rows = members
-					.map((member) => {
-						const initial = (member.name || member.email).charAt(0).toUpperCase();
-						const avatar = member.picture
-							? `<img class="avatar-img" src="${member.picture}" alt="" referrerpolicy="no-referrer" decoding="async" />`
-							: `<span class="avatar-fallback">${initial}</span>`;
-						return `
-							<button class="member-row" type="button" data-email="${member.email}">
-								<div class="avatar">${avatar}</div>
-								<div>
-									<div class="member-name">${member.name || "—"}</div>
-									<div class="member-email">${member.email}</div>
-								</div>
-								<span class="role-pill">${member.role === "admin" ? "Admin" : "Member"}</span>
-							</button>
-						`;
-					})
-					.join("");
+				memberList.innerHTML = '<div class="toast" aria-live="polite"></div>';
+				const grid = document.createElement("div");
+				grid.className = "member-grid";
+				members.forEach((member) => {
+					const row = document.createElement("button");
+					row.className = "member-row";
+					row.type = "button";
+					row.dataset.email = member.email;
 
-				memberList.innerHTML = `
-					<div class="toast" aria-live="polite"></div>
-					<div class="member-grid">${rows}</div>
-				`;
+					const avatar = document.createElement("div");
+					avatar.className = "avatar";
+					if (member.picture) {
+						const img = document.createElement("img");
+						img.className = "avatar-img";
+						img.src = member.picture;
+						img.alt = "";
+						img.referrerPolicy = "no-referrer";
+						img.decoding = "async";
+						avatar.appendChild(img);
+					} else {
+						const fallback = document.createElement("span");
+						fallback.className = "avatar-fallback";
+						fallback.textContent = (member.name || member.email)
+							.charAt(0)
+							.toUpperCase();
+						avatar.appendChild(fallback);
+					}
+
+					const details = document.createElement("div");
+					const name = document.createElement("div");
+					name.className = "member-name";
+					name.textContent = member.name || "—";
+					const email = document.createElement("div");
+					email.className = "member-email";
+					email.textContent = member.email;
+					details.appendChild(name);
+					details.appendChild(email);
+
+					const role = document.createElement("span");
+					role.className = "role-pill";
+					role.textContent = member.role === "admin" ? "Admin" : "Member";
+
+					row.appendChild(avatar);
+					row.appendChild(details);
+					row.appendChild(role);
+					grid.appendChild(row);
+				});
+				memberList.appendChild(grid);
 			}
 
 			document.addEventListener("click", (event) => {
@@ -234,10 +261,7 @@ export const prerender = false;
 			}
 
 			async function loadMemberDetail(email) {
-				const response = await fetch("/api/admin/members");
-				if (!response.ok) return;
-				const members = await response.json();
-				const member = members.find((item) => item.email === email);
+				const member = cachedMembers.find((item) => item.email === email);
 				if (!member) return;
 				if (editRole) editRole.value = member.role;
 				if (editAlias) editAlias.value = member.alias || "";
@@ -413,10 +437,6 @@ export const prerender = false;
 		outline: none;
 		border-color: rgba(59, 110, 165, 0.6);
 		box-shadow: 0 0 0 3px rgba(59, 110, 165, 0.15);
-	}
-
-	.member-table {
-		overflow-x: auto;
 	}
 
 	.member-list {

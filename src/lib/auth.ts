@@ -152,20 +152,6 @@ export async function getMember(env: AuthEnv, email: string) {
 	return row ?? null;
 }
 
-export async function createMember(
-	env: AuthEnv,
-	data: { email: string; name?: string; role: "admin" | "member" }
-) {
-	const db = getDb(env);
-	if (!db) {
-		return;
-	}
-	await db
-		.prepare("insert into members (email, name, role, active) values (?1, ?2, ?3, 1)")
-		.bind(data.email.toLowerCase(), data.name || null, data.role)
-		.run();
-}
-
 export async function updateMemberProfile(
 	env: AuthEnv,
 	email: string,
