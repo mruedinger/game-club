@@ -39,7 +39,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
 	const { results } = await db
 		.prepare(
-			"select email, name, alias, picture, role, active, created_at from members order by active desc, email asc"
+			"select email, name, alias, picture, role, active, created_at from members order by role asc, name is null, lower(name) asc, email asc"
 		)
 		.bind()
 		.all<MemberRow>();
