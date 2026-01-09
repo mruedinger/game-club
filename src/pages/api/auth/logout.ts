@@ -8,9 +8,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 	const secureCookie = new URL(request.url).protocol === "https:";
 	const cookie = await clearSession(env, secureCookie);
 	return new Response(null, {
-		status: 302,
+		status: 204,
 		headers: {
-			Location: "/",
 			"Set-Cookie": cookie
 		}
 	});
