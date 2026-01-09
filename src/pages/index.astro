@@ -200,7 +200,8 @@ const playedGames = [
 					.then((data) => {
 						authDetails.dataset.authStatus = "ready";
 						if (data.picture) {
-							const title = `${data.role === "admin" ? "Admin" : "Member"}\n${data.name || ""}\n${data.email}`;
+							const displayName = data.alias || data.name || data.email;
+							const title = `${data.role === "admin" ? "Admin" : "Member"}\n${displayName}\n${data.email}`;
 							authDetails.innerHTML = `
 								<img
 									class="auth-avatar"

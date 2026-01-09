@@ -13,6 +13,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 		JSON.stringify({
 			email: session.email,
 			name: session.name,
+			alias: session.alias,
 			role: session.role,
 			picture: session.picture
 		}),
