@@ -1,5 +1,5 @@
 ---
-import SiteHeader from "../../components/SiteHeader.astro";
+import AppHeader from "../../components/AppHeader.astro";
 
 export const prerender = false;
 ---
@@ -12,17 +12,7 @@ export const prerender = false;
 		<title>Game Club | Admin</title>
 	</head>
 	<body>
-		<SiteHeader>
-			<Fragment slot="nav">
-				<a href="/">Home</a>
-				<a href="/admin">Admin</a>
-			</Fragment>
-			<Fragment slot="actions">
-				<form action="/api/auth/logout" method="post">
-					<button class="ghost" type="submit">Sign out</button>
-				</form>
-			</Fragment>
-		</SiteHeader>
+		<AppHeader />
 
 		<main class="admin-shell is-hidden">
 			<section class="hero">

@@ -1,5 +1,5 @@
 ---
-import SiteHeader from "../components/SiteHeader.astro";
+import AppHeader from "../components/AppHeader.astro";
 
 const sampleGames = [
 	{ title: "Outer Wilds", tags: ["Exploration", "Puzzle", "Narrative"], length: "16-22 hrs" },
@@ -29,27 +29,7 @@ const playedGames = [
 		<title>Game Club</title>
 	</head>
 	<body>
-		<SiteHeader>
-			<Fragment slot="nav">
-				<a href="#now">Current</a>
-				<a href="#games">Games</a>
-				<a href="#poll">Poll</a>
-				<a href="#played">Archive</a>
-				<a class="admin-link" href="/admin">Admin</a>
-			</Fragment>
-			<Fragment slot="actions">
-				<div class="auth-status" aria-live="polite">
-					<div class="auth-details" data-auth-status="loading">
-						<span class="chip subtle">Checking...</span>
-					</div>
-				</div>
-				<a class="ghost auth-signin" href="/api/auth/login">Sign in</a>
-				<form class="auth-signout" action="/api/auth/logout" method="post">
-					<button class="ghost" type="submit">Sign out</button>
-				</form>
-				<a class="cta" href="#">Submit a game</a>
-			</Fragment>
-		</SiteHeader>
+		<AppHeader />
 
 		<main>
 			<section class="hero">
@@ -183,58 +163,6 @@ const playedGames = [
 				<a href="#poll">Check poll</a>
 			</div>
 		</footer>
-		<script>
-			const authDetails = document.querySelector(".auth-details");
-			const signIn = document.querySelector(".auth-signin");
-			const signOut = document.querySelector(".auth-signout");
-			const adminLink = document.querySelector(".admin-link");
-
-			if (authDetails) {
-				fetch("/api/me")
-					.then((response) => {
-						if (!response.ok) {
-							throw new Error("Not authenticated");
-						}
-						return response.json();
-					})
-					.then((data) => {
-						authDetails.dataset.authStatus = "ready";
-						if (data.picture) {
-							const displayName = data.alias || data.name || data.email;
-							const title = `${data.role === "admin" ? "Admin" : "Member"}\n${displayName}\n${data.email}`;
-							authDetails.innerHTML = `
-								<img
-									class="auth-avatar"
-									src="${data.picture}"
-									alt=""
-									referrerpolicy="no-referrer"
-									decoding="async"
-									width="32"
-									height="32"
-									title="${title}"
-									style="width:32px;height:32px;border-radius:50%;object-fit:cover;display:block;"
-								/>
-							`;
-						} else {
-							const displayName = data.alias || data.name || data.email;
-							const title = `${data.role === "admin" ? "Admin" : "Member"}\n${displayName}\n${data.email}`;
-							authDetails.innerHTML = `<span class="auth-fallback" title="${title}" aria-hidden="true"></span>`;
-						}
-						if (signIn) signIn.style.display = "none";
-						if (signOut) signOut.style.display = "inline-flex";
-						if (adminLink && data.role === "admin") {
-							adminLink.style.display = "inline-flex";
-						}
-					})
-					.catch(() => {
-						authDetails.dataset.authStatus = "error";
-						authDetails.innerHTML = '<span class="chip subtle">Logged out</span>';
-						if (signIn) signIn.style.display = "inline-flex";
-						if (signOut) signOut.style.display = "none";
-						if (adminLink) adminLink.style.display = "none";
-					});
-			}
-		</script>
 	</body>
 </html>
 
@@ -295,88 +223,6 @@ const playedGames = [
 		line-height: 1.6;
 	}
 
-	.site-header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		padding: 1.5rem 5vw 1rem;
-		position: sticky;
-		top: 0;
-		background: rgba(238, 242, 246, 0.9);
-		backdrop-filter: blur(14px);
-		z-index: 10;
-		border-bottom: 1px solid var(--border);
-	}
-
-	.brand {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		font-weight: 600;
-		letter-spacing: 0.02em;
-		color: inherit;
-		text-decoration: none;
-	}
-
-	.brand-mark {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		width: 42px;
-		height: 42px;
-		border-radius: 14px;
-		background: var(--ink);
-		color: #e9f2fb;
-		font-weight: 700;
-	}
-
-	.site-nav {
-		display: flex;
-		gap: 1.5rem;
-		font-size: 0.95rem;
-	}
-
-	.site-nav a {
-		color: var(--ink-soft);
-	}
-
-	.admin-link {
-		display: none;
-	}
-
-	.header-actions {
-		display: flex;
-		gap: 0.8rem;
-		align-items: center;
-	}
-
-	.header-actions form {
-		margin: 0;
-	}
-
-	.header-actions button {
-		border: none;
-		cursor: pointer;
-		font: inherit;
-	}
-
-	.auth-details {
-		display: flex;
-		gap: 0.6rem;
-		align-items: center;
-	}
-
-	.auth-fallback {
-		width: 28px;
-		height: 28px;
-		border-radius: 50%;
-		display: inline-block;
-		background: #2f9e6d;
-	}
-
-	.auth-signout {
-		display: none;
-	}
 
 	.cta,
 	.ghost {
