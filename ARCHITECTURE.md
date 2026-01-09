@@ -18,7 +18,7 @@
 
 ## D1 Members
 - Table: `members` with `email`, `name`, `role`, `active`.
-- OAuth checks D1 first; env allowlists are a fallback until members are migrated.
+- OAuth requires a matching D1 member record.
 
 ## Core Entities (Draft)
 - users: email, display_name, created_at, is_member, is_admin

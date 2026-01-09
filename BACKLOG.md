@@ -21,3 +21,4 @@
 - External game metadata (cover art, tags, descriptions).
 - Time-to-beat, pricing, and historical data.
 - Weighted voting options (future).
+- User ratings and comments on games.
