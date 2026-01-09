@@ -7,7 +7,7 @@ import {
 	getMember,
 	getRuntimeEnv,
 	readOAuthState,
-	updateMemberName
+	updateMemberProfile
 } from "../../../lib/auth";
 
 export const prerender = false;
@@ -57,7 +57,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 		}
 
 		const role = member.role;
-		await updateMemberName(env, email, name);
+		await updateMemberProfile(env, email, name, picture);
 		const sessionCookie = await createSession(
 			env,
 			{

@@ -5,6 +5,7 @@ type MemberRow = {
 	email: string;
 	name?: string;
 	alias?: string;
+	picture?: string;
 	role: "admin" | "member";
 	active: number;
 	created_at: string;
@@ -38,7 +39,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
 	const { results } = await db
 		.prepare(
-			"select email, name, alias, role, active, created_at from members order by active desc, email asc"
+			"select email, name, alias, picture, role, active, created_at from members order by active desc, email asc"
 		)
 		.bind()
 		.all<MemberRow>();
@@ -97,14 +98,15 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
 	if (!email) {
 		return new Response("Email is required.", { status: 400 });
 	}
-	if (email === session.email.toLowerCase()) {
-		return new Response("You cannot modify your own account.", { status: 403 });
-	}
+	const isSelf = email === session.email.toLowerCase();
 
 	const updates: string[] = [];
 	const values: unknown[] = [];
 
 	if (body?.role) {
+		if (isSelf) {
+			return new Response("You cannot modify your own role.", { status: 403 });
+		}
 		const role = normalizeRole(body.role);
 		if (!role) {
 			return new Response("Invalid role.", { status: 400 });
@@ -113,9 +115,10 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
 		values.push(role);
 	}
 
-	if (typeof body?.active === "boolean") {
-		updates.push(`active = ?${values.length + 1}`);
-		values.push(body.active ? 1 : 0);
+	if (typeof body?.alias === "string") {
+		updates.push(`alias = ?${values.length + 1}`);
+		const alias = body.alias.trim();
+		values.push(alias ? alias : null);
 	}
 
 	if (updates.length === 0) {
