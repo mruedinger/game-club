@@ -1,0 +1,220 @@
+---
+import AppHeader from "../components/AppHeader.astro";
+import "../styles/base.css";
+
+const backlogGames = [
+	{ title: "Outer Wilds", tags: ["Exploration", "Puzzle", "Narrative"], length: "16-22 hrs" },
+	{ title: "Hades", tags: ["Roguelike", "Action"], length: "20-30 hrs" },
+	{ title: "Return of the Obra Dinn", tags: ["Mystery", "Puzzle"], length: "10-12 hrs" },
+	{ title: "Pentiment", tags: ["Narrative", "RPG"], length: "15-20 hrs" }
+];
+
+const playedGames = [
+	{ title: "Disco Elysium", month: "Oct 2025", tags: ["Narrative", "RPG"], length: "20-30 hrs" },
+	{ title: "Inside", month: "Nov 2025", tags: ["Puzzle", "Adventure"], length: "4-6 hrs" },
+	{ title: "Citizen Sleeper", month: "Dec 2025", tags: ["Narrative", "Indie"], length: "10-15 hrs" }
+];
+---
+
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="generator" content={Astro.generator} />
+		<meta name="description" content="Browse the Game Club backlog and played games." />
+		<title>Game Club | Games</title>
+	</head>
+	<body>
+		<AppHeader />
+
+		<main>
+			<section class="hero">
+				<p class="eyebrow">Game library</p>
+				<h1>Backlog and played games</h1>
+				<p class="lead">
+					Browse member-submitted games and revisit the titles we have already played
+					together.
+				</p>
+			</section>
+
+			<section class="section">
+				<div class="section-head">
+					<h2>Backlog</h2>
+					<p>Games waiting to be picked in an upcoming poll.</p>
+					<button class="cta add-game hidden" type="button">Add a game</button>
+				</div>
+				<div class="games-grid">
+					{backlogGames.map((game, index) => (
+						<article class="game-card" style={`animation-delay: ${index * 70}ms`}>
+							<h3>{game.title}</h3>
+							<p class="muted">{game.tags.join(" · ")}</p>
+							<div class="card-row">
+								<span class="chip subtle">{game.length}</span>
+								<span class="chip subtle">Submitted by A.</span>
+							</div>
+						</article>
+					))}
+				</div>
+			</section>
+
+			<section class="section">
+				<div class="section-head">
+					<h2>Played</h2>
+					<p>Games the club has finished and discussed.</p>
+				</div>
+				<div class="games-grid">
+					{playedGames.map((game, index) => (
+						<article class="game-card" style={`animation-delay: ${index * 70}ms`}>
+							<h3>{game.title}</h3>
+							<p class="muted">{game.tags.join(" · ")}</p>
+							<div class="card-row">
+								<span class="chip subtle">{game.length}</span>
+								<span class="chip subtle">{game.month}</span>
+							</div>
+						</article>
+					))}
+				</div>
+			</section>
+		</main>
+
+		<script>
+			const addButton = document.querySelector(".add-game");
+			fetch("/api/me")
+				.then((response) => {
+					if (!response.ok) throw new Error("Not authenticated");
+					if (addButton) addButton.classList.remove("hidden");
+				})
+				.catch(() => {});
+		</script>
+	</body>
+</html>
+
+<style>
+	:root {
+		color-scheme: light;
+		--ink: #1f2933;
+		--muted: #5b6672;
+		--tan: #dbe2ea;
+		--ink-soft: #364152;
+		--shadow: rgba(13, 30, 48, 0.18);
+		--border: rgba(33, 51, 70, 0.14);
+		--accent: #3b6ea5;
+		--accent-dark: #2a5581;
+		--radius: 22px;
+		font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+		background: radial-gradient(circle at top right, #f7fbff 0%, #eef2f6 55%, #e2e8f0 100%);
+	}
+
+	* {
+		box-sizing: border-box;
+	}
+
+	body {
+		margin: 0;
+		color: var(--ink);
+		background: linear-gradient(120deg, #f6f9fc 0%, #e9eff6 60%, #dde5ef 100%);
+		min-height: 100vh;
+	}
+
+.hero {
+	display: grid;
+	max-width: 640px;
+}
+
+main {
+	display: grid;
+	gap: 3rem;
+}
+
+	.section {
+		display: grid;
+		gap: 1.5rem;
+	}
+
+	.section-head {
+		display: grid;
+		gap: 0.4rem;
+	}
+
+	.section-head p {
+		color: var(--muted);
+		max-width: 30rem;
+	}
+
+	.games-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+		gap: 1.2rem;
+	}
+
+	.game-card {
+		padding: 1.2rem;
+		border-radius: 18px;
+		border: 1px solid var(--border);
+		background: rgba(255, 255, 255, 0.72);
+		animation: rise 0.5s ease both;
+	}
+
+	.card-row {
+		display: flex;
+		gap: 1rem;
+		align-items: center;
+		flex-wrap: wrap;
+		margin: 0.6rem 0 0;
+	}
+
+	.chip {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+		border-radius: 999px;
+		padding: 0.4rem 0.85rem;
+		font-size: 0.75rem;
+		background: var(--tan);
+		font-weight: 500;
+	}
+
+	.chip.subtle {
+		background: rgba(255, 255, 255, 0.7);
+		border: 1px solid var(--border);
+	}
+
+	.cta {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0.7rem 1.4rem;
+		border-radius: 999px;
+		font-weight: 600;
+		font-size: 0.9rem;
+		background: var(--accent);
+		color: #fff;
+		border: none;
+		box-shadow: 0 12px 20px -16px var(--accent-dark);
+		cursor: pointer;
+		transition: transform 0.2s ease, box-shadow 0.2s ease;
+		width: fit-content;
+	}
+
+	.cta:hover {
+		transform: translateY(-1px);
+		box-shadow: 0 18px 30px -22px var(--accent-dark);
+	}
+
+	.hidden {
+		display: none;
+	}
+
+	@keyframes rise {
+		from {
+			opacity: 0;
+			transform: translateY(12px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+
+</style>

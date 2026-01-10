@@ -1,5 +1,6 @@
 ---
 import AppHeader from "../components/AppHeader.astro";
+import "../styles/base.css";
 
 const sampleGames = [
 	{ title: "Outer Wilds", tags: ["Exploration", "Puzzle", "Narrative"], length: "16-22 hrs" },
@@ -32,7 +33,7 @@ const playedGames = [
 		<AppHeader />
 
 		<main>
-			<section class="hero">
+			<section class="hero two-column">
 				<div class="hero-text">
 					<p class="eyebrow">Monthly video game club</p>
 					<h1>Play together. Talk it out. Pick the next adventure.</h1>
@@ -212,18 +213,6 @@ const playedGames = [
 		text-decoration: none;
 	}
 
-	h1,
-	h2,
-	h3 {
-		margin: 0 0 0.6rem;
-	}
-
-	p {
-		margin: 0;
-		line-height: 1.6;
-	}
-
-
 	.cta,
 	.ghost {
 		display: inline-flex;
@@ -253,30 +242,10 @@ const playedGames = [
 		box-shadow: 0 18px 30px -22px var(--accent-dark);
 	}
 
-	main {
-		padding: 2rem 6vw 4rem;
-	}
-
 	.hero {
 		display: grid;
 		gap: 2rem;
 		grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-		align-items: center;
-		margin-top: 1rem;
-	}
-
-	.eyebrow {
-		text-transform: uppercase;
-		letter-spacing: 0.22em;
-		font-size: 0.72rem;
-		color: var(--muted);
-		font-weight: 600;
-	}
-
-	.lead {
-		font-size: 1.1rem;
-		color: var(--ink-soft);
-		max-width: 36rem;
 	}
 
 	.hero-actions {
@@ -411,10 +380,6 @@ const playedGames = [
 		display: grid;
 		grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
 		gap: 1rem;
-	}
-
-	.muted {
-		color: var(--muted);
 	}
 
 	.site-footer {
