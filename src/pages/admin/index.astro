@@ -1,5 +1,6 @@
 ---
 import AppHeader from "../../components/AppHeader.astro";
+import "../../styles/base.css";
 
 export const prerender = false;
 ---
@@ -348,40 +349,20 @@ export const prerender = false;
 		min-height: 100vh;
 	}
 
-	h1,
-	h2,
-	h3 {
-		margin: 0 0 0.6rem;
-	}
-
-	p {
-		margin: 0;
-		line-height: 1.6;
-	}
-
 	main {
-		padding: 2rem 6vw 4rem;
 		display: grid;
 		gap: 2rem;
 	}
 
 	.hero {
 		display: grid;
-		gap: 0.35rem;
+		gap: 0;
 		max-width: 520px;
 	}
 
-	.eyebrow {
-		text-transform: uppercase;
-		letter-spacing: 0.22em;
-		font-size: 0.72rem;
-		color: var(--muted);
-		font-weight: 600;
-	}
-
-	.hero .muted {
-		max-width: 34rem;
-	}
+.hero .muted {
+	max-width: 34rem;
+}
 
 	.card {
 		background: var(--glass-strong);
@@ -624,7 +605,6 @@ export const prerender = false;
 	}
 
 	.muted {
-		color: var(--muted);
 		line-height: 1.6;
 	}
 
