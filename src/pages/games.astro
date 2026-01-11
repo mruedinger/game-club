@@ -450,6 +450,7 @@ main {
 		box-shadow: none;
 		color: var(--ink-soft);
 		cursor: pointer;
+		user-select: none;
 		display: flex;
 		align-items: center;
 		gap: 0.6rem;
@@ -459,6 +460,7 @@ main {
 		padding: 0.7rem 0.9rem;
 		border-bottom: 1px solid rgba(33, 51, 70, 0.06);
 		text-transform: none;
+		transition: background-color 120ms ease;
 		width: 100%;
 	}
 
@@ -473,6 +475,7 @@ main {
 
 	.suggestion-item:hover {
 		background: rgba(240, 246, 253, 0.9);
+		cursor: pointer;
 	}
 
 	.suggestion-item:last-child {
