@@ -108,7 +108,7 @@ const playedGames = games.played as Game[];
 					<label for="game-title">Game title</label>
 					<input id="game-title" name="title" type="text" placeholder="Search for a game" autocomplete="off" required />
 				</div>
-				<div class="suggestions" aria-live="polite"></div>
+				<ul class="suggestions" aria-live="polite" role="listbox"></ul>
 				<p class="muted small">Start typing to see suggestions.</p>
 				<footer>
 					<button class="ghost" type="button" data-action="close-add-game">Cancel</button>
@@ -206,14 +206,14 @@ const playedGames = games.played as Game[];
 				if (!list) return;
 				list.innerHTML = "";
 				if (items.length === 0) {
-					const empty = document.createElement("p");
+					const empty = document.createElement("li");
 					empty.className = "muted small";
 					empty.textContent = "No matches yet.";
 					list.appendChild(empty);
 					return;
 				}
 				items.forEach((item) => {
-					const entry = document.createElement("div");
+					const entry = document.createElement("li");
 					entry.className = "suggestion-item";
 					entry.textContent = item.name;
 					entry.dataset.name = item.name;
@@ -431,6 +431,8 @@ main {
 	}
 
 	.suggestions {
+		list-style: none;
+		margin: 0;
 		display: grid;
 		gap: 0;
 		padding: 0;
@@ -478,9 +480,8 @@ main {
 		opacity: 0.35;
 	}
 
-	.suggestions .suggestion-item:hover {
-		background-color: rgba(222, 235, 251, 0.9) !important;
-		box-shadow: inset 0 0 0 9999px rgba(222, 235, 251, 0.3) !important;
+	.suggestion-item:hover {
+		background-color: rgba(222, 235, 251, 0.9);
 	}
 
 	.suggestion-item:focus-visible {
