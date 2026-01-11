@@ -50,6 +50,16 @@ const playedGames = games.played as Game[];
 					<p>Games waiting to be picked in an upcoming poll.</p>
 					<button class="cta add-game hidden" type="button">Add a game</button>
 				</div>
+				<div class="inline-search hidden">
+					<label class="inline-label" for="inline-game-search">Add a game</label>
+					<input
+						id="inline-game-search"
+						type="text"
+						placeholder="Search Steam for a game"
+						autocomplete="off"
+					/>
+					<div class="inline-suggestions" aria-live="polite"></div>
+				</div>
 				<div class="games-grid">
 					{backlogGames.map((game, index) => (
 						<article class="game-card" style={`animation-delay: ${index * 70}ms`}>
@@ -104,12 +114,12 @@ const playedGames = games.played as Game[];
 						×
 					</button>
 				</header>
-				<div class="field search-field">
+				<div class="field">
 					<label for="game-title">Game title</label>
 					<input id="game-title" name="title" type="text" placeholder="Search for a game" autocomplete="off" required />
-					<div class="suggestions" aria-live="polite"></div>
-					<p class="muted small">Start typing to see suggestions.</p>
 				</div>
+				<div class="suggestions" aria-live="polite"></div>
+				<p class="muted small">Start typing to see suggestions.</p>
 				<footer>
 					<button class="ghost" type="button" data-action="close-add-game">Cancel</button>
 					<button class="cta" type="submit">Submit</button>
@@ -123,12 +133,16 @@ const playedGames = games.played as Game[];
 			const addForm = document.querySelector(".add-game-form");
 			const titleInput = document.querySelector("#game-title");
 			const suggestionList = document.querySelector(".suggestions");
+			const inlineSearch = document.querySelector(".inline-search");
+			const inlineInput = document.querySelector("#inline-game-search");
+			const inlineSuggestions = document.querySelector(".inline-suggestions");
 			let isSignedIn = false;
 
 			fetch("/api/me")
 				.then((response) => {
 					if (!response.ok) throw new Error("Not authenticated");
 					if (addButton) addButton.classList.remove("hidden");
+					if (inlineSearch) inlineSearch.classList.remove("hidden");
 					isSignedIn = true;
 				})
 				.catch(() => {});
@@ -153,26 +167,8 @@ const playedGames = games.played as Game[];
 				}
 			});
 
-			if (titleInput) {
-				let searchTimer;
-				titleInput.addEventListener("input", () => {
-					const value = titleInput.value.trim();
-					if (searchTimer) clearTimeout(searchTimer);
-					if (!value) {
-						clearSuggestions();
-						return;
-					}
-					searchTimer = setTimeout(async () => {
-						const response = await fetch(`/api/games/search?term=${encodeURIComponent(value)}`);
-						if (!response.ok) {
-							renderSuggestions([]);
-							return;
-						}
-						const data = await response.json();
-						renderSuggestions(data.results || []);
-					}, 300);
-				});
-			}
+			bindSearch(titleInput, suggestionList);
+			bindSearch(inlineInput, inlineSuggestions);
 
 			if (addForm) {
 				addForm.addEventListener("submit", async (event) => {
@@ -191,15 +187,36 @@ const playedGames = games.played as Game[];
 				});
 			}
 
-			function renderSuggestions(items) {
-				if (!suggestionList) return;
-				suggestionList.innerHTML = "";
-				suggestionList.classList.add("suggestions-open");
+			function bindSearch(input, list) {
+				if (!input || !list) return;
+				let searchTimer;
+				input.addEventListener("input", () => {
+					const value = input.value.trim();
+					if (searchTimer) clearTimeout(searchTimer);
+					if (!value) {
+						clearSuggestions(list);
+						return;
+					}
+					searchTimer = setTimeout(async () => {
+						const response = await fetch(`/api/games/search?term=${encodeURIComponent(value)}`);
+						if (!response.ok) {
+							renderSuggestions(list, []);
+							return;
+						}
+						const data = await response.json();
+						renderSuggestions(list, data.results || []);
+					}, 300);
+				});
+			}
+
+			function renderSuggestions(list, items) {
+				if (!list) return;
+				list.innerHTML = "";
 				if (items.length === 0) {
 					const empty = document.createElement("p");
 					empty.className = "muted small";
 					empty.textContent = "No matches yet.";
-					suggestionList.appendChild(empty);
+					list.appendChild(empty);
 					return;
 				}
 				items.forEach((item) => {
@@ -208,14 +225,13 @@ const playedGames = games.played as Game[];
 					button.className = "suggestion-item";
 					button.textContent = item.name;
 					button.dataset.name = item.name;
-					suggestionList.appendChild(button);
+					list.appendChild(button);
 				});
 			}
 
-			function clearSuggestions() {
-				if (!suggestionList) return;
-				suggestionList.innerHTML = "";
-				suggestionList.classList.remove("suggestions-open");
+			function clearSuggestions(list) {
+				if (!list) return;
+				list.innerHTML = "";
 			}
 		</script>
 	</body>
@@ -342,6 +358,7 @@ main {
 		border-radius: 20px;
 		padding: 0;
 		max-width: 520px;
+		min-height: 420px;
 		width: min(90vw, 520px);
 		background: transparent;
 	}
@@ -378,10 +395,6 @@ main {
 		gap: 0.3rem;
 	}
 
-	.search-field {
-		position: relative;
-	}
-
 	label {
 		font-weight: 600;
 		font-size: 0.85rem;
@@ -399,30 +412,37 @@ main {
 		box-sizing: border-box;
 	}
 
+	.inline-search {
+		margin: 1.5rem 0 2rem;
+		background: rgba(255, 255, 255, 0.9);
+		border: 1px solid var(--border);
+		border-radius: 18px;
+		padding: 1.2rem 1.4rem;
+		box-shadow: 0 20px 40px -30px var(--shadow);
+		display: grid;
+		gap: 0.6rem;
+		max-width: 520px;
+	}
+
+	.inline-label {
+		font-weight: 600;
+		color: var(--ink-soft);
+	}
+
+	.inline-suggestions,
 	.suggestions {
-		position: absolute;
-		top: calc(100% + 0.4rem);
-		left: 0;
-		right: 0;
 		display: grid;
 		gap: 0.5rem;
 		padding: 0.5rem;
 		border-radius: 14px;
 		border: 1px solid var(--border);
-		background: rgba(255, 255, 255, 0.95);
-		box-shadow: 0 20px 40px -30px var(--shadow);
-		opacity: 0;
-		transform: translateY(-6px);
-		pointer-events: none;
-		max-height: 240px;
-		overflow-y: auto;
-		z-index: 5;
+		background: rgba(255, 255, 255, 0.9);
+		box-shadow: 0 18px 30px -24px var(--shadow);
 	}
 
-	.suggestions-open {
-		opacity: 1;
-		transform: translateY(0);
-		pointer-events: auto;
+	.inline-suggestions:empty,
+	.suggestions:empty {
+		display: none;
 	}
 
 	.suggestion-item {
