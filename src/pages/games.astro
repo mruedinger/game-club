@@ -428,10 +428,11 @@ main {
 	}
 
 	.suggestion-item {
+		all: unset;
 		appearance: none;
 		-webkit-appearance: none;
-		background: none;
-		border: none;
+		background: transparent;
+		border: 0;
 		border-radius: 0;
 		box-shadow: none;
 		color: var(--ink-soft);
@@ -445,6 +446,7 @@ main {
 		padding: 0.7rem 0.9rem;
 		border-bottom: 1px solid rgba(33, 51, 70, 0.06);
 		text-transform: none;
+		width: 100%;
 	}
 
 	.suggestion-item::before {
