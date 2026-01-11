@@ -446,7 +446,7 @@ main {
 		display: none;
 	}
 
-	.suggestion-item {
+	:global(.suggestion-item) {
 		background: transparent;
 		border: 0;
 		border-radius: 0;
@@ -468,11 +468,11 @@ main {
 		width: 100%;
 	}
 
-	.suggestion-item * {
+	:global(.suggestion-item *) {
 		cursor: pointer;
 	}
 
-	.suggestion-item::before {
+	:global(.suggestion-item::before) {
 		content: "";
 		width: 6px;
 		height: 6px;
@@ -481,21 +481,21 @@ main {
 		opacity: 0.35;
 	}
 
-	.suggestion-item:hover {
+	:global(.suggestion-item:hover) {
 		background-color: rgba(210, 228, 248, 0.95) !important;
 		border-left-color: rgba(59, 110, 165, 0.7);
 	}
 
-	.suggestion-item:hover::before {
+	:global(.suggestion-item:hover::before) {
 		opacity: 0.8;
 	}
 
-	.suggestion-item:focus-visible {
+	:global(.suggestion-item:focus-visible) {
 		outline: 2px solid rgba(59, 110, 165, 0.35);
 		outline-offset: -1px;
 	}
 
-	.suggestion-item:last-child {
+	:global(.suggestion-item:last-child) {
 		border-bottom: none;
 	}
 
