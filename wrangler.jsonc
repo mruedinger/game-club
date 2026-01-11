@@ -3,11 +3,24 @@
 	"name": "game-club",
 	"compatibility_date": "2026-01-01",
 	"compatibility_flags": ["nodejs_compat"],
-	"d1_databases": [
-		{
-			"binding": "DB",
-			"database_name": "game-club",
-			"database_id": "fcc5645d-d485-4df3-927b-d83048ed2f33"
+	"env": {
+		"dev": {
+			"d1_databases": [
+				{
+					"binding": "DB",
+					"database_name": "game-club-dev",
+					"database_id": "c3fbbdda-4cf8-41e0-a58a-44bc1288e71f"
+				}
+			]
+		},
+		"production": {
+			"d1_databases": [
+				{
+					"binding": "DB",
+					"database_name": "game-club",
+					"database_id": "fcc5645d-d485-4df3-927b-d83048ed2f33"
+				}
+			]
 		}
-	]
+	}
 }

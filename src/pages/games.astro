@@ -2,18 +2,24 @@
 import AppHeader from "../components/AppHeader.astro";
 import "../styles/base.css";
 
-const backlogGames = [
-	{ title: "Outer Wilds", tags: ["Exploration", "Puzzle", "Narrative"], length: "16-22 hrs" },
-	{ title: "Hades", tags: ["Roguelike", "Action"], length: "20-30 hrs" },
-	{ title: "Return of the Obra Dinn", tags: ["Mystery", "Puzzle"], length: "10-12 hrs" },
-	{ title: "Pentiment", tags: ["Narrative", "RPG"], length: "15-20 hrs" }
-];
+type Game = {
+	id: number;
+	title: string;
+	status: "backlog" | "current" | "played";
+	tags_json?: string;
+	time_to_beat_minutes?: number;
+	played_month?: string;
+};
 
-const playedGames = [
-	{ title: "Disco Elysium", month: "Oct 2025", tags: ["Narrative", "RPG"], length: "20-30 hrs" },
-	{ title: "Inside", month: "Nov 2025", tags: ["Puzzle", "Adventure"], length: "4-6 hrs" },
-	{ title: "Citizen Sleeper", month: "Dec 2025", tags: ["Narrative", "Indie"], length: "10-15 hrs" }
-];
+const gamesResponse = await fetch(new URL("/api/games", Astro.url), {
+	headers: Astro.request.headers
+});
+const games = gamesResponse.ok
+	? await gamesResponse.json()
+	: { backlog: [], current: [], played: [] };
+
+const backlogGames = games.backlog as Game[];
+const playedGames = games.played as Game[];
 ---
 
 <html lang="en">
@@ -48,9 +54,15 @@ const playedGames = [
 					{backlogGames.map((game, index) => (
 						<article class="game-card" style={`animation-delay: ${index * 70}ms`}>
 							<h3>{game.title}</h3>
-							<p class="muted">{game.tags.join(" · ")}</p>
+							<p class="muted">
+								{game.tags_json ? JSON.parse(game.tags_json).join(" · ") : "Tags coming soon"}
+							</p>
 							<div class="card-row">
-								<span class="chip subtle">{game.length}</span>
+								<span class="chip subtle">
+									{game.time_to_beat_minutes
+										? `${Math.round(game.time_to_beat_minutes / 60)} hrs`
+										: "Time TBD"}
+								</span>
 								<span class="chip subtle">Submitted by A.</span>
 							</div>
 						</article>
@@ -67,10 +79,16 @@ const playedGames = [
 					{playedGames.map((game, index) => (
 						<article class="game-card" style={`animation-delay: ${index * 70}ms`}>
 							<h3>{game.title}</h3>
-							<p class="muted">{game.tags.join(" · ")}</p>
+							<p class="muted">
+								{game.tags_json ? JSON.parse(game.tags_json).join(" · ") : "Tags coming soon"}
+							</p>
 							<div class="card-row">
-								<span class="chip subtle">{game.length}</span>
-								<span class="chip subtle">{game.month}</span>
+								<span class="chip subtle">
+									{game.time_to_beat_minutes
+										? `${Math.round(game.time_to_beat_minutes / 60)} hrs`
+										: "Time TBD"}
+								</span>
+								<span class="chip subtle">{game.played_month || "Played date TBD"}</span>
 							</div>
 						</article>
 					))}
@@ -78,14 +96,124 @@ const playedGames = [
 			</section>
 		</main>
 
+		<dialog class="modal" id="add-game-modal">
+			<form class="modal-card add-game-form" novalidate>
+				<header>
+					<h3>Add a game</h3>
+					<button class="ghost icon-button" type="button" data-action="close-add-game" aria-label="Close">
+						×
+					</button>
+				</header>
+				<div class="field">
+					<label for="game-title">Game title</label>
+					<input id="game-title" name="title" type="text" placeholder="Search for a game" autocomplete="off" required />
+					<p class="muted small">Start typing to see suggestions.</p>
+				</div>
+				<div class="suggestions" aria-live="polite"></div>
+				<footer>
+					<button class="ghost" type="button" data-action="close-add-game">Cancel</button>
+					<button class="cta" type="submit">Submit</button>
+				</footer>
+			</form>
+		</dialog>
+
 		<script>
 			const addButton = document.querySelector(".add-game");
+			const addModal = document.querySelector("#add-game-modal");
+			const addForm = document.querySelector(".add-game-form");
+			const titleInput = document.querySelector("#game-title");
+			const suggestionList = document.querySelector(".suggestions");
+			let isSignedIn = false;
+
 			fetch("/api/me")
 				.then((response) => {
 					if (!response.ok) throw new Error("Not authenticated");
 					if (addButton) addButton.classList.remove("hidden");
+					isSignedIn = true;
 				})
 				.catch(() => {});
+
+			document.addEventListener("click", (event) => {
+				const target = event.target;
+				if (!(target instanceof HTMLElement)) return;
+				if (target.closest(".add-game")) {
+					if (!isSignedIn) {
+						window.location.href = "/api/auth/login";
+						return;
+					}
+					addModal?.showModal();
+				}
+				if (target.closest("[data-action='close-add-game']")) {
+					addModal?.close();
+				}
+				if (target.closest(".suggestion-item") && titleInput) {
+					const selected = target.closest(".suggestion-item");
+					titleInput.value = selected?.dataset.name || selected?.textContent || "";
+					clearSuggestions();
+				}
+			});
+
+			if (titleInput) {
+				let searchTimer;
+				titleInput.addEventListener("input", () => {
+					const value = titleInput.value.trim();
+					if (searchTimer) clearTimeout(searchTimer);
+					if (!value) {
+						clearSuggestions();
+						return;
+					}
+					searchTimer = setTimeout(async () => {
+						const response = await fetch(`/api/games/search?term=${encodeURIComponent(value)}`);
+						if (!response.ok) {
+							renderSuggestions([]);
+							return;
+						}
+						const data = await response.json();
+						renderSuggestions(data.results || []);
+					}, 300);
+				});
+			}
+
+			if (addForm) {
+				addForm.addEventListener("submit", async (event) => {
+					event.preventDefault();
+					const title = titleInput?.value.trim();
+					if (!title) return;
+					const response = await fetch("/api/games", {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ title })
+					});
+					if (response.ok) {
+						addModal?.close();
+						window.location.reload();
+					}
+				});
+			}
+
+			function renderSuggestions(items) {
+				if (!suggestionList) return;
+				suggestionList.innerHTML = "";
+				if (items.length === 0) {
+					const empty = document.createElement("p");
+					empty.className = "muted small";
+					empty.textContent = "No matches yet.";
+					suggestionList.appendChild(empty);
+					return;
+				}
+				items.forEach((item) => {
+					const button = document.createElement("button");
+					button.type = "button";
+					button.className = "suggestion-item";
+					button.textContent = item.name;
+					button.dataset.name = item.name;
+					suggestionList.appendChild(button);
+				});
+			}
+
+			function clearSuggestions() {
+				if (suggestionList) suggestionList.innerHTML = "";
+			}
 		</script>
 	</body>
 </html>
@@ -204,6 +332,95 @@ main {
 
 	.hidden {
 		display: none;
+	}
+
+	.modal {
+		border: none;
+		border-radius: 20px;
+		padding: 0;
+		max-width: 520px;
+		width: min(90vw, 520px);
+		background: transparent;
+	}
+
+	.modal::backdrop {
+		background: rgba(15, 25, 36, 0.4);
+	}
+
+	.modal-card {
+		background: rgba(255, 255, 255, 0.88);
+		border-radius: 20px;
+		padding: 1.6rem;
+		border: 1px solid var(--border);
+		box-shadow: 0 30px 60px -40px var(--shadow);
+		display: grid;
+		gap: 1rem;
+	}
+
+	.modal-card header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+	}
+
+	.modal-card footer {
+		display: flex;
+		justify-content: flex-end;
+		gap: 0.8rem;
+	}
+
+	.field {
+		display: grid;
+		gap: 0.3rem;
+	}
+
+	label {
+		font-weight: 600;
+		font-size: 0.85rem;
+		color: var(--ink-soft);
+	}
+
+	input {
+		width: 100%;
+		border-radius: 12px;
+		border: 1px solid var(--border);
+		padding: 0.65rem 0.9rem;
+		font-size: 0.9rem;
+		font-family: inherit;
+		background: rgba(255, 255, 255, 0.8);
+		box-sizing: border-box;
+	}
+
+	.suggestions {
+		display: grid;
+		gap: 0.5rem;
+	}
+
+	.suggestion-item {
+		text-align: left;
+		border-radius: 12px;
+		border: 1px solid var(--border);
+		padding: 0.6rem 0.8rem;
+		background: rgba(255, 255, 255, 0.7);
+		cursor: pointer;
+	}
+
+	.suggestion-item:hover {
+		transform: translateY(-1px);
+		box-shadow: 0 12px 20px -18px var(--shadow);
+	}
+
+	.icon-button {
+		width: 36px;
+		height: 36px;
+		padding: 0;
+		font-size: 1.2rem;
+		line-height: 1;
+	}
+
+	.small {
+		font-size: 0.9rem;
 	}
 
 	@keyframes rise {
