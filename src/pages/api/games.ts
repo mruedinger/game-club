@@ -105,6 +105,42 @@ export const POST: APIRoute = async ({ request, locals }) => {
 	return new Response(null, { status: 204 });
 };
 
+export const DELETE: APIRoute = async ({ request, locals }) => {
+	const env = getRuntimeEnv(locals.runtime?.env);
+	const session = await readSession(request, env);
+	if (!session) {
+		return new Response("Authentication required.", { status: 401 });
+	}
+
+	const db = getDb(env);
+	if (!db) {
+		return new Response("Games database not configured.", { status: 500 });
+	}
+
+	const body = await readJson(request);
+	const id = normalizeGameId(body?.id);
+	if (!id) {
+		return new Response("Game id is required.", { status: 400 });
+	}
+
+	const owner = await db
+		.prepare("select submitted_by_email from games where id = ?1")
+		.bind(id)
+		.first<{ submitted_by_email: string }>();
+	if (!owner) {
+		return new Response("Game not found.", { status: 404 });
+	}
+
+	const isOwner = owner.submitted_by_email === session.email.toLowerCase();
+	const isAdmin = session.role === "admin";
+	if (!isOwner && !isAdmin) {
+		return new Response("Not authorized.", { status: 403 });
+	}
+
+	await db.prepare("delete from games where id = ?1").bind(id).run();
+	return new Response(null, { status: 204 });
+};
+
 function getDb(env: Record<string, unknown>): D1Database | undefined {
 	const value = env.DB;
 	if (value && typeof value === "object") {
@@ -115,14 +151,27 @@ function getDb(env: Record<string, unknown>): D1Database | undefined {
 
 async function readJson(
 	request: Request
-): Promise<{ title?: string; steamAppId?: string | number } | null> {
+): Promise<{ title?: string; steamAppId?: string | number; id?: string | number } | null> {
 	const text = await request.text();
 	if (!text) return null;
 	try {
-		return JSON.parse(text) as { title?: string; steamAppId?: string | number };
+		return JSON.parse(text) as {
+			title?: string;
+			steamAppId?: string | number;
+			id?: string | number;
+		};
 	} catch {
 		return null;
 	}
+}
+
+function normalizeGameId(value: unknown): number | null {
+	if (typeof value === "number" && Number.isInteger(value)) return value;
+	if (typeof value === "string") {
+		const parsed = Number.parseInt(value, 10);
+		return Number.isNaN(parsed) ? null : parsed;
+	}
+	return null;
 }
 
 function normalizeSteamAppId(value: unknown): number | null {

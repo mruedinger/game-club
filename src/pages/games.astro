@@ -9,6 +9,9 @@ type Game = {
 	tags_json?: string;
 	time_to_beat_minutes?: number;
 	played_month?: string;
+	cover_art_url?: string;
+	description?: string;
+	submitted_by_email?: string;
 };
 
 const gamesResponse = await fetch(new URL("/api/games", Astro.url), {
@@ -52,7 +55,16 @@ const playedGames = games.played as Game[];
 				</div>
 				<div class="games-grid">
 					{backlogGames.map((game, index) => (
-						<article class="game-card" style={`animation-delay: ${index * 70}ms`}>
+						<article
+							class="game-card"
+							style={`animation-delay: ${index * 70}ms`}
+							data-id={game.id}
+							data-title={game.title}
+							data-tags={game.tags_json || ""}
+							data-description={game.description || ""}
+							data-cover={game.cover_art_url || ""}
+							data-submitted={game.submitted_by_email || ""}
+						>
 							<h3>{game.title}</h3>
 							<p class="muted">
 								{game.tags_json ? JSON.parse(game.tags_json).join(" · ") : "Tags coming soon"}
@@ -77,7 +89,16 @@ const playedGames = games.played as Game[];
 				</div>
 				<div class="games-grid">
 					{playedGames.map((game, index) => (
-						<article class="game-card" style={`animation-delay: ${index * 70}ms`}>
+						<article
+							class="game-card"
+							style={`animation-delay: ${index * 70}ms`}
+							data-id={game.id}
+							data-title={game.title}
+							data-tags={game.tags_json || ""}
+							data-description={game.description || ""}
+							data-cover={game.cover_art_url || ""}
+							data-submitted={game.submitted_by_email || ""}
+						>
 							<h3>{game.title}</h3>
 							<p class="muted">
 								{game.tags_json ? JSON.parse(game.tags_json).join(" · ") : "Tags coming soon"}
@@ -117,12 +138,43 @@ const playedGames = games.played as Game[];
 			</form>
 		</dialog>
 
+		<dialog class="modal" id="game-detail-modal">
+			<form class="modal-card game-detail-card" method="dialog">
+				<header>
+					<h3 class="game-detail-title">Game details</h3>
+					<button class="ghost icon-button" type="button" data-action="close-game-detail" aria-label="Close">
+						×
+					</button>
+				</header>
+				<div class="game-detail-body">
+					<img class="game-detail-cover" alt="" />
+					<div class="game-detail-info">
+						<p class="muted game-detail-tags"></p>
+						<p class="game-detail-description"></p>
+						<p class="muted small game-detail-submitted"></p>
+					</div>
+				</div>
+				<footer class="game-detail-footer">
+					<button class="ghost" type="button" data-action="close-game-detail">Close</button>
+					<button class="ghost danger game-detail-delete hidden" type="button">Delete</button>
+				</footer>
+			</form>
+		</dialog>
+
 		<script>
 			const addButton = document.querySelector(".add-game");
 			const addModal = document.querySelector("#add-game-modal");
 			const addForm = document.querySelector(".add-game-form");
 			const titleInput = document.querySelector("#game-title");
 			const suggestionList = document.querySelector(".suggestions");
+			const detailModal = document.querySelector("#game-detail-modal");
+			const detailTitle = document.querySelector(".game-detail-title");
+			const detailTags = document.querySelector(".game-detail-tags");
+			const detailDescription = document.querySelector(".game-detail-description");
+			const detailSubmitted = document.querySelector(".game-detail-submitted");
+			const detailCover = document.querySelector(".game-detail-cover");
+			const detailDelete = document.querySelector(".game-detail-delete");
+			let selectedGameId = null;
 			const steamIdKey = "steamAppId";
 			let isSignedIn = false;
 
@@ -147,9 +199,16 @@ const playedGames = games.played as Game[];
 				if (target.closest("[data-action='close-add-game']")) {
 					addModal?.close();
 				}
+				if (target.closest("[data-action='close-game-detail']")) {
+					detailModal?.close();
+				}
 				const selected = target.closest(".suggestion-item");
 				if (selected && titleInput) {
 					applySuggestion(selected);
+				}
+				const card = target.closest(".game-card");
+				if (card && detailModal) {
+					openGameDetail(card);
 				}
 			});
 
@@ -177,6 +236,21 @@ const playedGames = games.played as Game[];
 					});
 					if (response.ok) {
 						addModal?.close();
+						window.location.reload();
+					}
+				});
+			}
+
+			if (detailDelete) {
+				detailDelete.addEventListener("click", async () => {
+					if (!selectedGameId) return;
+					const response = await fetch("/api/games", {
+						method: "DELETE",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ id: selectedGameId })
+					});
+					if (response.ok) {
+						detailModal?.close();
 						window.location.reload();
 					}
 				});
@@ -242,6 +316,51 @@ const playedGames = games.played as Game[];
 				titleInput.dataset[steamIdKey] = selected?.dataset.steamId || "";
 				clearSuggestions(suggestionList);
 				titleInput.focus();
+			}
+
+			function openGameDetail(card) {
+				if (!detailModal) return;
+				const title = card.dataset.title || "Untitled game";
+				const description = card.dataset.description || "Description coming soon.";
+				const tags = card.dataset.tags ? parseTags(card.dataset.tags) : "Tags coming soon";
+				const submitted = card.dataset.submitted || "";
+				const cover = card.dataset.cover || "";
+				selectedGameId = card.dataset.id || null;
+
+				if (detailTitle) detailTitle.textContent = title;
+				if (detailDescription) detailDescription.textContent = description;
+				if (detailTags) detailTags.textContent = tags;
+				if (detailSubmitted) {
+					detailSubmitted.textContent = submitted
+						? `Submitted by ${submitted}`
+						: "Submitted by a member";
+				}
+				if (detailCover) {
+					if (cover) {
+						detailCover.src = cover;
+						detailCover.alt = title;
+						detailCover.classList.remove("hidden");
+					} else {
+						detailCover.removeAttribute("src");
+						detailCover.alt = "";
+						detailCover.classList.add("hidden");
+					}
+				}
+				if (detailDelete) {
+					detailDelete.classList.toggle("hidden", !isSignedIn);
+				}
+
+				detailModal.showModal();
+			}
+
+			function parseTags(value) {
+				try {
+					const parsed = JSON.parse(value);
+					if (Array.isArray(parsed)) {
+						return parsed.join(" · ");
+					}
+				} catch {}
+				return value;
 			}
 		</script>
 	</body>
@@ -311,6 +430,7 @@ main {
 		border: 1px solid var(--border);
 		background: rgba(255, 255, 255, 0.72);
 		animation: rise 0.5s ease both;
+		cursor: pointer;
 	}
 
 	.card-row {
@@ -385,6 +505,57 @@ main {
 		box-shadow: 0 30px 60px -40px var(--shadow);
 		display: grid;
 		gap: 1rem;
+	}
+
+	.game-detail-card {
+		gap: 1.2rem;
+	}
+
+	.game-detail-body {
+		display: grid;
+		grid-template-columns: 160px 1fr;
+		gap: 1.2rem;
+		align-items: start;
+	}
+
+	.game-detail-cover {
+		width: 160px;
+		height: 90px;
+		border-radius: 14px;
+		object-fit: cover;
+		border: 1px solid var(--border);
+		background: rgba(255, 255, 255, 0.8);
+	}
+
+	.game-detail-info {
+		display: grid;
+		gap: 0.6rem;
+	}
+
+	.game-detail-description {
+		margin: 0;
+		line-height: 1.6;
+	}
+
+	.game-detail-footer {
+		justify-content: space-between;
+	}
+
+	.ghost.danger {
+		color: #8b1e24;
+		border-color: rgba(139, 30, 36, 0.25);
+		background: rgba(255, 240, 242, 0.9);
+	}
+
+	@media (max-width: 640px) {
+		.game-detail-body {
+			grid-template-columns: 1fr;
+		}
+
+		.game-detail-cover {
+			width: 100%;
+			height: 180px;
+		}
 	}
 
 	.modal-card header {
