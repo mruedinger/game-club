@@ -146,11 +146,19 @@ const playedGames = games.played as Game[];
 				if (target.closest("[data-action='close-add-game']")) {
 					addModal?.close();
 				}
-				if (target.closest(".suggestion-item") && titleInput) {
-					const selected = target.closest(".suggestion-item");
-					titleInput.value = selected?.dataset.name || selected?.textContent || "";
-					clearSuggestions();
+				const selected = target.closest(".suggestion-item");
+				if (selected && titleInput) {
+					applySuggestion(selected);
 				}
+			});
+
+			document.addEventListener("keydown", (event) => {
+				const target = event.target;
+				if (!(target instanceof HTMLElement)) return;
+				if (!target.classList.contains("suggestion-item")) return;
+				if (event.key !== "Enter" && event.key !== " ") return;
+				event.preventDefault();
+				applySuggestion(target);
 			});
 
 			bindSearch(titleInput, suggestionList);
@@ -205,18 +213,26 @@ const playedGames = games.played as Game[];
 					return;
 				}
 				items.forEach((item) => {
-					const button = document.createElement("button");
-					button.type = "button";
-					button.className = "suggestion-item";
-					button.textContent = item.name;
-					button.dataset.name = item.name;
-					list.appendChild(button);
+					const entry = document.createElement("div");
+					entry.className = "suggestion-item";
+					entry.textContent = item.name;
+					entry.dataset.name = item.name;
+					entry.setAttribute("role", "option");
+					entry.tabIndex = 0;
+					list.appendChild(entry);
 				});
 			}
 
 			function clearSuggestions(list) {
 				if (!list) return;
 				list.innerHTML = "";
+			}
+
+			function applySuggestion(selected) {
+				if (!titleInput) return;
+				titleInput.value = selected?.dataset.name || selected?.textContent || "";
+				clearSuggestions(suggestionList);
+				titleInput.focus();
 			}
 		</script>
 	</body>
@@ -428,9 +444,6 @@ main {
 	}
 
 	.suggestion-item {
-		all: unset;
-		appearance: none;
-		-webkit-appearance: none;
 		background: transparent;
 		border: 0;
 		border-radius: 0;
