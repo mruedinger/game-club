@@ -14,6 +14,7 @@ type GameRow = {
 	current_price_cents?: number;
 	best_price_cents?: number;
 	played_month?: string;
+	steam_app_id?: number;
 };
 
 type D1Database = {
@@ -35,7 +36,7 @@ export const GET: APIRoute = async ({ locals }) => {
 
 	const { results } = await db
 		.prepare(
-			"select id, title, submitted_by_email, status, created_at, cover_art_url, tags_json, description, time_to_beat_minutes, current_price_cents, best_price_cents, played_month " +
+			"select id, title, submitted_by_email, status, created_at, cover_art_url, tags_json, description, time_to_beat_minutes, current_price_cents, best_price_cents, played_month, steam_app_id " +
 				"from games order by status asc, title asc"
 		)
 		.bind()
@@ -71,16 +72,34 @@ export const POST: APIRoute = async ({ request, locals }) => {
 	}
 
 	const body = await readJson(request);
-	const title = typeof body?.title === "string" ? body.title.trim() : "";
+	const steamAppId = normalizeSteamAppId(body?.steamAppId);
+	const steamData = steamAppId ? await fetchSteamDetails(steamAppId) : null;
+	const title =
+		steamData?.name ??
+		(typeof body?.title === "string" ? body.title.trim() : "");
 	if (!title) {
 		return new Response("Title is required.", { status: 400 });
 	}
 
+	const coverArtUrl = steamData?.capsule_image ?? null;
+	const description = steamData?.short_description ?? null;
+	const tagsJson =
+		steamData?.genres && steamData.genres.length > 0
+			? JSON.stringify(steamData.genres.map((genre) => genre.description))
+			: null;
+
 	await db
 		.prepare(
-			"insert into games (title, submitted_by_email, status) values (?1, ?2, 'backlog')"
+			"insert into games (title, submitted_by_email, status, cover_art_url, tags_json, description, steam_app_id) values (?1, ?2, 'backlog', ?3, ?4, ?5, ?6)"
 		)
-		.bind(title, session.email.toLowerCase())
+		.bind(
+			title,
+			session.email.toLowerCase(),
+			coverArtUrl,
+			tagsJson,
+			description,
+			steamAppId
+		)
 		.run();
 
 	return new Response(null, { status: 204 });
@@ -94,12 +113,47 @@ function getDb(env: Record<string, unknown>): D1Database | undefined {
 	return undefined;
 }
 
-async function readJson(request: Request): Promise<{ title?: string } | null> {
+async function readJson(
+	request: Request
+): Promise<{ title?: string; steamAppId?: string | number } | null> {
 	const text = await request.text();
 	if (!text) return null;
 	try {
-		return JSON.parse(text) as { title?: string };
+		return JSON.parse(text) as { title?: string; steamAppId?: string | number };
 	} catch {
 		return null;
 	}
+}
+
+function normalizeSteamAppId(value: unknown): number | null {
+	if (typeof value === "number" && Number.isInteger(value)) return value;
+	if (typeof value === "string") {
+		const parsed = Number.parseInt(value, 10);
+		return Number.isNaN(parsed) ? null : parsed;
+	}
+	return null;
+}
+
+type SteamGenre = { description: string };
+type SteamAppDetails = {
+	name?: string;
+	capsule_image?: string;
+	short_description?: string;
+	genres?: SteamGenre[];
+};
+
+async function fetchSteamDetails(
+	appId: number
+): Promise<SteamAppDetails | null> {
+	const response = await fetch(
+		`https://store.steampowered.com/api/appdetails?appids=${appId}&cc=us&l=en`
+	);
+	if (!response.ok) return null;
+	const payload = (await response.json()) as Record<
+		string,
+		{ success: boolean; data?: SteamAppDetails }
+	>;
+	const entry = payload[String(appId)];
+	if (!entry || !entry.success || !entry.data) return null;
+	return entry.data;
 }

@@ -123,6 +123,7 @@ const playedGames = games.played as Game[];
 			const addForm = document.querySelector(".add-game-form");
 			const titleInput = document.querySelector("#game-title");
 			const suggestionList = document.querySelector(".suggestions");
+			const steamIdKey = "steamAppId";
 			let isSignedIn = false;
 
 			fetch("/api/me")
@@ -168,11 +169,12 @@ const playedGames = games.played as Game[];
 					event.preventDefault();
 					const title = titleInput?.value.trim();
 					if (!title) return;
-				const response = await fetch("/api/games", {
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({ title })
-				});
+					const steamAppId = titleInput?.dataset[steamIdKey];
+					const response = await fetch("/api/games", {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ title, steamAppId })
+					});
 					if (response.ok) {
 						addModal?.close();
 						window.location.reload();
@@ -184,6 +186,9 @@ const playedGames = games.played as Game[];
 				if (!input || !list) return;
 				let searchTimer;
 				input.addEventListener("input", () => {
+					if (input === titleInput) {
+						input.dataset[steamIdKey] = "";
+					}
 					const value = input.value.trim();
 					if (searchTimer) clearTimeout(searchTimer);
 					if (!value) {
@@ -217,6 +222,9 @@ const playedGames = games.played as Game[];
 					entry.className = "suggestion-item";
 					entry.textContent = item.name;
 					entry.dataset.name = item.name;
+					if (item.steamId) {
+						entry.dataset.steamId = String(item.steamId);
+					}
 					entry.setAttribute("role", "option");
 					entry.tabIndex = 0;
 					list.appendChild(entry);
@@ -231,6 +239,7 @@ const playedGames = games.played as Game[];
 			function applySuggestion(selected) {
 				if (!titleInput) return;
 				titleInput.value = selected?.dataset.name || selected?.textContent || "";
+				titleInput.dataset[steamIdKey] = selected?.dataset.steamId || "";
 				clearSuggestions(suggestionList);
 				titleInput.focus();
 			}
