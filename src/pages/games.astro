@@ -479,7 +479,13 @@ main {
 	}
 
 	.suggestion-item:hover {
-		background: rgba(232, 241, 252, 0.95);
+		background-color: rgba(222, 235, 251, 0.9);
+		box-shadow: inset 0 0 0 9999px rgba(222, 235, 251, 0.3);
+	}
+
+	.suggestion-item:focus-visible {
+		outline: 2px solid rgba(59, 110, 165, 0.35);
+		outline-offset: -1px;
 	}
 
 	.suggestion-item:last-child {
