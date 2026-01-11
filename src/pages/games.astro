@@ -104,12 +104,12 @@ const playedGames = games.played as Game[];
 						×
 					</button>
 				</header>
-				<div class="field">
+				<div class="field search-field">
 					<label for="game-title">Game title</label>
 					<input id="game-title" name="title" type="text" placeholder="Search for a game" autocomplete="off" required />
+					<div class="suggestions" aria-live="polite"></div>
 					<p class="muted small">Start typing to see suggestions.</p>
 				</div>
-				<div class="suggestions" aria-live="polite"></div>
 				<footer>
 					<button class="ghost" type="button" data-action="close-add-game">Cancel</button>
 					<button class="cta" type="submit">Submit</button>
@@ -194,6 +194,7 @@ const playedGames = games.played as Game[];
 			function renderSuggestions(items) {
 				if (!suggestionList) return;
 				suggestionList.innerHTML = "";
+				suggestionList.classList.add("suggestions-open");
 				if (items.length === 0) {
 					const empty = document.createElement("p");
 					empty.className = "muted small";
@@ -212,7 +213,9 @@ const playedGames = games.played as Game[];
 			}
 
 			function clearSuggestions() {
-				if (suggestionList) suggestionList.innerHTML = "";
+				if (!suggestionList) return;
+				suggestionList.innerHTML = "";
+				suggestionList.classList.remove("suggestions-open");
 			}
 		</script>
 	</body>
@@ -375,6 +378,10 @@ main {
 		gap: 0.3rem;
 	}
 
+	.search-field {
+		position: relative;
+	}
+
 	label {
 		font-weight: 600;
 		font-size: 0.85rem;
@@ -393,8 +400,29 @@ main {
 	}
 
 	.suggestions {
+		position: absolute;
+		top: calc(100% + 0.4rem);
+		left: 0;
+		right: 0;
 		display: grid;
 		gap: 0.5rem;
+		padding: 0.5rem;
+		border-radius: 14px;
+		border: 1px solid var(--border);
+		background: rgba(255, 255, 255, 0.95);
+		box-shadow: 0 20px 40px -30px var(--shadow);
+		opacity: 0;
+		transform: translateY(-6px);
+		pointer-events: none;
+		max-height: 240px;
+		overflow-y: auto;
+		z-index: 5;
+	}
+
+	.suggestions-open {
+		opacity: 1;
+		transform: translateY(0);
+		pointer-events: auto;
 	}
 
 	.suggestion-item {
@@ -409,14 +437,6 @@ main {
 	.suggestion-item:hover {
 		transform: translateY(-1px);
 		box-shadow: 0 12px 20px -18px var(--shadow);
-	}
-
-	.icon-button {
-		width: 36px;
-		height: 36px;
-		padding: 0;
-		font-size: 1.2rem;
-		line-height: 1;
 	}
 
 	.small {
