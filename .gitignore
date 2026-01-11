@@ -23,5 +23,8 @@ pnpm-debug.log*
 # macOS-specific files
 .DS_Store
 
+# screenshots
+game-modal.png
+
 # jetbrains setting folder
 .idea/
