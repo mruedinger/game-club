@@ -437,6 +437,7 @@ main {
 		border-radius: 12px;
 		border: 1px solid rgba(33, 51, 70, 0.08);
 		background: rgba(255, 255, 255, 0.95);
+		cursor: pointer;
 	}
 
 	.suggestions:empty {
@@ -464,6 +465,10 @@ main {
 		width: 100%;
 	}
 
+	.suggestion-item * {
+		cursor: pointer;
+	}
+
 	.suggestion-item::before {
 		content: "";
 		width: 6px;
@@ -474,8 +479,7 @@ main {
 	}
 
 	.suggestion-item:hover {
-		background: rgba(240, 246, 253, 0.9);
-		cursor: pointer;
+		background: rgba(232, 241, 252, 0.95);
 	}
 
 	.suggestion-item:last-child {
