@@ -416,11 +416,11 @@ main {
 
 	.suggestions {
 		display: grid;
-		gap: 0.5rem;
-		padding: 0.4rem;
-		border-radius: 14px;
+		gap: 0;
+		padding: 0;
+		border-radius: 12px;
 		border: 1px solid rgba(33, 51, 70, 0.08);
-		background: rgba(247, 250, 255, 0.9);
+		background: rgba(255, 255, 255, 0.95);
 	}
 
 	.suggestions:empty {
@@ -430,19 +430,20 @@ main {
 	.suggestion-item {
 		appearance: none;
 		-webkit-appearance: none;
-		background: rgba(255, 255, 255, 0.98);
-		border: 1px solid rgba(33, 51, 70, 0.08);
-		border-radius: 10px;
-		box-shadow: 0 6px 12px -12px var(--shadow);
+		background: transparent;
+		border: none;
+		border-radius: 0;
+		box-shadow: none;
 		color: var(--ink-soft);
 		cursor: pointer;
 		display: flex;
 		align-items: center;
 		gap: 0.6rem;
-		font-weight: 600;
+		font-weight: 500;
 		letter-spacing: 0.01em;
 		text-align: left;
-		padding: 0.55rem 0.85rem;
+		padding: 0.7rem 0.9rem;
+		border-bottom: 1px solid rgba(33, 51, 70, 0.06);
 		text-transform: none;
 	}
 
@@ -452,14 +453,15 @@ main {
 		height: 6px;
 		border-radius: 999px;
 		background: var(--accent);
-		opacity: 0.5;
+		opacity: 0.35;
 	}
 
 	.suggestion-item:hover {
-		border-color: rgba(59, 110, 165, 0.35);
-		background: rgba(240, 246, 253, 0.98);
-		transform: translateY(-1px);
-		box-shadow: 0 12px 20px -18px var(--shadow);
+		background: rgba(240, 246, 253, 0.9);
+	}
+
+	.suggestion-item:last-child {
+		border-bottom: none;
 	}
 
 	.small {
