@@ -50,16 +50,6 @@ const playedGames = games.played as Game[];
 					<p>Games waiting to be picked in an upcoming poll.</p>
 					<button class="cta add-game hidden" type="button">Add a game</button>
 				</div>
-				<div class="inline-search hidden">
-					<label class="inline-label" for="inline-game-search">Add a game</label>
-					<input
-						id="inline-game-search"
-						type="text"
-						placeholder="Search Steam for a game"
-						autocomplete="off"
-					/>
-					<div class="inline-suggestions" aria-live="polite"></div>
-				</div>
 				<div class="games-grid">
 					{backlogGames.map((game, index) => (
 						<article class="game-card" style={`animation-delay: ${index * 70}ms`}>
@@ -133,16 +123,12 @@ const playedGames = games.played as Game[];
 			const addForm = document.querySelector(".add-game-form");
 			const titleInput = document.querySelector("#game-title");
 			const suggestionList = document.querySelector(".suggestions");
-			const inlineSearch = document.querySelector(".inline-search");
-			const inlineInput = document.querySelector("#inline-game-search");
-			const inlineSuggestions = document.querySelector(".inline-suggestions");
 			let isSignedIn = false;
 
 			fetch("/api/me")
 				.then((response) => {
 					if (!response.ok) throw new Error("Not authenticated");
 					if (addButton) addButton.classList.remove("hidden");
-					if (inlineSearch) inlineSearch.classList.remove("hidden");
 					isSignedIn = true;
 				})
 				.catch(() => {});
@@ -168,18 +154,17 @@ const playedGames = games.played as Game[];
 			});
 
 			bindSearch(titleInput, suggestionList);
-			bindSearch(inlineInput, inlineSuggestions);
 
 			if (addForm) {
 				addForm.addEventListener("submit", async (event) => {
 					event.preventDefault();
 					const title = titleInput?.value.trim();
 					if (!title) return;
-					const response = await fetch("/api/games", {
-						method: "POST",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({ title })
-					});
+				const response = await fetch("/api/games", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ title })
+				});
 					if (response.ok) {
 						addModal?.close();
 						window.location.reload();
@@ -429,50 +414,47 @@ main {
 		color: var(--ink-soft);
 	}
 
-	.inline-suggestions,
 	.suggestions {
 		display: grid;
 		gap: 0.5rem;
-		padding: 0.6rem;
+		padding: 0.4rem;
 		border-radius: 14px;
-		border: 1px solid var(--border);
-		background: rgba(255, 255, 255, 0.95);
-		box-shadow: 0 16px 30px -26px var(--shadow);
+		border: 1px solid rgba(33, 51, 70, 0.08);
+		background: rgba(247, 250, 255, 0.9);
 	}
 
-	.inline-suggestions:empty,
 	.suggestions:empty {
 		display: none;
 	}
 
 	.suggestion-item {
 		text-align: left;
-		border-radius: 12px;
+		border-radius: 10px;
 		border: 1px solid transparent;
-		padding: 0.65rem 0.9rem;
-		background: rgba(238, 244, 251, 0.7);
+		padding: 0.55rem 0.85rem;
+		background: rgba(255, 255, 255, 0.95);
 		cursor: pointer;
 		display: flex;
 		align-items: center;
-		gap: 0.6rem;
-		font-weight: 600;
+		gap: 0.55rem;
+		font-weight: 500;
 		color: var(--ink-soft);
 	}
 
 	.suggestion-item::before {
 		content: "";
-		width: 8px;
-		height: 8px;
+		width: 6px;
+		height: 6px;
 		border-radius: 999px;
 		background: var(--accent);
-		opacity: 0.6;
+		opacity: 0.5;
 	}
 
 	.suggestion-item:hover {
-		border-color: rgba(59, 110, 165, 0.4);
-		background: rgba(227, 238, 250, 0.9);
+		border-color: rgba(59, 110, 165, 0.3);
+		background: rgba(240, 246, 253, 0.95);
 		transform: translateY(-1px);
-		box-shadow: 0 14px 24px -20px var(--shadow);
+		box-shadow: 0 10px 18px -18px var(--shadow);
 	}
 
 	.small {
