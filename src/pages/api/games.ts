@@ -5,6 +5,8 @@ type GameRow = {
 	id: number;
 	title: string;
 	submitted_by_email: string;
+	submitted_by_name?: string;
+	submitted_by_alias?: string;
 	status: "backlog" | "current" | "played";
 	created_at: string;
 	cover_art_url?: string;
@@ -36,8 +38,8 @@ export const GET: APIRoute = async ({ locals }) => {
 
 	const { results } = await db
 		.prepare(
-			"select id, title, submitted_by_email, status, created_at, cover_art_url, tags_json, description, time_to_beat_minutes, current_price_cents, best_price_cents, played_month, steam_app_id " +
-				"from games order by status asc, title asc"
+			"select games.id, games.title, games.submitted_by_email, members.name as submitted_by_name, members.alias as submitted_by_alias, games.status, games.created_at, games.cover_art_url, games.tags_json, games.description, games.time_to_beat_minutes, games.current_price_cents, games.best_price_cents, games.played_month, games.steam_app_id " +
+				"from games left join members on members.email = games.submitted_by_email order by games.status asc, games.title asc"
 		)
 		.bind()
 		.all<GameRow>();

@@ -12,6 +12,8 @@ type Game = {
 	cover_art_url?: string;
 	description?: string;
 	submitted_by_email?: string;
+	submitted_by_name?: string;
+	submitted_by_alias?: string;
 };
 
 const gamesResponse = await fetch(new URL("/api/games", Astro.url), {
@@ -64,19 +66,20 @@ const playedGames = games.played as Game[];
 							data-description={game.description || ""}
 							data-cover={game.cover_art_url || ""}
 							data-submitted={game.submitted_by_email || ""}
+							data-submitted-name={game.submitted_by_name || ""}
+							data-submitted-alias={game.submitted_by_alias || ""}
 						>
 							<h3>{game.title}</h3>
+							<div class="game-cover">
+								{game.cover_art_url ? (
+									<img src={game.cover_art_url} alt={`${game.title} cover art`} loading="lazy" />
+								) : (
+									<div class="cover-placeholder">Cover coming soon</div>
+								)}
+							</div>
 							<p class="muted">
 								{game.tags_json ? JSON.parse(game.tags_json).join(" · ") : "Tags coming soon"}
 							</p>
-							<div class="card-row">
-								<span class="chip subtle">
-									{game.time_to_beat_minutes
-										? `${Math.round(game.time_to_beat_minutes / 60)} hrs`
-										: "Time TBD"}
-								</span>
-								<span class="chip subtle">Submitted by A.</span>
-							</div>
 						</article>
 					))}
 				</div>
@@ -98,19 +101,20 @@ const playedGames = games.played as Game[];
 							data-description={game.description || ""}
 							data-cover={game.cover_art_url || ""}
 							data-submitted={game.submitted_by_email || ""}
+							data-submitted-name={game.submitted_by_name || ""}
+							data-submitted-alias={game.submitted_by_alias || ""}
 						>
 							<h3>{game.title}</h3>
+							<div class="game-cover">
+								{game.cover_art_url ? (
+									<img src={game.cover_art_url} alt={`${game.title} cover art`} loading="lazy" />
+								) : (
+									<div class="cover-placeholder">Cover coming soon</div>
+								)}
+							</div>
 							<p class="muted">
 								{game.tags_json ? JSON.parse(game.tags_json).join(" · ") : "Tags coming soon"}
 							</p>
-							<div class="card-row">
-								<span class="chip subtle">
-									{game.time_to_beat_minutes
-										? `${Math.round(game.time_to_beat_minutes / 60)} hrs`
-										: "Time TBD"}
-								</span>
-								<span class="chip subtle">{game.played_month || "Played date TBD"}</span>
-							</div>
 						</article>
 					))}
 				</div>
@@ -324,6 +328,8 @@ const playedGames = games.played as Game[];
 				const description = card.dataset.description || "Description coming soon.";
 				const tags = card.dataset.tags ? parseTags(card.dataset.tags) : "Tags coming soon";
 				const submitted = card.dataset.submitted || "";
+				const submittedName = card.dataset.submittedName || "";
+				const submittedAlias = card.dataset.submittedAlias || "";
 				const cover = card.dataset.cover || "";
 				selectedGameId = card.dataset.id || null;
 
@@ -331,9 +337,9 @@ const playedGames = games.played as Game[];
 				if (detailDescription) detailDescription.textContent = description;
 				if (detailTags) detailTags.textContent = tags;
 				if (detailSubmitted) {
-					detailSubmitted.textContent = submitted
-						? `Submitted by ${submitted}`
-						: "Submitted by a member";
+					const submitter =
+						submittedAlias || submittedName || submitted || "a member";
+					detailSubmitted.textContent = `Submitted by ${submitter}`;
 				}
 				if (detailCover) {
 					if (cover) {
@@ -431,6 +437,30 @@ main {
 		background: rgba(255, 255, 255, 0.72);
 		animation: rise 0.5s ease both;
 		cursor: pointer;
+	}
+
+	.game-cover {
+		margin: 0.8rem 0 0.7rem;
+		border-radius: 14px;
+		overflow: hidden;
+		border: 1px solid var(--border);
+		background: rgba(255, 255, 255, 0.8);
+		aspect-ratio: 16 / 9;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.game-cover img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		display: block;
+	}
+
+	.cover-placeholder {
+		font-size: 0.8rem;
+		color: var(--muted);
 	}
 
 	.card-row {
