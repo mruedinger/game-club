@@ -24,7 +24,7 @@ pnpm-debug.log*
 .DS_Store
 
 # screenshots
-game-modal.png
+screenshots/
 
 # jetbrains setting folder
 .idea/
