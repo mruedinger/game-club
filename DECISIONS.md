@@ -17,3 +17,5 @@
 ## 2026-01-08
 - Auth: Switch to Google OAuth (Authorization Code + PKCE) with allowlists.
   - Reason: Hosting-agnostic, simpler multi-project user management.
+- User identity display: Alias > Name > Email.
+  - Reason: Prefer user-chosen identifiers while keeping a reliable fallback.
