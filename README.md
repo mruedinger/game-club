@@ -15,8 +15,9 @@ games, vote on the next pick, and track the current and previously played games.
 ## Stack
 - Astro (frontend)
 - Cloudflare Pages + Pages Functions (API)
-- Cloudflare Access (Google) for invite-only auth
+- Google OAuth (Authorization Code + PKCE)
 - Cloudflare D1 (SQLite) for data
+- IsThereAnyDeal (prices)
 
 ## Development
 ```bash
@@ -29,13 +30,24 @@ npm run dev
 - Configure the same values in Cloudflare Pages environment variables.
 - Redirect URI should be `/api/auth/callback` on your chosen domain.
 
+## IsThereAnyDeal (prices)
+- Set `ITAD_API_KEY` in local `.env` and in Pages environment variables.
+- Prices are pulled when a game is added and via a scheduled sync worker.
+
+## Scheduled price sync
+Deploy the worker defined in `wrangler.itad-sync.toml`:
+```bash
+npx wrangler deploy -c wrangler.itad-sync.toml
+npx wrangler secret put ITAD_API_KEY -c wrangler.itad-sync.toml
+```
+
 ## Members (D1)
 - OAuth checks the `members` table in D1 first.
 - Migration file: `migrations/0001_members.sql`.
 
 ## Project Docs
 - `ARCHITECTURE.md` for platform and data model notes
-- `BACKLOG.md` for prioritized work items
+- `DECISIONS.md` for key product and engineering decisions
 
 ## Repo Layout
 - `src/pages/` Astro pages (routes)
