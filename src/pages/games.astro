@@ -179,6 +179,8 @@ const playedGames = games.played as Game[];
 			const detailCover = document.querySelector(".game-detail-cover");
 			const detailDelete = document.querySelector(".game-detail-delete");
 			let selectedGameId = null;
+			let currentUserEmail = "";
+			let currentUserRole = "";
 			const steamIdKey = "steamAppId";
 			let isSignedIn = false;
 
@@ -187,6 +189,11 @@ const playedGames = games.played as Game[];
 					if (!response.ok) throw new Error("Not authenticated");
 					if (addButton) addButton.classList.remove("hidden");
 					isSignedIn = true;
+					return response.json();
+				})
+				.then((data) => {
+					if (data?.email) currentUserEmail = String(data.email).toLowerCase();
+					if (data?.role) currentUserRole = String(data.role);
 				})
 				.catch(() => {});
 
@@ -354,6 +361,13 @@ const playedGames = games.played as Game[];
 				}
 				if (detailDelete) {
 					detailDelete.classList.toggle("hidden", !isSignedIn);
+					if (isSignedIn) {
+						const isOwner =
+							submitted && currentUserEmail && submitted.toLowerCase() === currentUserEmail;
+						const isAdmin = currentUserRole === "admin";
+						const canDelete = isOwner || isAdmin;
+						detailDelete.disabled = !canDelete;
+					}
 				}
 
 				detailModal.showModal();

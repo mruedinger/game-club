@@ -50,6 +50,12 @@ main {
 	cursor: pointer;
 }
 
+.ghost:disabled {
+	opacity: 0.55;
+	cursor: not-allowed;
+	box-shadow: none;
+}
+
 .icon-button {
 	width: 36px;
 	height: 36px;
