@@ -35,6 +35,18 @@ main {
 	align-items: start;
 }
 
+.games-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(220px, 260px));
+	gap: 1.2rem;
+	justify-content: start;
+}
+
+.games-grid .game-card {
+	width: 100%;
+	max-width: 260px;
+}
+
 .ghost {
 	display: inline-flex;
 	align-items: center;
