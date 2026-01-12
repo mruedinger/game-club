@@ -89,7 +89,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 		return new Response("Title is required.", { status: 400 });
 	}
 
-	const coverArtUrl = steamData?.capsule_image ?? null;
+	const coverArtUrl = steamData?.header_image ?? null;
 	const description = steamData?.short_description ?? null;
 	const tagsJson =
 		steamData?.genres && steamData.genres.length > 0
@@ -257,7 +257,7 @@ function getCurrentMonth() {
 type SteamGenre = { description: string };
 type SteamAppDetails = {
 	name?: string;
-	capsule_image?: string;
+	header_image?: string;
 	short_description?: string;
 	genres?: SteamGenre[];
 };
