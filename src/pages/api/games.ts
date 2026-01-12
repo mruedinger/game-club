@@ -167,7 +167,12 @@ function getDb(env: Record<string, unknown>): D1Database | undefined {
 
 async function readJson(
 	request: Request
-): Promise<{ title?: string; steamAppId?: string | number; id?: string | number } | null> {
+): Promise<{
+	title?: string;
+	steamAppId?: string | number;
+	id?: string | number;
+	action?: string;
+} | null> {
 	const text = await request.text();
 	if (!text) return null;
 	try {
@@ -175,6 +180,7 @@ async function readJson(
 			title?: string;
 			steamAppId?: string | number;
 			id?: string | number;
+			action?: string;
 		};
 	} catch {
 		return null;
@@ -197,6 +203,55 @@ function normalizeSteamAppId(value: unknown): number | null {
 		return Number.isNaN(parsed) ? null : parsed;
 	}
 	return null;
+}
+
+export const PATCH: APIRoute = async ({ request, locals }) => {
+	const env = getRuntimeEnv(locals.runtime?.env);
+	const session = await readSession(request, env);
+	if (!session) {
+		return new Response("Authentication required.", { status: 401 });
+	}
+	if (session.role !== "admin") {
+		return new Response("Not authorized.", { status: 403 });
+	}
+
+	const db = getDb(env);
+	if (!db) {
+		return new Response("Games database not configured.", { status: 500 });
+	}
+
+	const body = await readJson(request);
+	const id = normalizeGameId(body?.id);
+	if (!id) {
+		return new Response("Game id is required.", { status: 400 });
+	}
+
+	if (body?.action !== "set-current") {
+		return new Response("Unsupported action.", { status: 400 });
+	}
+
+	const playedMonth = getCurrentMonth();
+
+	await db
+		.prepare(
+			"update games set status = 'played', played_month = coalesce(played_month, ?1) where status = 'current' and id != ?2"
+		)
+		.bind(playedMonth, id)
+		.run();
+
+	await db
+		.prepare("update games set status = 'current', played_month = ?1 where id = ?2")
+		.bind(playedMonth, id)
+		.run();
+
+	return new Response(null, { status: 204 });
+};
+
+function getCurrentMonth() {
+	const now = new Date();
+	const year = now.getFullYear();
+	const month = String(now.getMonth() + 1).padStart(2, "0");
+	return `${year}-${month}`;
 }
 
 type SteamGenre = { description: string };

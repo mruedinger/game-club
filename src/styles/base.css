@@ -61,6 +61,106 @@ main {
 	max-width: 260px;
 }
 
+.game-card {
+	padding: 1.2rem;
+	border-radius: 18px;
+	border: 1px solid var(--border);
+	background: rgba(255, 255, 255, 0.72);
+	cursor: pointer;
+}
+
+.game-cover {
+	margin: 0.8rem 0 0.7rem;
+	border-radius: 14px;
+	overflow: hidden;
+	border: 1px solid var(--border);
+	background: rgba(255, 255, 255, 0.8);
+	aspect-ratio: 16 / 9;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.game-cover img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
+}
+
+.cover-placeholder {
+	font-size: 0.8rem;
+	color: var(--muted);
+}
+
+.game-detail-card {
+	gap: 1.2rem;
+}
+
+.game-detail-body {
+	display: grid;
+	grid-template-columns: 160px 1fr;
+	gap: 1.2rem;
+	align-items: start;
+}
+
+.game-detail-cover {
+	width: 160px;
+	height: 90px;
+	border-radius: 14px;
+	object-fit: cover;
+	border: 1px solid var(--border);
+	background: rgba(255, 255, 255, 0.8);
+}
+
+.game-detail-info {
+	display: grid;
+	gap: 0.6rem;
+}
+
+.game-detail-description {
+	margin: 0;
+	line-height: 1.6;
+}
+
+.game-detail-footer {
+	justify-content: space-between;
+}
+
+.game-detail-links {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+}
+
+.small-pill {
+	padding: 0.35rem 0.7rem;
+	font-size: 0.75rem;
+}
+
+.game-detail-prices {
+	display: flex;
+	gap: 0.6rem;
+	flex-wrap: wrap;
+}
+
+.ghost.danger {
+	color: #8b1e24;
+	border-color: rgba(139, 30, 36, 0.25);
+	background: rgba(255, 240, 242, 0.9);
+}
+
+@media (max-width: 640px) {
+	.game-detail-body {
+		grid-template-columns: 1fr;
+	}
+
+	.game-detail-cover {
+		width: 100%;
+		height: 180px;
+	}
+}
+
 .ghost {
 	display: inline-flex;
 	align-items: center;
@@ -74,12 +174,73 @@ main {
 	color: inherit;
 	text-decoration: none;
 	cursor: pointer;
+	transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .ghost:disabled {
 	opacity: 0.55;
 	cursor: not-allowed;
 	box-shadow: none;
+}
+
+.ghost:hover {
+	transform: translateY(-1px);
+	box-shadow: 0 18px 30px -22px var(--accent-dark);
+}
+
+.cta {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0.7rem 1.4rem;
+	border-radius: 999px;
+	font-weight: 600;
+	font-size: 0.9rem;
+	background: var(--accent);
+	color: #fff;
+	border: none;
+	box-shadow: 0 12px 20px -16px var(--accent-dark);
+	cursor: pointer;
+	transition: transform 0.2s ease, box-shadow 0.2s ease;
+	width: fit-content;
+}
+
+.cta:hover {
+	transform: translateY(-1px);
+	box-shadow: 0 18px 30px -22px var(--accent-dark);
+}
+
+.hidden {
+	display: none;
+}
+
+.card-row {
+	display: flex;
+	gap: 1rem;
+	align-items: center;
+	flex-wrap: wrap;
+	margin: 0.6rem 0 0;
+}
+
+.chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+	border-radius: 999px;
+	padding: 0.4rem 0.85rem;
+	font-size: 0.75rem;
+	background: var(--tan);
+	font-weight: 500;
+}
+
+.chip.subtle {
+	background: rgba(255, 255, 255, 0.7);
+	border: 1px solid var(--border);
+}
+
+.chip.strong {
+	background: var(--accent);
+	color: #fff;
 }
 
 .icon-button {
