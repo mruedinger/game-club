@@ -19,3 +19,5 @@
   - Reason: Hosting-agnostic, simpler multi-project user management.
 - User identity display: Alias > Name > Email.
   - Reason: Prefer user-chosen identifiers while keeping a reliable fallback.
+- UI styling: Themes, fonts, spacing, and all other UI elements are centralized in `src/styles/base.css`.
+  - Reason: Ensure consistent styling across pages and reduce duplicated UI rules.
