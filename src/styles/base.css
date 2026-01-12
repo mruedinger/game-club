@@ -35,6 +35,20 @@ main {
 	align-items: start;
 }
 
+.hero-actions {
+	margin-top: 1.5rem;
+	display: flex;
+	gap: 1rem;
+	flex-wrap: wrap;
+	justify-content: flex-start;
+}
+
+@media (max-width: 600px) {
+	.hero-actions {
+		justify-content: center;
+	}
+}
+
 .games-grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(220px, 260px));
