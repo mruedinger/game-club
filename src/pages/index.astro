@@ -2,6 +2,31 @@
 import AppHeader from "../components/AppHeader.astro";
 import "../styles/base.css";
 
+type Game = {
+	id: number;
+	title: string;
+	status: "backlog" | "current" | "played";
+	tags_json?: string;
+	played_month?: string;
+	cover_art_url?: string;
+	description?: string;
+	submitted_by_email?: string;
+	submitted_by_name?: string;
+	submitted_by_alias?: string;
+	steam_app_id?: number;
+	itad_slug?: string;
+	current_price_cents?: number;
+	best_price_cents?: number;
+};
+
+const gamesResponse = await fetch(new URL("/api/games", Astro.url), {
+	headers: Astro.request.headers
+});
+const games = gamesResponse.ok
+	? await gamesResponse.json()
+	: { current: [] };
+const currentGame = (games.current as Game[])[0] ?? null;
+
 const sampleGames = [
 	{ title: "Outer Wilds", tags: ["Exploration", "Puzzle", "Narrative"], length: "16-22 hrs" },
 	{ title: "Hades", tags: ["Roguelike", "Action"], length: "20-30 hrs" },
@@ -10,11 +35,14 @@ const sampleGames = [
 	{ title: "Pentiment", tags: ["Narrative", "RPG"], length: "15-20 hrs" },
 	{ title: "Celeste", tags: ["Platformer", "Indie"], length: "10-15 hrs" }
 ];
-const playedGames = [
-	{ title: "Disco Elysium", month: "Oct 2025" },
-	{ title: "Inside", month: "Nov 2025" },
-	{ title: "Citizen Sleeper", month: "Dec 2025" }
-];
+
+function formatMonthYear(value?: string) {
+	if (!value) return "Month TBD";
+	const [year, month] = value.split("-");
+	if (!year || !month) return value;
+	const date = new Date(Number(year), Number(month) - 1, 1);
+	return date.toLocaleString("en-US", { month: "long", year: "numeric" });
+}
 ---
 
 <html lang="en">
@@ -37,21 +65,61 @@ const playedGames = [
 				<div class="hero-text">
 					<p class="eyebrow">Monthly(ish) Video Game Club</p>
 					<h1>A Shindigging good time.</h1>
-					<p class="lead">Next meeting of the minds: Tuesday February 3rd @ 8:15pm</p>
+					<p class="lead">Next meeting Tuesday February 3rd @ 8:15</p>
 				</div>
 				<div class="hero-card">
-					<h2>Next meetup</h2>
-					<div class="card-row">
-						<span>Feb 22, 7:00 PM</span>
-						<span class="chip">Hybrid</span>
-					</div>
-					<p class="muted">
-						Bring notes, favorite moments, and one question you want the group to chew on.
-					</p>
-					<div class="stack">
-						<div class="stack-item">5 members confirmed</div>
-						<div class="stack-item">2 topics queued</div>
-					</div>
+					<h2>Current game</h2>
+					<p class="muted">{formatMonthYear(currentGame?.played_month)}</p>
+					{currentGame ? (
+						<div class="games-grid">
+							<article
+								class="game-card"
+								data-id={currentGame.id}
+								data-title={currentGame.title}
+								data-tags={currentGame.tags_json || ""}
+								data-description={currentGame.description || ""}
+								data-cover={currentGame.cover_art_url || ""}
+								data-submitted={currentGame.submitted_by_email || ""}
+								data-submitted-name={currentGame.submitted_by_name || ""}
+								data-submitted-alias={currentGame.submitted_by_alias || ""}
+								data-steam-app-id={
+									currentGame.steam_app_id ? String(currentGame.steam_app_id) : ""
+								}
+								data-itad-slug={currentGame.itad_slug || ""}
+								data-current-price={
+									typeof currentGame.current_price_cents === "number"
+										? String(currentGame.current_price_cents)
+										: ""
+								}
+								data-best-price={
+									typeof currentGame.best_price_cents === "number"
+										? String(currentGame.best_price_cents)
+										: ""
+								}
+								data-status={currentGame.status}
+							>
+								<h3>{currentGame.title}</h3>
+								<div class="game-cover">
+									{currentGame.cover_art_url ? (
+										<img
+											src={currentGame.cover_art_url}
+											alt={`${currentGame.title} cover art`}
+											loading="lazy"
+										/>
+									) : (
+										<div class="cover-placeholder">Cover coming soon</div>
+									)}
+								</div>
+								<p class="muted">
+									{currentGame.tags_json
+										? JSON.parse(currentGame.tags_json).join(" · ")
+										: "Tags coming soon"}
+								</p>
+							</article>
+						</div>
+					) : (
+						<p class="muted">No current game set yet.</p>
+					)}
 				</div>
 			</section>
 
@@ -68,9 +136,9 @@ const playedGames = [
 							discovery.
 						</p>
 						<div class="chips">
-							<span>Exploration</span>
-							<span>Puzzle</span>
-							<span>16-22 hrs</span>
+							<span class="chip">Exploration</span>
+							<span class="chip">Puzzle</span>
+							<span class="chip">16-22 hrs</span>
 						</div>
 					</div>
 					<div class="current-meta">
@@ -116,6 +184,215 @@ const playedGames = [
 			</section>
 
 		</main>
+
+		<dialog class="modal" id="game-detail-modal">
+			<form class="modal-card game-detail-card" method="dialog">
+				<header>
+					<h3 class="game-detail-title">Game details</h3>
+					<button class="ghost icon-button" type="button" data-action="close-game-detail" aria-label="Close">
+						×
+					</button>
+				</header>
+				<div class="game-detail-body">
+					<img class="game-detail-cover" alt="" />
+					<div class="game-detail-info">
+						<p class="muted game-detail-tags"></p>
+						<p class="game-detail-description"></p>
+						<div class="game-detail-links">
+							<a class="ghost small-pill game-detail-steam" target="_blank" rel="noreferrer" title="View on Steam">Steam</a>
+							<a class="ghost small-pill game-detail-hltb" target="_blank" rel="noreferrer" title="View on HowLongToBeat">HLTB</a>
+							<a class="ghost small-pill game-detail-itad" target="_blank" rel="noreferrer" title="View on IsThereAnyDeal">ITAD</a>
+						</div>
+						<div class="game-detail-prices">
+							<span class="chip subtle game-detail-current">Current: TBD</span>
+							<span class="chip subtle game-detail-best">Best: TBD</span>
+						</div>
+						<p class="muted small game-detail-submitted"></p>
+					</div>
+				</div>
+				<footer class="game-detail-footer">
+					<button class="ghost" type="button" data-action="close-game-detail">Close</button>
+					<button class="ghost game-detail-set-current hidden" type="button">Set current</button>
+					<button class="ghost danger game-detail-delete hidden" type="button">Delete</button>
+				</footer>
+			</form>
+		</dialog>
+
+		<script>
+			const detailModal = document.querySelector("#game-detail-modal");
+			const detailTitle = document.querySelector(".game-detail-title");
+			const detailTags = document.querySelector(".game-detail-tags");
+			const detailDescription = document.querySelector(".game-detail-description");
+			const detailSubmitted = document.querySelector(".game-detail-submitted");
+			const detailCover = document.querySelector(".game-detail-cover");
+			const detailDelete = document.querySelector(".game-detail-delete");
+			const detailSetCurrent = document.querySelector(".game-detail-set-current");
+			const detailSteam = document.querySelector(".game-detail-steam");
+			const detailHltb = document.querySelector(".game-detail-hltb");
+			const detailItad = document.querySelector(".game-detail-itad");
+			const detailCurrent = document.querySelector(".game-detail-current");
+			const detailBest = document.querySelector(".game-detail-best");
+			let selectedGameId = null;
+			let currentUserEmail = "";
+			let currentUserRole = "";
+			let isSignedIn = false;
+
+			fetch("/api/me")
+				.then((response) => {
+					if (!response.ok) throw new Error("Not authenticated");
+					isSignedIn = true;
+					return response.json();
+				})
+				.then((data) => {
+					if (data?.email) currentUserEmail = String(data.email).toLowerCase();
+					if (data?.role) currentUserRole = String(data.role);
+				})
+				.catch(() => {});
+
+			document.addEventListener("click", (event) => {
+				const target = event.target;
+				if (!(target instanceof HTMLElement)) return;
+				if (target.closest("[data-action='close-game-detail']")) {
+					detailModal?.close();
+				}
+				const card = target.closest(".game-card");
+				if (card && detailModal) {
+					openGameDetail(card);
+				}
+			});
+
+			if (detailDelete) {
+				detailDelete.addEventListener("click", async () => {
+					if (!selectedGameId) return;
+					const response = await fetch("/api/games", {
+						method: "DELETE",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ id: selectedGameId })
+					});
+					if (response.ok) {
+						detailModal?.close();
+						window.location.reload();
+					}
+				});
+			}
+
+			if (detailSetCurrent) {
+				detailSetCurrent.addEventListener("click", async () => {
+					if (!selectedGameId) return;
+					const response = await fetch("/api/games", {
+						method: "PATCH",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ id: selectedGameId, action: "set-current" })
+					});
+					if (response.ok) {
+						detailModal?.close();
+						window.location.reload();
+					}
+				});
+			}
+
+			function openGameDetail(card) {
+				if (!detailModal) return;
+				const title = card.dataset.title || "Untitled game";
+				const description = card.dataset.description || "Description coming soon.";
+				const tags = card.dataset.tags ? parseTags(card.dataset.tags) : "Tags coming soon";
+				const submitted = card.dataset.submitted || "";
+				const submittedName = card.dataset.submittedName || "";
+				const submittedAlias = card.dataset.submittedAlias || "";
+				const cover = card.dataset.cover || "";
+				const steamAppId = card.dataset.steamAppId || "";
+				const itadSlug = card.dataset.itadSlug || "";
+				const currentPrice = card.dataset.currentPrice || "";
+				const bestPrice = card.dataset.bestPrice || "";
+				const status = card.dataset.status || "";
+				selectedGameId = card.dataset.id || null;
+
+				if (detailTitle) detailTitle.textContent = title;
+				if (detailDescription) detailDescription.textContent = description;
+				if (detailTags) detailTags.textContent = tags;
+				if (detailSubmitted) {
+					const submitter =
+						submittedAlias || submittedName || submitted || "a member";
+					detailSubmitted.textContent = `Submitted by ${submitter}`;
+				}
+				if (detailCover) {
+					if (cover) {
+						detailCover.src = cover;
+						detailCover.alt = title;
+						detailCover.classList.remove("hidden");
+					} else {
+						detailCover.removeAttribute("src");
+						detailCover.alt = "";
+						detailCover.classList.add("hidden");
+					}
+				}
+				if (detailSteam) {
+					const steamUrl = steamAppId
+						? `https://store.steampowered.com/app/${steamAppId}`
+						: "";
+					detailSteam.href = steamUrl;
+					detailSteam.classList.toggle("hidden", !steamUrl);
+				}
+				if (detailHltb) {
+					const hltbUrl = `https://howlongtobeat.com/?q=${encodeURIComponent(title)}`;
+					detailHltb.href = hltbUrl;
+					detailHltb.classList.toggle("hidden", !title);
+				}
+				if (detailItad) {
+					const itadUrl = itadSlug
+						? `https://isthereanydeal.com/game/${itadSlug}/info/`
+						: "";
+					detailItad.href = itadUrl;
+					detailItad.classList.toggle("hidden", !itadUrl);
+				}
+				if (detailCurrent) {
+					detailCurrent.textContent = currentPrice
+						? `Current: ${formatUsd(currentPrice)}`
+						: "Current: TBD";
+				}
+				if (detailBest) {
+					detailBest.textContent = bestPrice
+						? `Best: ${formatUsd(bestPrice)}`
+						: "Best: TBD";
+				}
+				if (detailDelete) {
+					detailDelete.classList.toggle("hidden", !isSignedIn);
+					if (isSignedIn) {
+						const isOwner =
+							submitted && currentUserEmail && submitted.toLowerCase() === currentUserEmail;
+						const isAdmin = currentUserRole === "admin";
+						const canDelete = isOwner || isAdmin;
+						detailDelete.disabled = !canDelete;
+					}
+				}
+				if (detailSetCurrent) {
+					const isAdmin = currentUserRole === "admin";
+					detailSetCurrent.classList.toggle("hidden", !isAdmin);
+					detailSetCurrent.disabled = status === "current";
+				}
+
+				detailModal.showModal();
+			}
+
+			function parseTags(value) {
+				try {
+					const parsed = JSON.parse(value);
+					if (Array.isArray(parsed)) {
+						return parsed.join(" · ");
+					}
+				} catch {}
+				return value;
+			}
+
+			function formatUsd(value) {
+				const cents = Number.parseInt(value, 10);
+				if (Number.isNaN(cents)) return "TBD";
+				return new Intl.NumberFormat("en-US", {
+					style: "currency",
+					currency: "USD"
+				}).format(cents / 100);
+			}
+		</script>
 
 		<footer class="site-footer">
 			<p>Invite-only. Built for thoughtful gaming and shared curiosity.</p>
@@ -172,35 +449,6 @@ const playedGames = [
 		text-decoration: none;
 	}
 
-	.cta,
-	.ghost {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		padding: 0.7rem 1.4rem;
-		border-radius: 999px;
-		font-weight: 600;
-		font-size: 0.9rem;
-		transition: transform 0.2s ease, box-shadow 0.2s ease;
-	}
-
-	.cta {
-		background: var(--accent);
-		color: #fff;
-		box-shadow: 0 12px 20px -16px var(--accent-dark);
-	}
-
-	.ghost {
-		border: 1px solid var(--border);
-		background: rgba(255, 255, 255, 0.7);
-	}
-
-	.cta:hover,
-	.ghost:hover {
-		transform: translateY(-1px);
-		box-shadow: 0 18px 30px -22px var(--accent-dark);
-	}
-
 	.hero {
 		display: grid;
 		gap: 2rem;
@@ -217,13 +465,6 @@ const playedGames = [
 		border: 1px solid var(--border);
 	}
 
-	.card-row {
-		display: flex;
-		gap: 1rem;
-		align-items: center;
-		flex-wrap: wrap;
-		margin: 0.6rem 0 1rem;
-	}
 
 	.stack {
 		display: grid;
@@ -275,30 +516,10 @@ const playedGames = [
 		font-weight: 600;
 	}
 
-	.chips,
-	.chip {
+	.chips {
 		display: inline-flex;
 		align-items: center;
 		gap: 0.5rem;
-	}
-
-	.chips span,
-	.chip {
-		border-radius: 999px;
-		padding: 0.4rem 0.85rem;
-		font-size: 0.75rem;
-		background: var(--tan);
-		font-weight: 500;
-	}
-
-	.chip.subtle {
-		background: rgba(255, 255, 255, 0.7);
-		border: 1px solid var(--border);
-	}
-
-	.chip.strong {
-		background: var(--accent);
-		color: #fff;
 	}
 
 	.poll-card {
@@ -313,7 +534,6 @@ const playedGames = [
 	}
 
 	.poll-option,
-	.game-card,
 	.played-card {
 		padding: 1.2rem;
 		border-radius: 18px;
