@@ -74,8 +74,7 @@ main {
 	border-radius: 14px;
 	overflow: hidden;
 	border: 1px solid var(--border);
-	background: rgba(255, 255, 255, 0.8);
-	aspect-ratio: 16 / 9;
+	background: rgba(219, 226, 234, 0.6);
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -83,8 +82,8 @@ main {
 
 .game-cover img {
 	width: 100%;
-	height: 100%;
-	object-fit: cover;
+	height: auto;
+	object-fit: contain;
 	display: block;
 }
 
@@ -105,12 +104,12 @@ main {
 }
 
 .game-detail-cover {
-	width: 160px;
-	height: 90px;
+	width: 100%;
+	height: auto;
 	border-radius: 14px;
-	object-fit: cover;
+	object-fit: contain;
 	border: 1px solid var(--border);
-	background: rgba(255, 255, 255, 0.8);
+	background: rgba(219, 226, 234, 0.6);
 }
 
 .game-detail-info {
@@ -134,8 +133,11 @@ main {
 }
 
 .small-pill {
-	padding: 0.35rem 0.7rem;
+	padding: 0.4rem 0.85rem;
 	font-size: 0.75rem;
+	background: rgba(219, 226, 234, 0.9);
+	border: 1px solid var(--border);
+	box-shadow: none;
 }
 
 .game-detail-prices {
@@ -157,7 +159,7 @@ main {
 
 	.game-detail-cover {
 		width: 100%;
-		height: 180px;
+		height: auto;
 	}
 }
 
