@@ -14,6 +14,10 @@ type Game = {
 	submitted_by_email?: string;
 	submitted_by_name?: string;
 	submitted_by_alias?: string;
+	steam_app_id?: number;
+	itad_game_id?: string;
+	current_price_cents?: number;
+	best_price_cents?: number;
 };
 
 const gamesResponse = await fetch(new URL("/api/games", Astro.url), {
@@ -68,6 +72,18 @@ const playedGames = games.played as Game[];
 							data-submitted={game.submitted_by_email || ""}
 							data-submitted-name={game.submitted_by_name || ""}
 							data-submitted-alias={game.submitted_by_alias || ""}
+							data-steam-app-id={game.steam_app_id ? String(game.steam_app_id) : ""}
+							data-itad-id={game.itad_game_id || ""}
+							data-current-price={
+								typeof game.current_price_cents === "number"
+									? String(game.current_price_cents)
+									: ""
+							}
+							data-best-price={
+								typeof game.best_price_cents === "number"
+									? String(game.best_price_cents)
+									: ""
+							}
 						>
 							<h3>{game.title}</h3>
 							<div class="game-cover">
@@ -103,6 +119,18 @@ const playedGames = games.played as Game[];
 							data-submitted={game.submitted_by_email || ""}
 							data-submitted-name={game.submitted_by_name || ""}
 							data-submitted-alias={game.submitted_by_alias || ""}
+							data-steam-app-id={game.steam_app_id ? String(game.steam_app_id) : ""}
+							data-itad-id={game.itad_game_id || ""}
+							data-current-price={
+								typeof game.current_price_cents === "number"
+									? String(game.current_price_cents)
+									: ""
+							}
+							data-best-price={
+								typeof game.best_price_cents === "number"
+									? String(game.best_price_cents)
+									: ""
+							}
 						>
 							<h3>{game.title}</h3>
 							<div class="game-cover">
@@ -155,6 +183,15 @@ const playedGames = games.played as Game[];
 					<div class="game-detail-info">
 						<p class="muted game-detail-tags"></p>
 						<p class="game-detail-description"></p>
+						<div class="game-detail-links">
+							<a class="ghost small-pill game-detail-steam" target="_blank" rel="noreferrer" title="View on Steam">Steam</a>
+							<a class="ghost small-pill game-detail-hltb" target="_blank" rel="noreferrer" title="View on HowLongToBeat">HLTB</a>
+							<a class="ghost small-pill game-detail-itad" target="_blank" rel="noreferrer" title="View on IsThereAnyDeal">ITAD</a>
+						</div>
+						<div class="game-detail-prices">
+							<span class="chip subtle game-detail-current">Current: TBD</span>
+							<span class="chip subtle game-detail-best">Best: TBD</span>
+						</div>
 						<p class="muted small game-detail-submitted"></p>
 					</div>
 				</div>
@@ -178,6 +215,11 @@ const playedGames = games.played as Game[];
 			const detailSubmitted = document.querySelector(".game-detail-submitted");
 			const detailCover = document.querySelector(".game-detail-cover");
 			const detailDelete = document.querySelector(".game-detail-delete");
+			const detailSteam = document.querySelector(".game-detail-steam");
+			const detailHltb = document.querySelector(".game-detail-hltb");
+			const detailItad = document.querySelector(".game-detail-itad");
+			const detailCurrent = document.querySelector(".game-detail-current");
+			const detailBest = document.querySelector(".game-detail-best");
 			let selectedGameId = null;
 			let currentUserEmail = "";
 			let currentUserRole = "";
@@ -338,6 +380,10 @@ const playedGames = games.played as Game[];
 				const submittedName = card.dataset.submittedName || "";
 				const submittedAlias = card.dataset.submittedAlias || "";
 				const cover = card.dataset.cover || "";
+				const steamAppId = card.dataset.steamAppId || "";
+				const itadId = card.dataset.itadId || "";
+				const currentPrice = card.dataset.currentPrice || "";
+				const bestPrice = card.dataset.bestPrice || "";
 				selectedGameId = card.dataset.id || null;
 
 				if (detailTitle) detailTitle.textContent = title;
@@ -358,6 +404,33 @@ const playedGames = games.played as Game[];
 						detailCover.alt = "";
 						detailCover.classList.add("hidden");
 					}
+				}
+				if (detailSteam) {
+					const steamUrl = steamAppId
+						? `https://store.steampowered.com/app/${steamAppId}`
+						: "";
+					detailSteam.href = steamUrl;
+					detailSteam.classList.toggle("hidden", !steamUrl);
+				}
+				if (detailHltb) {
+					const hltbUrl = `https://howlongtobeat.com/?q=${encodeURIComponent(title)}`;
+					detailHltb.href = hltbUrl;
+					detailHltb.classList.toggle("hidden", !title);
+				}
+				if (detailItad) {
+					const itadUrl = itadId ? `https://isthereanydeal.com/game/${itadId}/` : "";
+					detailItad.href = itadUrl;
+					detailItad.classList.toggle("hidden", !itadUrl);
+				}
+				if (detailCurrent) {
+					detailCurrent.textContent = currentPrice
+						? `Current: ${formatUsd(currentPrice)}`
+						: "Current: TBD";
+				}
+				if (detailBest) {
+					detailBest.textContent = bestPrice
+						? `Best: ${formatUsd(bestPrice)}`
+						: "Best: TBD";
 				}
 				if (detailDelete) {
 					detailDelete.classList.toggle("hidden", !isSignedIn);
@@ -381,6 +454,15 @@ const playedGames = games.played as Game[];
 					}
 				} catch {}
 				return value;
+			}
+
+			function formatUsd(value) {
+				const cents = Number.parseInt(value, 10);
+				if (Number.isNaN(cents)) return "TBD";
+				return new Intl.NumberFormat("en-US", {
+					style: "currency",
+					currency: "USD"
+				}).format(cents / 100);
 			}
 		</script>
 	</body>
@@ -563,6 +645,23 @@ main {
 
 	.game-detail-footer {
 		justify-content: space-between;
+	}
+
+	.game-detail-links {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+	}
+
+	.small-pill {
+		padding: 0.35rem 0.7rem;
+		font-size: 0.75rem;
+	}
+
+	.game-detail-prices {
+		display: flex;
+		gap: 0.6rem;
+		flex-wrap: wrap;
 	}
 
 	.ghost.danger {
