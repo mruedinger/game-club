@@ -35,6 +35,19 @@ main {
 	align-items: start;
 }
 
+.two-column-grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+	gap: 2rem;
+	align-items: start;
+}
+
+@media (max-width: 900px) {
+	.two-column-grid {
+		grid-template-columns: 1fr;
+	}
+}
+
 .hero-actions {
 	margin-top: 1.5rem;
 	display: flex;

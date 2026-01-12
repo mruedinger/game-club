@@ -82,79 +82,82 @@ function getSubmitterLabel(game?: Game | null) {
 				</div>
 			</section>
 
-			<section class="section current-game">
-				<div class="section-head">
-					<h2>Current game</h2>
-					<p class="muted">{formatMonthYear(currentGame?.played_month)}</p>
-				</div>
-				{currentGame ? (
-					<div class="current-game-card">
-						<h3>{currentGame.title}</h3>
-						<div class="game-cover">
-							{currentGame.cover_art_url ? (
-								<img
-									src={currentGame.cover_art_url}
-									alt={`${currentGame.title} cover art`}
-									loading="lazy"
-								/>
-							) : (
-								<div class="cover-placeholder">Cover coming soon</div>
-							)}
-						</div>
-						<p class="muted">
-							{currentGame.tags_json
-								? JSON.parse(currentGame.tags_json).join(" · ")
-								: "Tags coming soon"}
-						</p>
-						<p class="current-game-description">
-							{currentGame.description || "Description coming soon."}
-						</p>
-						<div class="game-detail-links">
-							{currentGame.steam_app_id ? (
-								<a
-									class="ghost small-pill"
-									target="_blank"
-									rel="noreferrer"
-									title="View on Steam"
-									href={`https://store.steampowered.com/app/${currentGame.steam_app_id}`}
-								>
-									Steam
-								</a>
-							) : null}
-							<a
-								class="ghost small-pill"
-								target="_blank"
-								rel="noreferrer"
-								title="View on HowLongToBeat"
-								href={`https://howlongtobeat.com/?q=${encodeURIComponent(currentGame.title)}`}
-							>
-								HLTB
-							</a>
-							{currentGame.itad_slug ? (
-								<a
-									class="ghost small-pill"
-									target="_blank"
-									rel="noreferrer"
-									title="View on IsThereAnyDeal"
-									href={`https://isthereanydeal.com/game/${currentGame.itad_slug}/info/`}
-								>
-									ITAD
-								</a>
-							) : null}
-						</div>
-						<div class="game-detail-prices">
-							<span class="chip subtle">
-								Current: {formatUsd(currentGame.current_price_cents)}
-							</span>
-							<span class="chip subtle">
-								Best: {formatUsd(currentGame.best_price_cents)}
-							</span>
-						</div>
-						<p class="muted small">{getSubmitterLabel(currentGame)}</p>
+			<section class="section current-game two-column-grid">
+				<div>
+					<div class="section-head">
+						<h2>Current game</h2>
+						<p class="muted">{formatMonthYear(currentGame?.played_month)}</p>
 					</div>
-				) : (
-					<p class="muted">No current game set yet.</p>
-				)}
+					{currentGame ? (
+						<div class="current-game-card">
+							<h3>{currentGame.title}</h3>
+							<div class="game-cover">
+								{currentGame.cover_art_url ? (
+									<img
+										src={currentGame.cover_art_url}
+										alt={`${currentGame.title} cover art`}
+										loading="lazy"
+									/>
+								) : (
+									<div class="cover-placeholder">Cover coming soon</div>
+								)}
+							</div>
+							<p class="muted">
+								{currentGame.tags_json
+									? JSON.parse(currentGame.tags_json).join(" · ")
+									: "Tags coming soon"}
+							</p>
+							<p class="current-game-description">
+								{currentGame.description || "Description coming soon."}
+							</p>
+							<div class="game-detail-links">
+								{currentGame.steam_app_id ? (
+									<a
+										class="ghost small-pill"
+										target="_blank"
+										rel="noreferrer"
+										title="View on Steam"
+										href={`https://store.steampowered.com/app/${currentGame.steam_app_id}`}
+									>
+										Steam
+									</a>
+								) : null}
+								<a
+									class="ghost small-pill"
+									target="_blank"
+									rel="noreferrer"
+									title="View on HowLongToBeat"
+									href={`https://howlongtobeat.com/?q=${encodeURIComponent(currentGame.title)}`}
+								>
+									HLTB
+								</a>
+								{currentGame.itad_slug ? (
+									<a
+										class="ghost small-pill"
+										target="_blank"
+										rel="noreferrer"
+										title="View on IsThereAnyDeal"
+										href={`https://isthereanydeal.com/game/${currentGame.itad_slug}/info/`}
+									>
+										ITAD
+									</a>
+								) : null}
+							</div>
+							<div class="game-detail-prices">
+								<span class="chip subtle">
+									Current: {formatUsd(currentGame.current_price_cents)}
+								</span>
+								<span class="chip subtle">
+									Best: {formatUsd(currentGame.best_price_cents)}
+								</span>
+							</div>
+							<p class="muted small">{getSubmitterLabel(currentGame)}</p>
+						</div>
+					) : (
+						<p class="muted">No current game set yet.</p>
+					)}
+				</div>
+				<div></div>
 			</section>
 
 			<section id="now" class="section current">
