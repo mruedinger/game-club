@@ -140,6 +140,21 @@ main {
 	box-shadow: none;
 }
 
+.ghost.small-pill {
+	padding: 0.4rem 0.85rem;
+	font-size: 0.75rem;
+	background: rgba(219, 226, 234, 0.9);
+	border: 1px solid var(--border);
+	box-shadow: none;
+	line-height: 1.2;
+}
+
+.ghost.small-pill:hover {
+	transform: none;
+	box-shadow: none;
+	background: rgba(210, 220, 230, 0.95);
+}
+
 .game-detail-prices {
 	display: flex;
 	gap: 0.6rem;
