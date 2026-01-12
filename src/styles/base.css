@@ -67,7 +67,7 @@ main {
 	padding: 0;
 	max-width: 520px;
 	width: min(90vw, 520px);
-	background: #ffffff;
+	background: transparent;
 }
 
 .modal::backdrop {
