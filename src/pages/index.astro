@@ -122,45 +122,11 @@ const playedGames = [
 				</div>
 			</section>
 
-			<section id="games" class="section games">
-				<div class="section-head">
-					<h2>Games library</h2>
-					<p>Curated list submitted by members.</p>
-				</div>
-				<div class="games-grid">
-					{sampleGames.map((game, index) => (
-						<article class="game-card" style={`animation-delay: ${index * 70}ms`}>
-							<h3>{game.title}</h3>
-							<p class="muted">{game.tags.join(" · ")}</p>
-							<div class="card-row">
-								<span class="chip subtle">{game.length}</span>
-								<span class="chip subtle">Submitted by A.</span>
-							</div>
-						</article>
-					))}
-				</div>
-			</section>
-
-			<section id="played" class="section played">
-				<div class="section-head">
-					<h2>Previously played</h2>
-					<p>Great discussions and strong finishes.</p>
-				</div>
-				<div class="played-grid">
-					{playedGames.map((game, index) => (
-						<div class="played-card" style={`animation-delay: ${index * 90}ms`}>
-							<h3>{game.title}</h3>
-							<p class="muted">{game.month}</p>
-						</div>
-					))}
-				</div>
-			</section>
 		</main>
 
 		<footer class="site-footer">
 			<p>Invite-only. Built for thoughtful gaming and shared curiosity.</p>
 			<div class="footer-actions">
-				<a href="#games">Browse games</a>
 				<a href="#poll">Check poll</a>
 			</div>
 		</footer>
