@@ -2,6 +2,7 @@ type ItadLookupResponse = {
 	found: boolean;
 	game?: {
 		id?: string;
+		slug?: string;
 	};
 };
 
@@ -20,10 +21,10 @@ export type ItadPrices = {
 	bestPriceCents: number | null;
 };
 
-export async function fetchItadGameId(
+export async function fetchItadGame(
 	env: Record<string, unknown>,
 	appId: number
-): Promise<string | null> {
+): Promise<{ id: string; slug?: string } | null> {
 	const apiKey = getEnv(env, "ITAD_API_KEY");
 	if (!apiKey) return null;
 	const url = new URL("https://api.isthereanydeal.com/games/lookup/v1");
@@ -33,7 +34,7 @@ export async function fetchItadGameId(
 	if (!response.ok) return null;
 	const data = (await response.json()) as ItadLookupResponse;
 	if (!data.found || !data.game?.id) return null;
-	return data.game.id;
+	return { id: data.game.id, slug: data.game.slug };
 }
 
 export async function fetchItadPrices(

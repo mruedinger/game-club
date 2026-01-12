@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
 import { getRuntimeEnv, readSession } from "../../lib/auth";
-import { fetchItadGameId, fetchItadPrices } from "../../lib/itad";
+import { fetchItadGame, fetchItadPrices } from "../../lib/itad";
 
 type GameRow = {
 	id: number;
@@ -19,6 +19,7 @@ type GameRow = {
 	played_month?: string;
 	steam_app_id?: number;
 	itad_game_id?: string;
+	itad_slug?: string;
 	price_checked_at?: string;
 };
 
@@ -41,7 +42,7 @@ export const GET: APIRoute = async ({ locals }) => {
 
 	const { results } = await db
 		.prepare(
-			"select games.id, games.title, games.submitted_by_email, members.name as submitted_by_name, members.alias as submitted_by_alias, games.status, games.created_at, games.cover_art_url, games.tags_json, games.description, games.time_to_beat_minutes, games.current_price_cents, games.best_price_cents, games.played_month, games.steam_app_id, games.itad_game_id " +
+			"select games.id, games.title, games.submitted_by_email, members.name as submitted_by_name, members.alias as submitted_by_alias, games.status, games.created_at, games.cover_art_url, games.tags_json, games.description, games.time_to_beat_minutes, games.current_price_cents, games.best_price_cents, games.played_month, games.steam_app_id, games.itad_game_id, games.itad_slug " +
 				"from games left join members on members.email = games.submitted_by_email order by games.status asc, games.title asc"
 		)
 		.bind()
@@ -79,8 +80,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 	const body = await readJson(request);
 	const steamAppId = normalizeSteamAppId(body?.steamAppId);
 	const steamData = steamAppId ? await fetchSteamDetails(steamAppId) : null;
-	const itadGameId = steamAppId ? await fetchItadGameId(env, steamAppId) : null;
-	const itadPrices = itadGameId ? await fetchItadPrices(env, itadGameId) : null;
+	const itadGame = steamAppId ? await fetchItadGame(env, steamAppId) : null;
+	const itadPrices = itadGame?.id ? await fetchItadPrices(env, itadGame.id) : null;
 	const title =
 		steamData?.name ??
 		(typeof body?.title === "string" ? body.title.trim() : "");
@@ -100,7 +101,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 	await db
 		.prepare(
-			"insert into games (title, submitted_by_email, status, cover_art_url, tags_json, description, steam_app_id, itad_game_id, current_price_cents, best_price_cents, price_checked_at) values (?1, ?2, 'backlog', ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)"
+			"insert into games (title, submitted_by_email, status, cover_art_url, tags_json, description, steam_app_id, itad_game_id, itad_slug, current_price_cents, best_price_cents, price_checked_at) values (?1, ?2, 'backlog', ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)"
 		)
 		.bind(
 			title,
@@ -109,7 +110,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 			tagsJson,
 			description,
 			steamAppId,
-			itadGameId,
+			itadGame?.id ?? null,
+			itadGame?.slug ?? null,
 			currentPriceCents,
 			bestPriceCents,
 			priceCheckedAt

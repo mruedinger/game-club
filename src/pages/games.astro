@@ -16,6 +16,7 @@ type Game = {
 	submitted_by_alias?: string;
 	steam_app_id?: number;
 	itad_game_id?: string;
+	itad_slug?: string;
 	current_price_cents?: number;
 	best_price_cents?: number;
 };
@@ -74,6 +75,7 @@ const playedGames = games.played as Game[];
 							data-submitted-alias={game.submitted_by_alias || ""}
 							data-steam-app-id={game.steam_app_id ? String(game.steam_app_id) : ""}
 							data-itad-id={game.itad_game_id || ""}
+							data-itad-slug={game.itad_slug || ""}
 							data-current-price={
 								typeof game.current_price_cents === "number"
 									? String(game.current_price_cents)
@@ -121,6 +123,7 @@ const playedGames = games.played as Game[];
 							data-submitted-alias={game.submitted_by_alias || ""}
 							data-steam-app-id={game.steam_app_id ? String(game.steam_app_id) : ""}
 							data-itad-id={game.itad_game_id || ""}
+							data-itad-slug={game.itad_slug || ""}
 							data-current-price={
 								typeof game.current_price_cents === "number"
 									? String(game.current_price_cents)
@@ -382,6 +385,7 @@ const playedGames = games.played as Game[];
 				const cover = card.dataset.cover || "";
 				const steamAppId = card.dataset.steamAppId || "";
 				const itadId = card.dataset.itadId || "";
+				const itadSlug = card.dataset.itadSlug || "";
 				const currentPrice = card.dataset.currentPrice || "";
 				const bestPrice = card.dataset.bestPrice || "";
 				selectedGameId = card.dataset.id || null;
@@ -418,7 +422,9 @@ const playedGames = games.played as Game[];
 					detailHltb.classList.toggle("hidden", !title);
 				}
 				if (detailItad) {
-					const itadUrl = itadId ? `https://isthereanydeal.com/game/${itadId}/` : "";
+					const itadUrl = itadSlug
+						? `https://isthereanydeal.com/game/${itadSlug}/info/`
+						: "";
 					detailItad.href = itadUrl;
 					detailItad.classList.toggle("hidden", !itadUrl);
 				}
