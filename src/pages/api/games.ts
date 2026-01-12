@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
-import { getRuntimeEnv, readSession, getEnv } from "../../lib/auth";
+import { getRuntimeEnv, readSession } from "../../lib/auth";
+import { fetchItadGameId, fetchItadPrices } from "../../lib/itad";
 
 type GameRow = {
 	id: number;
@@ -17,6 +18,8 @@ type GameRow = {
 	best_price_cents?: number;
 	played_month?: string;
 	steam_app_id?: number;
+	itad_game_id?: string;
+	price_checked_at?: string;
 };
 
 type D1Database = {
@@ -93,10 +96,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
 			: null;
 	const currentPriceCents = itadPrices?.currentPriceCents ?? null;
 	const bestPriceCents = itadPrices?.bestPriceCents ?? null;
+	const priceCheckedAt = itadPrices ? new Date().toISOString() : null;
 
 	await db
 		.prepare(
-			"insert into games (title, submitted_by_email, status, cover_art_url, tags_json, description, steam_app_id, current_price_cents, best_price_cents) values (?1, ?2, 'backlog', ?3, ?4, ?5, ?6, ?7, ?8)"
+			"insert into games (title, submitted_by_email, status, cover_art_url, tags_json, description, steam_app_id, itad_game_id, current_price_cents, best_price_cents, price_checked_at) values (?1, ?2, 'backlog', ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)"
 		)
 		.bind(
 			title,
@@ -105,8 +109,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
 			tagsJson,
 			description,
 			steamAppId,
+			itadGameId,
 			currentPriceCents,
-			bestPriceCents
+			bestPriceCents,
+			priceCheckedAt
 		)
 		.run();
 
@@ -213,69 +219,4 @@ async function fetchSteamDetails(
 	const entry = payload[String(appId)];
 	if (!entry || !entry.success || !entry.data) return null;
 	return entry.data;
-}
-
-type ItadLookupResponse = {
-	found: boolean;
-	game?: {
-		id?: string;
-	};
-};
-
-type ItadPricesResponseItem = {
-	id: string;
-	historyLow?: {
-		all?: { amountInt: number };
-	};
-	deals?: Array<{
-		price?: { amountInt: number };
-	}>;
-};
-
-type ItadPrices = {
-	currentPriceCents: number | null;
-	bestPriceCents: number | null;
-};
-
-async function fetchItadGameId(env: Record<string, unknown>, appId: number) {
-	const apiKey = getEnv(env, "ITAD_API_KEY");
-	if (!apiKey) return null;
-	const url = new URL("https://api.isthereanydeal.com/games/lookup/v1");
-	url.searchParams.set("key", apiKey);
-	url.searchParams.set("appid", String(appId));
-	const response = await fetch(url.toString());
-	if (!response.ok) return null;
-	const data = (await response.json()) as ItadLookupResponse;
-	if (!data.found || !data.game?.id) return null;
-	return data.game.id;
-}
-
-async function fetchItadPrices(env: Record<string, unknown>, gameId: string) {
-	const apiKey = getEnv(env, "ITAD_API_KEY");
-	if (!apiKey) return null;
-	const url = new URL("https://api.isthereanydeal.com/games/prices/v3");
-	url.searchParams.set("key", apiKey);
-	url.searchParams.set("country", "US");
-	const response = await fetch(url.toString(), {
-		method: "POST",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify([gameId])
-	});
-	if (!response.ok) return null;
-	const data = (await response.json()) as ItadPricesResponseItem[];
-	const entry = data?.[0];
-	if (!entry) return null;
-	const bestPriceCents = entry.historyLow?.all?.amountInt ?? null;
-	const currentPriceCents = Array.isArray(entry.deals)
-		? entry.deals.reduce<number | null>((lowest, deal) => {
-				const value = deal.price?.amountInt;
-				if (typeof value !== "number") return lowest;
-				if (lowest === null || value < lowest) return value;
-				return lowest;
-		  }, null)
-		: null;
-	return {
-		currentPriceCents,
-		bestPriceCents
-	} satisfies ItadPrices;
 }
