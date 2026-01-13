@@ -61,6 +61,10 @@ main {
 	color: var(--muted);
 }
 
+.small {
+	font-size: 0.9rem;
+}
+
 .meta-line {
 	color: var(--muted);
 	line-height: 1.6;
@@ -318,6 +322,9 @@ main {
 .field input,
 .field select,
 .field textarea {
+	width: 100%;
+	max-width: 100%;
+	box-sizing: border-box;
 	padding: 0.7rem 0.9rem;
 	border-radius: 12px;
 	border: 1px solid var(--border);

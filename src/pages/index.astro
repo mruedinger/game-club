@@ -162,315 +162,314 @@ function getSubmitterLabel(game?: Game | null) {
 		<footer class="site-footer">
 			<p>Invite-only. Built for thoughtful gaming and shared curiosity.</p>
 		</footer>
+		<dialog class="modal" id="poll-vote-modal">
+			<form class="modal-card" id="poll-vote-form">
+				<header>
+					<div>
+						<h3>Vote in the poll</h3>
+						<p class="muted small">Rank up to three games. Top pick counts most.</p>
+					</div>
+					<button class="ghost icon-button" type="button" data-action="close-poll-modal" aria-label="Close">
+						×
+					</button>
+				</header>
+				<div class="poll-vote-list">
+					<div class="field">
+						<label for="poll-choice-1">First choice</label>
+						<select id="poll-choice-1" name="choice1">
+							<option value="">Select a game</option>
+						</select>
+					</div>
+					<div class="field">
+						<label for="poll-choice-2">Second choice</label>
+						<select id="poll-choice-2" name="choice2">
+							<option value="">Optional</option>
+						</select>
+					</div>
+					<div class="field">
+						<label for="poll-choice-3">Third choice</label>
+						<select id="poll-choice-3" name="choice3">
+							<option value="">Optional</option>
+						</select>
+					</div>
+					<p class="poll-error hidden" id="poll-error" role="alert"></p>
+				</div>
+				<footer>
+					<button class="ghost" type="button" data-action="close-poll-modal">Cancel</button>
+					<button class="cta" type="submit">Submit vote</button>
+				</footer>
+			</form>
+		</dialog>
+
+		<script>
+			const initialPollState = ${pollStateJson};
+			const pollChip = document.querySelector("#poll-chip");
+			const pollStatus = document.querySelector("#poll-status");
+			const pollResults = document.querySelector("#poll-results");
+			const pollMeta = document.querySelector("#poll-meta");
+			const pollVoteModal = document.querySelector("#poll-vote-modal");
+			const pollVoteForm = document.querySelector("#poll-vote-form");
+			const pollChoice1 = document.querySelector("#poll-choice-1");
+			const pollChoice2 = document.querySelector("#poll-choice-2");
+			const pollChoice3 = document.querySelector("#poll-choice-3");
+			const pollError = document.querySelector("#poll-error");
+			const startButton = document.querySelector("[data-action='start-poll']");
+			const voteButton = document.querySelector("[data-action='vote']");
+			const closeButton = document.querySelector("[data-action='close-poll']");
+
+			function formatPollDate(value) {
+				if (!value) return "TBD";
+				const normalized = value.includes("T") ? value : value.replace(" ", "T") + "Z";
+				const date = new Date(normalized);
+				if (Number.isNaN(date.getTime())) return value;
+				return date.toLocaleDateString("en-US", {
+					month: "short",
+					day: "numeric",
+					year: "numeric"
+				});
+			}
+
+			function clearElement(element) {
+				if (!element) return;
+				while (element.firstChild) {
+					element.removeChild(element.firstChild);
+				}
+			}
+
+			function setButtonVisibility({ canStart, canVote, canClose }) {
+				if (startButton) startButton.classList.toggle("hidden", !canStart);
+				if (voteButton) voteButton.classList.toggle("hidden", !canVote);
+				if (closeButton) closeButton.classList.toggle("hidden", !canClose);
+			}
+
+			function renderResults(results, label) {
+				if (!pollResults) return;
+				clearElement(pollResults);
+				if (!results || results.length === 0) {
+					const empty = document.createElement("p");
+					empty.className = "muted small";
+					empty.textContent = label || "No results yet.";
+					pollResults.appendChild(empty);
+					return;
+				}
+				const list = document.createElement("ol");
+				list.className = "poll-results-list";
+				results.slice(0, 3).forEach((result, index) => {
+					const item = document.createElement("li");
+					item.className = "poll-result";
+
+					const title = document.createElement("span");
+					title.className = "poll-result-title";
+					title.textContent = `${index + 1}. ${result.title}`;
+
+					const points = document.createElement("span");
+					points.className = "poll-result-points";
+					points.textContent = `${result.points ?? 0} pts`;
+
+					item.appendChild(title);
+					item.appendChild(points);
+					list.appendChild(item);
+				});
+				pollResults.appendChild(list);
+			}
+
+			function renderPoll(state) {
+				if (!pollStatus || !pollChip || !pollMeta) return;
+
+				if (!state) {
+					pollChip.textContent = "Offline";
+					pollStatus.textContent = "Unable to load poll status.";
+					pollMeta.textContent = "";
+					renderResults([], "No poll data available.");
+					setButtonVisibility({ canStart: false, canVote: false, canClose: false });
+					return;
+				}
+
+				if (state.active) {
+					pollChip.textContent = "Active";
+					pollChip.classList.remove("subtle");
+					pollChip.classList.add("strong");
+					pollStatus.textContent = state.hasVoted
+						? "Thanks for voting. Current standings:"
+						: "Poll is active. Cast your ranked vote.";
+					pollMeta.textContent = `Started ${formatPollDate(state.poll?.started_at)}`;
+					if (state.hasVoted) {
+						renderResults(state.results || [], "Results will appear after votes land.");
+						setButtonVisibility({ canStart: false, canVote: false, canClose: true });
+					} else {
+						renderResults([], "Vote to see results.");
+						setButtonVisibility({ canStart: false, canVote: true, canClose: false });
+					}
+				} else {
+					pollChip.textContent = "Inactive";
+					pollChip.classList.remove("strong");
+					pollChip.classList.add("subtle");
+					pollStatus.textContent = "No active poll right now.";
+					pollMeta.textContent = state.poll
+						? `Last poll: ${formatPollDate(state.poll.closed_at || state.poll.started_at)}`
+						: "No polls yet.";
+					renderResults(state.results || [], "No poll results yet.");
+					setButtonVisibility({ canStart: true, canVote: false, canClose: false });
+				}
+			}
+
+			function populateChoices(choices) {
+				const selects = [pollChoice1, pollChoice2, pollChoice3];
+				selects.forEach((select) => {
+					if (!select) return;
+					const placeholder = select.querySelector("option");
+					clearElement(select);
+					if (placeholder) {
+						select.appendChild(placeholder);
+					}
+					(choices || []).forEach((choice) => {
+						const option = document.createElement("option");
+						option.value = String(choice.id);
+						option.textContent = choice.title;
+						select.appendChild(option);
+					});
+				});
+			}
+
+			function setPollError(message) {
+				if (!pollError) return;
+				if (message) {
+					pollError.textContent = message;
+					pollError.classList.remove("hidden");
+				} else {
+					pollError.textContent = "";
+					pollError.classList.add("hidden");
+				}
+			}
+
+			async function loadPollState() {
+				const response = await fetch("/api/polls");
+				if (!response.ok) {
+					renderPoll(null);
+					return null;
+				}
+				const data = await response.json();
+				renderPoll(data);
+				return data;
+			}
+
+			async function ensureAuthenticated(actionLabel) {
+				const response = await fetch("/api/me");
+				if (response.ok) return true;
+				if (actionLabel) {
+					pollStatus.textContent = `${actionLabel} requires signing in.`;
+				}
+				window.location.href = "/api/auth/login";
+				return false;
+			}
+
+			async function startPoll() {
+				const authed = await ensureAuthenticated("Starting a poll");
+				if (!authed) return;
+				const response = await fetch("/api/polls", { method: "POST" });
+				if (response.ok) {
+					await loadPollState();
+				} else {
+					const message = await response.text();
+					pollStatus.textContent = message || "Unable to start poll.";
+				}
+			}
+
+			async function closePoll() {
+				const authed = await ensureAuthenticated("Closing the poll");
+				if (!authed) return;
+				const confirmed = window.confirm(
+					"Close this poll now? Please confirm all votes are in before closing."
+				);
+				if (!confirmed) return;
+				const response = await fetch("/api/polls", {
+					method: "PATCH",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ action: "close" })
+				});
+				if (response.ok) {
+					await loadPollState();
+				} else {
+					const message = await response.text();
+					pollStatus.textContent = message || "Unable to close poll.";
+				}
+			}
+
+			async function openVoteModal(state) {
+				if (!pollVoteModal) return;
+				const authed = await ensureAuthenticated("Voting");
+				if (!authed) return;
+				populateChoices(state?.choices || []);
+				setPollError("");
+				pollVoteModal.showModal();
+			}
+
+			if (startButton) {
+				startButton.addEventListener("click", () => startPoll());
+			}
+
+			if (voteButton) {
+				voteButton.addEventListener("click", async () => {
+					const state = await loadPollState();
+					if (state?.active) {
+						openVoteModal(state);
+					}
+				});
+			}
+
+			if (closeButton) {
+				closeButton.addEventListener("click", () => closePoll());
+			}
+
+			document.addEventListener("click", (event) => {
+				const target = event.target;
+				if (!(target instanceof HTMLElement)) return;
+				if (target.closest("[data-action='close-poll-modal']") && pollVoteModal) {
+					pollVoteModal.close();
+				}
+			});
+
+			if (pollVoteForm) {
+				pollVoteForm.addEventListener("submit", async (event) => {
+					event.preventDefault();
+					const choices = [pollChoice1, pollChoice2, pollChoice3]
+						.map((select) => (select ? select.value : ""))
+						.filter(Boolean)
+						.map((value) => Number.parseInt(value, 10))
+						.filter((value) => Number.isInteger(value));
+
+					if (choices.length === 0) {
+						setPollError("Pick at least one game.");
+						return;
+					}
+					const unique = new Set(choices);
+					if (unique.size !== choices.length) {
+						setPollError("Each choice must be unique.");
+						return;
+					}
+
+					const response = await fetch("/api/polls/vote", {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ choices })
+					});
+
+					if (response.ok) {
+						if (pollVoteModal) pollVoteModal.close();
+						await loadPollState();
+					} else if (response.status === 401) {
+						window.location.href = "/api/auth/login";
+					} else {
+						const message = await response.text();
+						setPollError(message || "Unable to submit vote.");
+					}
+				});
+			}
+
+			renderPoll(initialPollState);
+		</script>
 	</body>
 </html>
-
-<dialog class="modal" id="poll-vote-modal">
-	<form class="modal-card" id="poll-vote-form">
-		<header>
-			<div>
-				<h3>Vote in the poll</h3>
-				<p class="muted small">Rank up to three games. Top pick counts most.</p>
-			</div>
-			<button class="ghost icon-button" type="button" data-action="close-poll-modal" aria-label="Close">
-				×
-			</button>
-		</header>
-		<div class="poll-vote-list">
-			<div class="field">
-				<label for="poll-choice-1">First choice</label>
-				<select id="poll-choice-1" name="choice1">
-					<option value="">Select a game</option>
-				</select>
-			</div>
-			<div class="field">
-				<label for="poll-choice-2">Second choice</label>
-				<select id="poll-choice-2" name="choice2">
-					<option value="">Optional</option>
-				</select>
-			</div>
-			<div class="field">
-				<label for="poll-choice-3">Third choice</label>
-				<select id="poll-choice-3" name="choice3">
-					<option value="">Optional</option>
-				</select>
-			</div>
-			<p class="poll-error hidden" id="poll-error" role="alert"></p>
-		</div>
-		<footer>
-			<button class="ghost" type="button" data-action="close-poll-modal">Cancel</button>
-			<button class="cta" type="submit">Submit vote</button>
-		</footer>
-	</form>
-</dialog>
-
-<script>
-	const initialPollState = ${pollStateJson};
-	const pollChip = document.querySelector("#poll-chip");
-	const pollStatus = document.querySelector("#poll-status");
-	const pollResults = document.querySelector("#poll-results");
-	const pollMeta = document.querySelector("#poll-meta");
-	const pollVoteModal = document.querySelector("#poll-vote-modal");
-	const pollVoteForm = document.querySelector("#poll-vote-form");
-	const pollChoice1 = document.querySelector("#poll-choice-1");
-	const pollChoice2 = document.querySelector("#poll-choice-2");
-	const pollChoice3 = document.querySelector("#poll-choice-3");
-	const pollError = document.querySelector("#poll-error");
-	const startButton = document.querySelector("[data-action='start-poll']");
-	const voteButton = document.querySelector("[data-action='vote']");
-	const closeButton = document.querySelector("[data-action='close-poll']");
-
-	function formatPollDate(value) {
-		if (!value) return "TBD";
-		const normalized = value.includes("T") ? value : value.replace(" ", "T") + "Z";
-		const date = new Date(normalized);
-		if (Number.isNaN(date.getTime())) return value;
-		return date.toLocaleDateString("en-US", {
-			month: "short",
-			day: "numeric",
-			year: "numeric"
-		});
-	}
-
-	function clearElement(element) {
-		if (!element) return;
-		while (element.firstChild) {
-			element.removeChild(element.firstChild);
-		}
-	}
-
-	function setButtonVisibility({ canStart, canVote, canClose }) {
-		if (startButton) startButton.classList.toggle("hidden", !canStart);
-		if (voteButton) voteButton.classList.toggle("hidden", !canVote);
-		if (closeButton) closeButton.classList.toggle("hidden", !canClose);
-	}
-
-	function renderResults(results, label) {
-		if (!pollResults) return;
-		clearElement(pollResults);
-		if (!results || results.length === 0) {
-			const empty = document.createElement("p");
-			empty.className = "muted small";
-			empty.textContent = label || "No results yet.";
-			pollResults.appendChild(empty);
-			return;
-		}
-		const list = document.createElement("ol");
-		list.className = "poll-results-list";
-		results.slice(0, 3).forEach((result, index) => {
-			const item = document.createElement("li");
-			item.className = "poll-result";
-
-			const title = document.createElement("span");
-			title.className = "poll-result-title";
-			title.textContent = `${index + 1}. ${result.title}`;
-
-			const points = document.createElement("span");
-			points.className = "poll-result-points";
-			points.textContent = `${result.points ?? 0} pts`;
-
-			item.appendChild(title);
-			item.appendChild(points);
-			list.appendChild(item);
-		});
-		pollResults.appendChild(list);
-	}
-
-	function renderPoll(state) {
-		if (!pollStatus || !pollChip || !pollMeta) return;
-
-		if (!state) {
-			pollChip.textContent = "Offline";
-			pollStatus.textContent = "Unable to load poll status.";
-			pollMeta.textContent = "";
-			renderResults([], "No poll data available.");
-			setButtonVisibility({ canStart: false, canVote: false, canClose: false });
-			return;
-		}
-
-		if (state.active) {
-			pollChip.textContent = "Active";
-			pollChip.classList.remove("subtle");
-			pollChip.classList.add("strong");
-			pollStatus.textContent = state.hasVoted
-				? "Thanks for voting. Current standings:"
-				: "Poll is active. Cast your ranked vote.";
-			pollMeta.textContent = `Started ${formatPollDate(state.poll?.started_at)}`;
-			if (state.hasVoted) {
-				renderResults(state.results || [], "Results will appear after votes land.");
-				setButtonVisibility({ canStart: false, canVote: false, canClose: true });
-			} else {
-				renderResults([], "Vote to see results.");
-				setButtonVisibility({ canStart: false, canVote: true, canClose: false });
-			}
-		} else {
-			pollChip.textContent = "Inactive";
-			pollChip.classList.remove("strong");
-			pollChip.classList.add("subtle");
-			pollStatus.textContent = "No active poll right now.";
-			pollMeta.textContent = state.poll
-				? `Last poll: ${formatPollDate(state.poll.closed_at || state.poll.started_at)}`
-				: "No polls yet.";
-			renderResults(state.results || [], "No poll results yet.");
-			setButtonVisibility({ canStart: true, canVote: false, canClose: false });
-		}
-	}
-
-	function populateChoices(choices) {
-		const selects = [pollChoice1, pollChoice2, pollChoice3];
-		selects.forEach((select) => {
-			if (!select) return;
-			const placeholder = select.querySelector("option");
-			clearElement(select);
-			if (placeholder) {
-				select.appendChild(placeholder);
-			}
-			(choices || []).forEach((choice) => {
-				const option = document.createElement("option");
-				option.value = String(choice.id);
-				option.textContent = choice.title;
-				select.appendChild(option);
-			});
-		});
-	}
-
-	function setPollError(message) {
-		if (!pollError) return;
-		if (message) {
-			pollError.textContent = message;
-			pollError.classList.remove("hidden");
-		} else {
-			pollError.textContent = "";
-			pollError.classList.add("hidden");
-		}
-	}
-
-	async function loadPollState() {
-		const response = await fetch("/api/polls");
-		if (!response.ok) {
-			renderPoll(null);
-			return null;
-		}
-		const data = await response.json();
-		renderPoll(data);
-		return data;
-	}
-
-	async function ensureAuthenticated(actionLabel) {
-		const response = await fetch("/api/me");
-		if (response.ok) return true;
-		if (actionLabel) {
-			pollStatus.textContent = `${actionLabel} requires signing in.`;
-		}
-		window.location.href = "/api/auth/login";
-		return false;
-	}
-
-	async function startPoll() {
-		const authed = await ensureAuthenticated("Starting a poll");
-		if (!authed) return;
-		const response = await fetch("/api/polls", { method: "POST" });
-		if (response.ok) {
-			await loadPollState();
-		} else {
-			const message = await response.text();
-			pollStatus.textContent = message || "Unable to start poll.";
-		}
-	}
-
-	async function closePoll() {
-		const authed = await ensureAuthenticated("Closing the poll");
-		if (!authed) return;
-		const confirmed = window.confirm(
-			"Close this poll now? Please confirm all votes are in before closing."
-		);
-		if (!confirmed) return;
-		const response = await fetch("/api/polls", {
-			method: "PATCH",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ action: "close" })
-		});
-		if (response.ok) {
-			await loadPollState();
-		} else {
-			const message = await response.text();
-			pollStatus.textContent = message || "Unable to close poll.";
-		}
-	}
-
-	async function openVoteModal(state) {
-		if (!pollVoteModal) return;
-		const authed = await ensureAuthenticated("Voting");
-		if (!authed) return;
-		populateChoices(state?.choices || []);
-		setPollError("");
-		pollVoteModal.showModal();
-	}
-
-	if (startButton) {
-		startButton.addEventListener("click", () => startPoll());
-	}
-
-	if (voteButton) {
-		voteButton.addEventListener("click", async () => {
-			const state = await loadPollState();
-			if (state?.active) {
-				openVoteModal(state);
-			}
-		});
-	}
-
-	if (closeButton) {
-		closeButton.addEventListener("click", () => closePoll());
-	}
-
-	document.addEventListener("click", (event) => {
-		const target = event.target;
-		if (!(target instanceof HTMLElement)) return;
-		if (target.closest("[data-action='close-poll-modal']") && pollVoteModal) {
-			pollVoteModal.close();
-		}
-	});
-
-	if (pollVoteForm) {
-		pollVoteForm.addEventListener("submit", async (event) => {
-			event.preventDefault();
-			const choices = [pollChoice1, pollChoice2, pollChoice3]
-				.map((select) => (select ? select.value : ""))
-				.filter(Boolean)
-				.map((value) => Number.parseInt(value, 10))
-				.filter((value) => Number.isInteger(value));
-
-			if (choices.length === 0) {
-				setPollError("Pick at least one game.");
-				return;
-			}
-			const unique = new Set(choices);
-			if (unique.size !== choices.length) {
-				setPollError("Each choice must be unique.");
-				return;
-			}
-
-			const response = await fetch("/api/polls/vote", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ choices })
-			});
-
-			if (response.ok) {
-				if (pollVoteModal) pollVoteModal.close();
-				await loadPollState();
-			} else if (response.status === 401) {
-				window.location.href = "/api/auth/login";
-			} else {
-				const message = await response.text();
-				setPollError(message || "Unable to submit vote.");
-			}
-		});
-	}
-
-	renderPoll(initialPollState);
-</script>
 
 <style>
 	:root {
