@@ -388,6 +388,11 @@ main {
 	border-color: var(--accent);
 }
 
+.form-error {
+	color: #8b1e24;
+	font-size: 0.85rem;
+}
+
 .site-footer {
 	padding: 1rem 6vw;
 	border-top: 1px solid var(--border);
