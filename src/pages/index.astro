@@ -29,7 +29,6 @@ const pollResponse = await fetch(new URL("/api/polls", Astro.url), {
 	headers: Astro.request.headers
 });
 const pollState = pollResponse.ok ? await pollResponse.json() : null;
-const pollStateJson = JSON.stringify(pollState ?? null).replace(/</g, "\\u003c");
 
 function formatUsd(value?: number) {
 	if (typeof value !== "number") return "TBD";
@@ -201,8 +200,7 @@ function getSubmitterLabel(game?: Game | null) {
 			</form>
 		</dialog>
 
-		<script>
-			const initialPollState = ${pollStateJson};
+		<script define:vars={{ initialPollState: pollState ?? null }}>
 			const pollChip = document.querySelector("#poll-chip");
 			const pollStatus = document.querySelector("#poll-status");
 			const pollResults = document.querySelector("#poll-results");
