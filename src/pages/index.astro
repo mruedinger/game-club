@@ -86,7 +86,6 @@ function getSubmitterLabel(game?: Game | null) {
 				<div>
 					{currentGame ? (
 						<div class="current-game-card">
-							<h3>Current Game</h3>
 							<div class="game-cover">
 								{currentGame.cover_art_url ? (
 									<img
@@ -98,7 +97,7 @@ function getSubmitterLabel(game?: Game | null) {
 									<div class="cover-placeholder">Cover coming soon</div>
 								)}
 							</div>
-							<h4 class="game-title">{currentGame.title}</h4>
+							<h4 class="game-title">Current Game: {currentGame.title}</h4>
 							<p class="current-game-description">
 								{currentGame.description || "Description coming soon."}
 							</p>
@@ -297,6 +296,7 @@ function getSubmitterLabel(game?: Game | null) {
 		padding: 1.8rem;
 		box-shadow: 0 24px 50px -30px var(--shadow);
 		border: 1px solid var(--border);
+		max-width: 420px;
 	}
 
 	.game-title {
