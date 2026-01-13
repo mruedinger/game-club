@@ -201,7 +201,7 @@ async function getPollResults(db: D1Database, pollId: number) {
 		.bind(pollId)
 		.all<{ game_id: number; title: string; points: number }>();
 
-	return results.slice(0, 3);
+	return results.filter((result) => result.points > 0);
 }
 
 function jsonResponse(payload: unknown, status = 200) {
