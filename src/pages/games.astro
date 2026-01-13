@@ -1,5 +1,6 @@
 ---
 import AppHeader from "../components/AppHeader.astro";
+import AppFooter from "../components/AppFooter.astro";
 import "../styles/base.css";
 
 type Game = {
@@ -165,6 +166,7 @@ const playedGames = games.played as Game[];
 				</section>
 			</div>
 		</main>
+		<AppFooter />
 
 		<dialog class="modal" id="add-game-modal">
 			<form class="modal-card add-game-form" novalidate>
@@ -554,28 +556,6 @@ const playedGames = games.played as Game[];
 		min-height: 450px;
 	}
 
-	.field {
-		display: grid;
-		gap: 0.3rem;
-	}
-
-	label {
-		font-weight: 600;
-		font-size: 0.85rem;
-		color: var(--ink-soft);
-	}
-
-	input {
-		width: 100%;
-		border-radius: 12px;
-		border: 1px solid var(--border);
-		padding: 0.65rem 0.9rem;
-		font-size: 0.9rem;
-		font-family: inherit;
-		background: rgba(255, 255, 255, 0.8);
-		box-sizing: border-box;
-	}
-
 	.suggestions {
 		list-style: none;
 		margin: 0;
@@ -647,10 +627,6 @@ const playedGames = games.played as Game[];
 
 	:global(.suggestion-item:last-child) {
 		border-bottom: none;
-	}
-
-	.small {
-		font-size: 0.9rem;
 	}
 
 	@keyframes rise {
