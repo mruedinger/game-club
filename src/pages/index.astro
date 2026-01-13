@@ -74,6 +74,7 @@ function getSubmitterLabel(game?: Game | null) {
 		<AppHeader />
 
 		<main>
+			<div class="container">
 			<section class="hero">
 				<div class="hero-text">
 					<p class="eyebrow">Monthly(ish) Video Game Club</p>
@@ -98,18 +99,16 @@ function getSubmitterLabel(game?: Game | null) {
 								)}
 							</div>
 							<h4 class="game-title">Current Game: {currentGame.title}</h4>
+							{currentGame.tags_json ? (
+								<p class="meta-line">
+									{JSON.parse(currentGame.tags_json).join(" · ")}
+								</p>
+							) : (
+								<p class="meta-line">Tags coming soon</p>
+							)}
 							<p class="current-game-description">
 								{currentGame.description || "Description coming soon."}
 							</p>
-							{currentGame.tags_json ? (
-								<div class="game-tags">
-									{JSON.parse(currentGame.tags_json).map((tag) => (
-										<span class="chip" data-tag={tag}>{tag}</span>
-									))}
-								</div>
-							) : (
-								<p class="muted">Tags coming soon</p>
-							)}
 							<div class="game-detail-links">
 								{currentGame.steam_app_id ? (
 									<a
@@ -143,14 +142,10 @@ function getSubmitterLabel(game?: Game | null) {
 								</a>
 							) : null}
 							</div>
-							<div class="game-detail-prices">
-								<span class="chip subtle">
-									Current low: {formatUsd(currentGame.current_price_cents)}
-								</span>
-								<span class="chip subtle">
-									Historical low: {formatUsd(currentGame.best_price_cents)}
-								</span>
-							</div>
+							<p class="meta-line">
+								Current low: {formatUsd(currentGame.current_price_cents)} · Historical
+								low: {formatUsd(currentGame.best_price_cents)}
+							</p>
 							<p class="muted small">{getSubmitterLabel(currentGame)}</p>
 						</div>
 					) : (
@@ -184,7 +179,7 @@ function getSubmitterLabel(game?: Game | null) {
 					</div>
 				</div>
 			</section>
-
+			</div>
 		</main>
 
 		<footer class="site-footer">
@@ -302,12 +297,6 @@ function getSubmitterLabel(game?: Game | null) {
 	.game-title {
 		margin: 0;
 		font-size: 1.1rem;
-	}
-
-	.game-tags {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.5rem;
 	}
 
 
