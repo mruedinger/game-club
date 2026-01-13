@@ -204,6 +204,8 @@ function getSubmitterLabel(game?: Game | null) {
 			const pollError = document.querySelector("#poll-error");
 			const startButton = document.querySelector("[data-action='start-poll']");
 			const closeButton = document.querySelector("[data-action='close-poll']");
+			let isAuthenticated = false;
+			let currentPollState = initialPollState;
 
 			function formatPollDate(value) {
 				if (!value) return "TBD";
@@ -232,6 +234,9 @@ function getSubmitterLabel(game?: Game | null) {
 			function renderResults(results, label) {
 				if (!pollResults) return;
 				clearElement(pollResults);
+				if (label === null) {
+					return;
+				}
 				if (!results || results.length === 0) {
 					const empty = document.createElement("p");
 					empty.className = "muted small";
@@ -241,7 +246,7 @@ function getSubmitterLabel(game?: Game | null) {
 				}
 				const list = document.createElement("ol");
 				list.className = "poll-results-list";
-				results.slice(0, 3).forEach((result, index) => {
+				results.forEach((result, index) => {
 					const item = document.createElement("li");
 					item.className = "poll-result";
 
@@ -265,6 +270,7 @@ function getSubmitterLabel(game?: Game | null) {
 
 				if (!state) {
 					pollChip.textContent = "Offline";
+					pollChip.classList.remove("hidden");
 					pollStatus.textContent = "Unable to load poll status.";
 					pollMeta.textContent = "";
 					renderResults([], "No poll data available.");
@@ -278,12 +284,16 @@ function getSubmitterLabel(game?: Game | null) {
 					pollChip.classList.remove("hidden");
 					pollStatus.textContent = state.hasVoted ? "Current standings:" : "";
 					pollMeta.textContent = `Started ${formatPollDate(state.poll?.started_at)}`;
-					if (state.hasVoted) {
+					if (!isAuthenticated) {
+						renderResults([], "Sign in to vote.");
+						setButtonVisibility({ canStart: false, canVote: false, canClose: false });
+						toggleVoteForm(false);
+					} else if (state.hasVoted) {
 						renderResults(state.results || [], "Results will appear after votes land.");
 						setButtonVisibility({ canStart: false, canVote: false, canClose: true });
 						toggleVoteForm(false);
 					} else {
-						renderResults([], "Vote to see results.");
+						renderResults([], null);
 						setButtonVisibility({ canStart: false, canVote: false, canClose: false });
 						toggleVoteForm(true);
 					}
@@ -296,13 +306,20 @@ function getSubmitterLabel(game?: Game | null) {
 						? `Results from: ${formatPollDate(state.poll.closed_at || state.poll.started_at)} · Inactive`
 						: "No polls yet.";
 					renderResults(state.results || [], "No poll results yet.");
-					setButtonVisibility({ canStart: true, canVote: false, canClose: false });
+					setButtonVisibility({
+						canStart: isAuthenticated,
+						canVote: false,
+						canClose: false
+					});
 					toggleVoteForm(false);
 				}
 			}
 
 			function populateChoices(choices) {
 				const selects = [pollChoice1, pollChoice2, pollChoice3];
+				const sortedChoices = Array.isArray(choices)
+					? [...choices].sort((a, b) => (a.title || "").localeCompare(b.title || ""))
+					: [];
 				selects.forEach((select) => {
 					if (!select) return;
 					const placeholder = select.querySelector("option");
@@ -310,7 +327,7 @@ function getSubmitterLabel(game?: Game | null) {
 					if (placeholder) {
 						select.appendChild(placeholder);
 					}
-					(choices || []).forEach((choice) => {
+					sortedChoices.forEach((choice) => {
 						const option = document.createElement("option");
 						option.value = String(choice.id);
 						option.textContent = choice.title;
@@ -353,6 +370,7 @@ function getSubmitterLabel(game?: Game | null) {
 					return null;
 				}
 				const data = await response.json();
+				currentPollState = data;
 				renderPoll(data);
 				return data;
 			}
@@ -453,6 +471,16 @@ function getSubmitterLabel(game?: Game | null) {
 				populateChoices(initialPollState?.choices || []);
 			}
 			renderPoll(initialPollState);
+
+			fetch("/api/me")
+				.then((response) => {
+					if (response.ok) {
+						isAuthenticated = true;
+					}
+				})
+				.finally(() => {
+					renderPoll(currentPollState);
+				});
 		</script>
 	</body>
 </html>
