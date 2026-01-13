@@ -1,5 +1,6 @@
 ---
 import AppHeader from "../../components/AppHeader.astro";
+import AppFooter from "../../components/AppFooter.astro";
 import "../../styles/base.css";
 
 export const prerender = false;
@@ -39,6 +40,7 @@ export const prerender = false;
 				</section>
 			</div>
 		</main>
+		<AppFooter />
 
 		<dialog class="modal" id="invite-modal">
 			<form method="dialog" class="modal-card invite-form" novalidate>
