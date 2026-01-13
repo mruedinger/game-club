@@ -393,11 +393,17 @@ main {
 	font-weight: 600;
 	color: var(--ink-soft);
 	align-items: center;
+	justify-content: center;
 }
 
 .footer-label {
 	font-weight: 600;
 	color: var(--ink);
+}
+
+.footer-break {
+	flex-basis: 100%;
+	height: 0;
 }
 
 .footer-links a {
