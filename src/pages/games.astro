@@ -188,6 +188,7 @@ const playedGames = games.played as Game[];
 		<dialog class="modal" id="game-detail-modal">
 			<form class="modal-card game-detail-card" method="dialog">
 				<header>
+					<h3 class="game-detail-title">Game title</h3>
 					<button class="ghost icon-button" type="button" data-action="close-game-detail" aria-label="Close">
 						×
 					</button>
@@ -195,15 +196,14 @@ const playedGames = games.played as Game[];
 				<div class="game-detail-body">
 					<img class="game-detail-cover" alt="" />
 					<div class="game-detail-info">
-						<h3 class="game-detail-title">Game title</h3>
-						<p class="meta-line game-detail-tags"></p>
+						<p class="meta-line tight game-detail-tags"></p>
 						<p class="game-detail-description"></p>
 						<div class="game-detail-links">
 							<a class="ghost small-pill game-detail-steam" target="_blank" rel="noreferrer" title="View on Steam">Steam</a>
 							<a class="ghost small-pill game-detail-hltb" target="_blank" rel="noreferrer" title="View on HowLongToBeat">HLTB</a>
 							<a class="ghost small-pill game-detail-itad" target="_blank" rel="noreferrer" title="View on IsThereAnyDeal">ITAD</a>
 						</div>
-						<p class="meta-line game-detail-prices">Current low: TBD · Historical low: TBD</p>
+						<p class="meta-line tight game-detail-prices">Current low: TBD · Historical low: TBD</p>
 						<p class="muted small game-detail-submitted"></p>
 					</div>
 				</div>
