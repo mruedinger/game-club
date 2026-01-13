@@ -372,7 +372,10 @@ function getSubmitterLabel(game?: Game | null) {
 				if (!authed) return;
 				const response = await fetch("/api/polls", { method: "POST" });
 				if (response.ok) {
-					await loadPollState();
+					const updated = await loadPollState();
+					if (updated?.active) {
+						populateChoices(updated.choices || []);
+					}
 				} else {
 					const message = await response.text();
 					pollStatus.textContent = message || "Unable to start poll.";
