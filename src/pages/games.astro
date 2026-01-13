@@ -1,5 +1,6 @@
 ---
 import AppHeader from "../components/AppHeader.astro";
+import AppFooter from "../components/AppFooter.astro";
 import "../styles/base.css";
 
 type Game = {
@@ -165,6 +166,7 @@ const playedGames = games.played as Game[];
 				</section>
 			</div>
 		</main>
+		<AppFooter />
 
 		<dialog class="modal" id="add-game-modal">
 			<form class="modal-card add-game-form" novalidate>
