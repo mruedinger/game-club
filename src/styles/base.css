@@ -29,6 +29,10 @@ main {
 	justify-items: center;
 }
 
+.hero + .section {
+	margin-top: 2.5rem;
+}
+
 .eyebrow {
 	text-transform: uppercase;
 	letter-spacing: 0.22em;
@@ -51,6 +55,12 @@ main {
 	color: var(--muted);
 	line-height: 1.6;
 	margin: 0;
+}
+
+.meta-line.tight {
+	line-height: 1.3;
+	margin-top: -0.15rem;
+	margin-bottom: -0.1rem;
 }
 
 .hero.two-column {

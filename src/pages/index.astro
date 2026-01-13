@@ -99,13 +99,13 @@ function getSubmitterLabel(game?: Game | null) {
 								)}
 							</div>
 							<h4 class="game-title">Current Game: {currentGame.title}</h4>
-							{currentGame.tags_json ? (
-								<p class="meta-line">
-									{JSON.parse(currentGame.tags_json).join(" · ")}
-								</p>
-							) : (
-								<p class="meta-line">Tags coming soon</p>
-							)}
+								{currentGame.tags_json ? (
+									<p class="meta-line tight">
+										{JSON.parse(currentGame.tags_json).join(" · ")}
+									</p>
+								) : (
+									<p class="meta-line tight">Tags coming soon</p>
+								)}
 							<p class="current-game-description">
 								{currentGame.description || "Description coming soon."}
 							</p>
