@@ -89,6 +89,24 @@ export const POST: APIRoute = async ({ request, locals }) => {
 		return new Response("Title is required.", { status: 400 });
 	}
 
+	const existingBySteam = steamAppId
+		? await db
+				.prepare("select id from games where steam_app_id = ?1 limit 1")
+				.bind(steamAppId)
+				.first<{ id: number }>()
+		: null;
+	if (existingBySteam) {
+		return new Response("Game already exists in the backlog.", { status: 409 });
+	}
+
+	const existingByTitle = await db
+		.prepare("select id from games where lower(title) = ?1 limit 1")
+		.bind(title.toLowerCase())
+		.first<{ id: number }>();
+	if (existingByTitle) {
+		return new Response("Game already exists in the backlog.", { status: 409 });
+	}
+
 	const coverArtUrl = steamData?.header_image ?? null;
 	const description = steamData?.short_description ?? null;
 	const tagsJson =

@@ -182,6 +182,7 @@ const playedGames = games.played as Game[];
 				</div>
 				<ul class="suggestions" aria-live="polite" role="listbox"></ul>
 				<p class="muted small">Start typing to see suggestions.</p>
+				<p class="form-error hidden" id="add-game-error" role="alert"></p>
 				<footer>
 					<button class="ghost" type="button" data-action="close-add-game">Cancel</button>
 					<button class="cta" type="submit">Submit</button>
@@ -223,6 +224,7 @@ const playedGames = games.played as Game[];
 			const addButton = document.querySelector(".add-game");
 			const addModal = document.querySelector("#add-game-modal");
 			const addForm = document.querySelector(".add-game-form");
+			const addError = document.querySelector("#add-game-error");
 			const titleInput = document.querySelector("#game-title");
 			const suggestionList = document.querySelector(".suggestions");
 			const detailModal = document.querySelector("#game-detail-modal");
@@ -264,6 +266,7 @@ const playedGames = games.played as Game[];
 						window.location.href = "/api/auth/login";
 						return;
 					}
+					clearFormError();
 					addModal?.showModal();
 				}
 				if (target.closest("[data-action='close-add-game']")) {
@@ -307,7 +310,10 @@ const playedGames = games.played as Game[];
 					if (response.ok) {
 						addModal?.close();
 						window.location.reload();
+						return;
 					}
+					const message = await response.text();
+					showFormError(message || "Unable to add game.");
 				});
 			}
 
@@ -330,6 +336,7 @@ const playedGames = games.played as Game[];
 				if (!input || !list) return;
 				let searchTimer;
 				input.addEventListener("input", () => {
+					clearFormError();
 					if (input === titleInput) {
 						input.dataset[steamIdKey] = "";
 					}
@@ -349,6 +356,18 @@ const playedGames = games.played as Game[];
 						renderSuggestions(list, data.results || []);
 					}, 300);
 				});
+			}
+
+			function showFormError(message) {
+				if (!addError) return;
+				addError.textContent = message;
+				addError.classList.remove("hidden");
+			}
+
+			function clearFormError() {
+				if (!addError) return;
+				addError.textContent = "";
+				addError.classList.add("hidden");
 			}
 
 			function renderSuggestions(list, items) {
