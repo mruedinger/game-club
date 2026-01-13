@@ -75,7 +75,7 @@ function getSubmitterLabel(game?: Game | null) {
 
 		<main>
 			<div class="container">
-			<section class="hero">
+			<section class="hero centered">
 				<div class="hero-text">
 					<p class="eyebrow">Monthly(ish) Video Game Club</p>
 					<h1>A Shindigging good time.</h1>
@@ -152,7 +152,15 @@ function getSubmitterLabel(game?: Game | null) {
 						<p class="muted">No current game set yet.</p>
 					)}
 				</div>
-				<div></div>
+				<div class="poll-summary">
+					<h3>Poll</h3>
+					<p class="muted">No active poll right now.</p>
+					<div class="poll-summary-actions">
+						<button class="cta" type="button">Start a poll</button>
+						<button class="cta hidden" type="button">Vote</button>
+					</div>
+					<p class="muted small">Last poll: TBD</p>
+				</div>
 			</section>
 
 			<section id="poll" class="section poll">
@@ -237,11 +245,6 @@ function getSubmitterLabel(game?: Game | null) {
 		text-decoration: none;
 	}
 
-	.hero {
-		display: grid;
-		gap: 1.5rem;
-	}
-
 	.poll-card {
 		background: rgba(255, 255, 255, 0.78);
 		border-radius: var(--radius);
@@ -280,23 +283,6 @@ function getSubmitterLabel(game?: Game | null) {
 	.section-head p {
 		color: var(--muted);
 		max-width: 30rem;
-	}
-
-
-	.current-game-card {
-		display: grid;
-		gap: 0.9rem;
-		background: rgba(255, 255, 255, 0.78);
-		border-radius: var(--radius);
-		padding: 1.8rem;
-		box-shadow: 0 24px 50px -30px var(--shadow);
-		border: 1px solid var(--border);
-		max-width: 420px;
-	}
-
-	.game-title {
-		margin: 0;
-		font-size: 1.1rem;
 	}
 
 
