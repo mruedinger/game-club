@@ -381,7 +381,7 @@ main {
 }
 
 .site-footer {
-	padding: 2rem 6vw 3rem;
+	padding: 1rem 6vw;
 	border-top: 1px solid var(--border);
 	background: rgba(238, 242, 246, 0.85);
 }
@@ -389,7 +389,7 @@ main {
 .footer-links {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 1rem;
+	gap: 0.6rem 1rem;
 	font-weight: 600;
 	color: var(--ink-soft);
 	align-items: center;
