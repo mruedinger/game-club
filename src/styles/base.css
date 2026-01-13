@@ -253,6 +253,87 @@ main {
 	flex-wrap: wrap;
 }
 
+.poll-summary-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+}
+
+.poll-results {
+	display: grid;
+	gap: 0.5rem;
+}
+
+.poll-results-list {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+	display: grid;
+	gap: 0.5rem;
+}
+
+.poll-result {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	padding: 0.6rem 0.8rem;
+	border-radius: 12px;
+	background: rgba(255, 255, 255, 0.6);
+	border: 1px solid var(--border);
+}
+
+.poll-result-title {
+	font-weight: 600;
+}
+
+.poll-result-points {
+	color: var(--muted);
+	font-size: 0.85rem;
+	white-space: nowrap;
+}
+
+.poll-vote-list {
+	display: grid;
+	gap: 0.9rem;
+}
+
+.poll-error {
+	color: #8b1e24;
+	font-size: 0.85rem;
+}
+
+.field {
+	display: grid;
+	gap: 0.35rem;
+}
+
+.field label {
+	font-size: 0.85rem;
+	font-weight: 600;
+	color: var(--ink-soft);
+}
+
+.field input,
+.field select,
+.field textarea {
+	padding: 0.7rem 0.9rem;
+	border-radius: 12px;
+	border: 1px solid var(--border);
+	background: #fff;
+	font-size: 0.95rem;
+	color: var(--ink);
+	font-family: inherit;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+	outline: 2px solid rgba(59, 110, 165, 0.25);
+	border-color: var(--accent);
+}
+
 .ghost {
 	display: inline-flex;
 	align-items: center;
