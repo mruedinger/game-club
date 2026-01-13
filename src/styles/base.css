@@ -264,6 +264,19 @@ main {
 	gap: 1rem;
 }
 
+.poll-status-text {
+	font-size: 0.85rem;
+	font-weight: 600;
+	color: var(--muted);
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
+.poll-status-text.is-active {
+	color: var(--accent);
+	animation: pollPulse 1.6s ease-in-out infinite;
+}
+
 .poll-results {
 	display: grid;
 	gap: 0.5rem;
@@ -308,6 +321,20 @@ main {
 	font-size: 0.85rem;
 }
 
+.poll-vote-form {
+	display: grid;
+	gap: 0.8rem;
+	border: 1px solid var(--border);
+	border-radius: 16px;
+	padding: 1rem;
+	background: rgba(255, 255, 255, 0.7);
+}
+
+.poll-vote-actions {
+	display: flex;
+	justify-content: flex-end;
+}
+
 .field {
 	display: grid;
 	gap: 0.35rem;
@@ -339,6 +366,16 @@ main {
 .field textarea:focus {
 	outline: 2px solid rgba(59, 110, 165, 0.25);
 	border-color: var(--accent);
+}
+
+@keyframes pollPulse {
+	0%,
+	100% {
+		opacity: 0.55;
+	}
+	50% {
+		opacity: 1;
+	}
 }
 
 .ghost {

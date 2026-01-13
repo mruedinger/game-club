@@ -143,16 +143,41 @@ function getSubmitterLabel(game?: Game | null) {
 				<div class="poll-summary" id="poll-summary">
 					<div class="poll-summary-header">
 						<h3>Poll</h3>
-						<span class="chip subtle" id="poll-chip">Inactive</span>
+						<div class="poll-summary-actions">
+							<button class="cta" type="button" data-action="start-poll">Start a poll</button>
+							<button class="ghost hidden" type="button" data-action="close-poll">Close poll</button>
+						</div>
 					</div>
+					<span class="poll-status-text" id="poll-chip">Inactive</span>
 					<p class="muted" id="poll-status">Loading poll status...</p>
+					<form class="poll-vote-form hidden" id="poll-vote-form">
+						<div class="poll-vote-list">
+							<div class="field">
+								<label for="poll-choice-1">First choice</label>
+								<select id="poll-choice-1" name="choice1">
+									<option value="">Select a game</option>
+								</select>
+							</div>
+							<div class="field">
+								<label for="poll-choice-2">Second choice</label>
+								<select id="poll-choice-2" name="choice2">
+									<option value="">Optional</option>
+								</select>
+							</div>
+							<div class="field">
+								<label for="poll-choice-3">Third choice</label>
+								<select id="poll-choice-3" name="choice3">
+									<option value="">Optional</option>
+								</select>
+							</div>
+						</div>
+						<p class="poll-error hidden" id="poll-error" role="alert"></p>
+						<div class="poll-vote-actions">
+							<button class="cta" type="submit">Vote!</button>
+						</div>
+					</form>
 					<div class="poll-results" id="poll-results"></div>
 					<p class="muted small" id="poll-meta"></p>
-					<div class="poll-summary-actions">
-						<button class="cta" type="button" data-action="start-poll">Start a poll</button>
-						<button class="cta hidden" type="button" data-action="vote">Vote</button>
-						<button class="ghost hidden" type="button" data-action="close-poll">Close poll</button>
-					</div>
 				</div>
 			</section>
 			</div>
@@ -161,58 +186,17 @@ function getSubmitterLabel(game?: Game | null) {
 		<footer class="site-footer">
 			<p>Invite-only. Built for thoughtful gaming and shared curiosity.</p>
 		</footer>
-		<dialog class="modal" id="poll-vote-modal">
-			<form class="modal-card" id="poll-vote-form">
-				<header>
-					<div>
-						<h3>Vote in the poll</h3>
-						<p class="muted small">Rank up to three games. Top pick counts most.</p>
-					</div>
-					<button class="ghost icon-button" type="button" data-action="close-poll-modal" aria-label="Close">
-						×
-					</button>
-				</header>
-				<div class="poll-vote-list">
-					<div class="field">
-						<label for="poll-choice-1">First choice</label>
-						<select id="poll-choice-1" name="choice1">
-							<option value="">Select a game</option>
-						</select>
-					</div>
-					<div class="field">
-						<label for="poll-choice-2">Second choice</label>
-						<select id="poll-choice-2" name="choice2">
-							<option value="">Optional</option>
-						</select>
-					</div>
-					<div class="field">
-						<label for="poll-choice-3">Third choice</label>
-						<select id="poll-choice-3" name="choice3">
-							<option value="">Optional</option>
-						</select>
-					</div>
-					<p class="poll-error hidden" id="poll-error" role="alert"></p>
-				</div>
-				<footer>
-					<button class="ghost" type="button" data-action="close-poll-modal">Cancel</button>
-					<button class="cta" type="submit">Submit vote</button>
-				</footer>
-			</form>
-		</dialog>
-
 		<script define:vars={{ initialPollState: pollState ?? null }}>
 			const pollChip = document.querySelector("#poll-chip");
 			const pollStatus = document.querySelector("#poll-status");
 			const pollResults = document.querySelector("#poll-results");
 			const pollMeta = document.querySelector("#poll-meta");
-			const pollVoteModal = document.querySelector("#poll-vote-modal");
 			const pollVoteForm = document.querySelector("#poll-vote-form");
 			const pollChoice1 = document.querySelector("#poll-choice-1");
 			const pollChoice2 = document.querySelector("#poll-choice-2");
 			const pollChoice3 = document.querySelector("#poll-choice-3");
 			const pollError = document.querySelector("#poll-error");
 			const startButton = document.querySelector("[data-action='start-poll']");
-			const voteButton = document.querySelector("[data-action='vote']");
 			const closeButton = document.querySelector("[data-action='close-poll']");
 
 			function formatPollDate(value) {
@@ -236,7 +220,6 @@ function getSubmitterLabel(game?: Game | null) {
 
 			function setButtonVisibility({ canStart, canVote, canClose }) {
 				if (startButton) startButton.classList.toggle("hidden", !canStart);
-				if (voteButton) voteButton.classList.toggle("hidden", !canVote);
 				if (closeButton) closeButton.classList.toggle("hidden", !canClose);
 			}
 
@@ -285,8 +268,7 @@ function getSubmitterLabel(game?: Game | null) {
 
 				if (state.active) {
 					pollChip.textContent = "Active";
-					pollChip.classList.remove("subtle");
-					pollChip.classList.add("strong");
+					pollChip.classList.add("is-active");
 					pollStatus.textContent = state.hasVoted
 						? "Thanks for voting. Current standings:"
 						: "Poll is active. Cast your ranked vote.";
@@ -294,20 +276,22 @@ function getSubmitterLabel(game?: Game | null) {
 					if (state.hasVoted) {
 						renderResults(state.results || [], "Results will appear after votes land.");
 						setButtonVisibility({ canStart: false, canVote: false, canClose: true });
+						toggleVoteForm(false);
 					} else {
-						renderResults([], "Vote to see results.");
-						setButtonVisibility({ canStart: false, canVote: true, canClose: false });
+						renderResults([], "Vote below to see results.");
+						setButtonVisibility({ canStart: false, canVote: false, canClose: false });
+						toggleVoteForm(true);
 					}
 				} else {
 					pollChip.textContent = "Inactive";
-					pollChip.classList.remove("strong");
-					pollChip.classList.add("subtle");
+					pollChip.classList.remove("is-active");
 					pollStatus.textContent = "No active poll right now.";
 					pollMeta.textContent = state.poll
 						? `Last poll: ${formatPollDate(state.poll.closed_at || state.poll.started_at)}`
 						: "No polls yet.";
 					renderResults(state.results || [], "No poll results yet.");
 					setButtonVisibility({ canStart: true, canVote: false, canClose: false });
+					toggleVoteForm(false);
 				}
 			}
 
@@ -327,6 +311,22 @@ function getSubmitterLabel(game?: Game | null) {
 						select.appendChild(option);
 					});
 				});
+			}
+
+			function toggleVoteForm(show) {
+				if (!pollVoteForm) return;
+				pollVoteForm.classList.toggle("hidden", !show);
+				const selects = [pollChoice1, pollChoice2, pollChoice3];
+				selects.forEach((select) => {
+					if (!select) return;
+					select.disabled = !show;
+				});
+				if (!show) {
+					selects.forEach((select) => {
+						if (select) select.value = "";
+					});
+					setPollError("");
+				}
 			}
 
 			function setPollError(message) {
@@ -393,39 +393,13 @@ function getSubmitterLabel(game?: Game | null) {
 				}
 			}
 
-			async function openVoteModal(state) {
-				if (!pollVoteModal) return;
-				const authed = await ensureAuthenticated("Voting");
-				if (!authed) return;
-				populateChoices(state?.choices || []);
-				setPollError("");
-				pollVoteModal.showModal();
-			}
-
 			if (startButton) {
 				startButton.addEventListener("click", () => startPoll());
-			}
-
-			if (voteButton) {
-				voteButton.addEventListener("click", async () => {
-					const state = await loadPollState();
-					if (state?.active) {
-						openVoteModal(state);
-					}
-				});
 			}
 
 			if (closeButton) {
 				closeButton.addEventListener("click", () => closePoll());
 			}
-
-			document.addEventListener("click", (event) => {
-				const target = event.target;
-				if (!(target instanceof HTMLElement)) return;
-				if (target.closest("[data-action='close-poll-modal']") && pollVoteModal) {
-					pollVoteModal.close();
-				}
-			});
 
 			if (pollVoteForm) {
 				pollVoteForm.addEventListener("submit", async (event) => {
@@ -453,8 +427,10 @@ function getSubmitterLabel(game?: Game | null) {
 					});
 
 					if (response.ok) {
-						if (pollVoteModal) pollVoteModal.close();
-						await loadPollState();
+						const updated = await loadPollState();
+						if (updated?.active) {
+							populateChoices(updated.choices || []);
+						}
 					} else if (response.status === 401) {
 						window.location.href = "/api/auth/login";
 					} else {
@@ -464,6 +440,9 @@ function getSubmitterLabel(game?: Game | null) {
 				});
 			}
 
+			if (initialPollState?.active && !initialPollState?.hasVoted) {
+				populateChoices(initialPollState?.choices || []);
+			}
 			renderPoll(initialPollState);
 		</script>
 	</body>
