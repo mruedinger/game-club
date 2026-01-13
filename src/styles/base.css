@@ -30,6 +30,11 @@ main {
 	justify-items: center;
 }
 
+.hero-text {
+	display: grid;
+	gap: 0.4rem;
+}
+
 .hero + .section {
 	margin-top: 1.6rem;
 }
@@ -63,9 +68,9 @@ main {
 }
 
 .meta-line.tight {
-	line-height: 1.3;
-	margin-top: -0.15rem;
-	margin-bottom: -0.1rem;
+	line-height: 1.2;
+	margin-top: -0.2rem;
+	margin-bottom: -0.15rem;
 }
 
 .hero.two-column {
