@@ -45,113 +45,123 @@ const playedGames = games.played as Game[];
 		<AppHeader />
 
 		<main>
-			<section class="hero">
-				<p class="eyebrow">Game library</p>
-				<h1>Backlog and played games</h1>
-				<p class="lead">
-					Browse member-submitted games and revisit the titles we have already played
-					together.
-				</p>
-			</section>
+			<div class="container">
+				<section class="hero">
+					<p class="eyebrow">Game library</p>
+					<h1>Backlog and played games</h1>
+					<p class="lead">
+						Browse member-submitted games and revisit the titles we have already played
+						together.
+					</p>
+				</section>
 
-			<section class="section">
-				<div class="section-head">
-					<h2>Backlog</h2>
-					<p>Games waiting to be picked in an upcoming poll.</p>
-					<button class="cta add-game hidden" type="button">Add a game</button>
-				</div>
-				<div class="games-grid">
-					{backlogGames.map((game, index) => (
-						<article
-							class="game-card"
-							style={`animation-delay: ${index * 70}ms`}
-							data-id={game.id}
-							data-title={game.title}
-							data-tags={game.tags_json || ""}
-							data-description={game.description || ""}
-							data-cover={game.cover_art_url || ""}
-							data-submitted={game.submitted_by_email || ""}
-							data-submitted-name={game.submitted_by_name || ""}
-							data-submitted-alias={game.submitted_by_alias || ""}
-							data-steam-app-id={game.steam_app_id ? String(game.steam_app_id) : ""}
-							data-itad-id={game.itad_game_id || ""}
-							data-itad-slug={game.itad_slug || ""}
-							data-current-price={
-								typeof game.current_price_cents === "number"
-									? String(game.current_price_cents)
-									: ""
-							}
-							data-best-price={
-								typeof game.best_price_cents === "number"
-									? String(game.best_price_cents)
-									: ""
-							}
-							data-status={game.status}
-						>
-							<h3>{game.title}</h3>
-							<div class="game-cover">
-								{game.cover_art_url ? (
-									<img src={game.cover_art_url} alt={`${game.title} cover art`} loading="lazy" />
-								) : (
-									<div class="cover-placeholder">Cover coming soon</div>
-								)}
-							</div>
-							<p class="muted">
-								{game.tags_json ? JSON.parse(game.tags_json).join(" · ") : "Tags coming soon"}
-							</p>
-						</article>
-					))}
-				</div>
-			</section>
+				<section class="section">
+					<div class="section-head">
+						<h2>Backlog</h2>
+						<p>Games waiting to be picked in an upcoming poll.</p>
+						<button class="cta add-game hidden" type="button">Add a game</button>
+					</div>
+					<div class="games-grid">
+						{backlogGames.map((game, index) => (
+							<article
+								class="game-card"
+								style={`animation-delay: ${index * 70}ms`}
+								data-id={game.id}
+								data-title={game.title}
+								data-tags={game.tags_json || ""}
+								data-description={game.description || ""}
+								data-cover={game.cover_art_url || ""}
+								data-submitted={game.submitted_by_email || ""}
+								data-submitted-name={game.submitted_by_name || ""}
+								data-submitted-alias={game.submitted_by_alias || ""}
+								data-steam-app-id={game.steam_app_id ? String(game.steam_app_id) : ""}
+								data-itad-id={game.itad_game_id || ""}
+								data-itad-slug={game.itad_slug || ""}
+								data-current-price={
+									typeof game.current_price_cents === "number"
+										? String(game.current_price_cents)
+										: ""
+								}
+								data-best-price={
+									typeof game.best_price_cents === "number"
+										? String(game.best_price_cents)
+										: ""
+								}
+								data-status={game.status}
+							>
+								<h3>{game.title}</h3>
+								<div class="game-cover">
+									{game.cover_art_url ? (
+										<img
+											src={game.cover_art_url}
+											alt={`${game.title} cover art`}
+											loading="lazy"
+										/>
+									) : (
+										<div class="cover-placeholder">Cover coming soon</div>
+									)}
+								</div>
+								<p class="muted">
+									{game.tags_json ? JSON.parse(game.tags_json).join(" · ") : "Tags coming soon"}
+								</p>
+							</article>
+						))}
+					</div>
+				</section>
 
-			<section class="section">
-				<div class="section-head">
-					<h2>Played</h2>
-					<p>Games the club has finished and discussed.</p>
-				</div>
-				<div class="games-grid">
-					{playedGames.map((game, index) => (
-						<article
-							class="game-card"
-							style={`animation-delay: ${index * 70}ms`}
-							data-id={game.id}
-							data-title={game.title}
-							data-tags={game.tags_json || ""}
-							data-description={game.description || ""}
-							data-cover={game.cover_art_url || ""}
-							data-submitted={game.submitted_by_email || ""}
-							data-submitted-name={game.submitted_by_name || ""}
-							data-submitted-alias={game.submitted_by_alias || ""}
-							data-steam-app-id={game.steam_app_id ? String(game.steam_app_id) : ""}
-							data-itad-id={game.itad_game_id || ""}
-							data-itad-slug={game.itad_slug || ""}
-							data-current-price={
-								typeof game.current_price_cents === "number"
-									? String(game.current_price_cents)
-									: ""
-							}
-							data-best-price={
-								typeof game.best_price_cents === "number"
-									? String(game.best_price_cents)
-									: ""
-							}
-							data-status={game.status}
-						>
-							<h3>{game.title}</h3>
-							<div class="game-cover">
-								{game.cover_art_url ? (
-									<img src={game.cover_art_url} alt={`${game.title} cover art`} loading="lazy" />
-								) : (
-									<div class="cover-placeholder">Cover coming soon</div>
-								)}
-							</div>
-							<p class="muted">
-								{game.tags_json ? JSON.parse(game.tags_json).join(" · ") : "Tags coming soon"}
-							</p>
-						</article>
-					))}
-				</div>
-			</section>
+				<section class="section">
+					<div class="section-head">
+						<h2>Played</h2>
+						<p>Games the club has finished and discussed.</p>
+					</div>
+					<div class="games-grid">
+						{playedGames.map((game, index) => (
+							<article
+								class="game-card"
+								style={`animation-delay: ${index * 70}ms`}
+								data-id={game.id}
+								data-title={game.title}
+								data-tags={game.tags_json || ""}
+								data-description={game.description || ""}
+								data-cover={game.cover_art_url || ""}
+								data-submitted={game.submitted_by_email || ""}
+								data-submitted-name={game.submitted_by_name || ""}
+								data-submitted-alias={game.submitted_by_alias || ""}
+								data-steam-app-id={game.steam_app_id ? String(game.steam_app_id) : ""}
+								data-itad-id={game.itad_game_id || ""}
+								data-itad-slug={game.itad_slug || ""}
+								data-current-price={
+									typeof game.current_price_cents === "number"
+										? String(game.current_price_cents)
+										: ""
+								}
+								data-best-price={
+									typeof game.best_price_cents === "number"
+										? String(game.best_price_cents)
+										: ""
+								}
+								data-status={game.status}
+							>
+								<h3>{game.title}</h3>
+								<div class="game-cover">
+									{game.cover_art_url ? (
+										<img
+											src={game.cover_art_url}
+											alt={`${game.title} cover art`}
+											loading="lazy"
+										/>
+									) : (
+										<div class="cover-placeholder">Cover coming soon</div>
+									)}
+								</div>
+								<p class="muted">
+									{game.tags_json ? JSON.parse(game.tags_json).join(" · ") : "Tags coming soon"}
+								</p>
+							</article>
+						))}
+					</div>
+				</section>
+			</div>
 		</main>
 
 		<dialog class="modal" id="add-game-modal">
@@ -178,7 +188,6 @@ const playedGames = games.played as Game[];
 		<dialog class="modal" id="game-detail-modal">
 			<form class="modal-card game-detail-card" method="dialog">
 				<header>
-					<h3 class="game-detail-title">Game details</h3>
 					<button class="ghost icon-button" type="button" data-action="close-game-detail" aria-label="Close">
 						×
 					</button>
@@ -186,17 +195,15 @@ const playedGames = games.played as Game[];
 				<div class="game-detail-body">
 					<img class="game-detail-cover" alt="" />
 					<div class="game-detail-info">
-						<p class="muted game-detail-tags"></p>
+						<h3 class="game-detail-title">Game title</h3>
+						<p class="meta-line game-detail-tags"></p>
 						<p class="game-detail-description"></p>
 						<div class="game-detail-links">
 							<a class="ghost small-pill game-detail-steam" target="_blank" rel="noreferrer" title="View on Steam">Steam</a>
 							<a class="ghost small-pill game-detail-hltb" target="_blank" rel="noreferrer" title="View on HowLongToBeat">HLTB</a>
 							<a class="ghost small-pill game-detail-itad" target="_blank" rel="noreferrer" title="View on IsThereAnyDeal">ITAD</a>
 						</div>
-						<div class="game-detail-prices">
-							<span class="chip subtle game-detail-current">Current: TBD</span>
-							<span class="chip subtle game-detail-best">Best: TBD</span>
-						</div>
+						<p class="meta-line game-detail-prices">Current low: TBD · Historical low: TBD</p>
 						<p class="muted small game-detail-submitted"></p>
 					</div>
 				</div>
@@ -225,8 +232,7 @@ const playedGames = games.played as Game[];
 			const detailSteam = document.querySelector(".game-detail-steam");
 			const detailHltb = document.querySelector(".game-detail-hltb");
 			const detailItad = document.querySelector(".game-detail-itad");
-			const detailCurrent = document.querySelector(".game-detail-current");
-			const detailBest = document.querySelector(".game-detail-best");
+			const detailPrices = document.querySelector(".game-detail-prices");
 			let selectedGameId = null;
 			let currentUserEmail = "";
 			let currentUserRole = "";
@@ -397,7 +403,7 @@ const playedGames = games.played as Game[];
 
 				if (detailTitle) detailTitle.textContent = title;
 				if (detailDescription) detailDescription.textContent = description;
-				if (detailTags) detailTags.textContent = tags;
+				if (detailTags) detailTags.textContent = tags || "Tags coming soon";
 				if (detailSubmitted) {
 					const submitter =
 						submittedAlias || submittedName || submitted || "a member";
@@ -433,15 +439,8 @@ const playedGames = games.played as Game[];
 					detailItad.href = itadUrl;
 					detailItad.classList.toggle("hidden", !itadUrl);
 				}
-				if (detailCurrent) {
-					detailCurrent.textContent = currentPrice
-						? `Current: ${formatUsd(currentPrice)}`
-						: "Current: TBD";
-				}
-				if (detailBest) {
-					detailBest.textContent = bestPrice
-						? `Best: ${formatUsd(bestPrice)}`
-						: "Best: TBD";
+				if (detailPrices) {
+					detailPrices.textContent = `Current low: ${formatUsd(currentPrice)} · Historical low: ${formatUsd(bestPrice)}`;
 				}
 				if (detailDelete) {
 					detailDelete.classList.toggle("hidden", !isSignedIn);
@@ -473,6 +472,7 @@ const playedGames = games.played as Game[];
 			}
 
 			function formatUsd(value) {
+				if (value === null || value === undefined || value === "") return "TBD";
 				const cents = Number.parseInt(value, 10);
 				if (Number.isNaN(cents)) return "TBD";
 				return new Intl.NumberFormat("en-US", {

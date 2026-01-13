@@ -16,24 +16,26 @@ export const prerender = false;
 		<AppHeader />
 
 		<main class="admin-shell is-hidden">
-			<section class="hero">
-				<p class="eyebrow">Admin</p>
-				<h1>Control Room</h1>
-				<p class="muted">Manage members, content, and club operations.</p>
-			</section>
+			<div class="container">
+				<section class="hero">
+					<p class="eyebrow">Admin</p>
+					<h1>Control Room</h1>
+					<p class="muted">Manage members, content, and club operations.</p>
+				</section>
 
-			<section class="card members-card">
-				<div class="section-head">
-					<h2>Members</h2>
-					<p class="muted">View and manage member access.</p>
-				</div>
-				<button class="cta invite-cta" type="button" data-action="open-invite">
-					Add a new member
-				</button>
-				<div class="member-list" aria-live="polite">
-					<p class="muted small">Loading members…</p>
-				</div>
-			</section>
+				<section class="card members-card">
+					<div class="section-head">
+						<h2>Members</h2>
+						<p class="muted">View and manage member access.</p>
+					</div>
+					<button class="cta invite-cta" type="button" data-action="open-invite">
+						Add a new member
+					</button>
+					<div class="member-list" aria-live="polite">
+						<p class="muted small">Loading members…</p>
+					</div>
+				</section>
+			</div>
 		</main>
 
 		<dialog class="modal" id="invite-modal">
