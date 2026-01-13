@@ -32,7 +32,15 @@ main {
 
 .hero-text {
 	display: grid;
-	gap: 0.25rem;
+	gap: 0.4rem;
+}
+
+.hero-text h1 {
+	margin-bottom: 0.2rem;
+}
+
+.hero-text .eyebrow {
+	margin-bottom: 0.1rem;
 }
 
 .hero + .section {
