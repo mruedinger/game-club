@@ -75,7 +75,7 @@ function getSubmitterLabel(game?: Game | null) {
 			<section class="section current-game two-column-grid">
 				<div>
 					{currentGame ? (
-						<div class="current-game-card">
+						<div class="card current-game-card">
 							<div class="game-cover">
 								{currentGame.cover_art_url ? (
 									<img
@@ -141,7 +141,7 @@ function getSubmitterLabel(game?: Game | null) {
 						<p class="muted">No current game set yet.</p>
 					)}
 				</div>
-				<div class="poll-summary" id="poll-summary">
+				<div class="card poll-summary" id="poll-summary">
 					<div class="poll-summary-header">
 						<div class="poll-header">
 							<h3>Poll</h3>
