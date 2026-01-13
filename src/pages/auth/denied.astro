@@ -1,5 +1,6 @@
 ---
 import AppHeader from "../../components/AppHeader.astro";
+import AppFooter from "../../components/AppFooter.astro";
 import "../../styles/base.css";
 
 export const prerender = false;
@@ -16,7 +17,7 @@ export const prerender = false;
 		<AppHeader />
 
 		<main>
-			<div class="container">
+			<div class="container centered-container">
 				<section class="card">
 					<h1>Looks like you are not a member of Game Club.</h1>
 					<p class="muted">
@@ -26,6 +27,7 @@ export const prerender = false;
 				</section>
 			</div>
 		</main>
+		<AppFooter />
 	</body>
 </html>
 
@@ -56,9 +58,10 @@ export const prerender = false;
 		min-height: 100vh;
 	}
 
-	main {
+	.centered-container {
 		display: grid;
 		place-items: center;
+		min-height: 60vh;
 	}
 
 	.card {
