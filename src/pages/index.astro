@@ -142,13 +142,14 @@ function getSubmitterLabel(game?: Game | null) {
 				</div>
 				<div class="poll-summary" id="poll-summary">
 					<div class="poll-summary-header">
-						<h3>Poll</h3>
+						<div class="poll-header">
+							<h3>Poll</h3>
+							<span class="poll-status-text hidden" id="poll-chip">Inactive</span>
+						</div>
 						<div class="poll-summary-actions">
 							<button class="cta" type="button" data-action="start-poll">Start a poll</button>
-							<button class="ghost hidden" type="button" data-action="close-poll">Close poll</button>
 						</div>
 					</div>
-					<span class="poll-status-text" id="poll-chip">Inactive</span>
 					<p class="muted" id="poll-status">Loading poll status...</p>
 					<form class="poll-vote-form hidden" id="poll-vote-form">
 						<div class="poll-vote-list">
@@ -173,11 +174,16 @@ function getSubmitterLabel(game?: Game | null) {
 						</div>
 						<p class="poll-error hidden" id="poll-error" role="alert"></p>
 						<div class="poll-vote-actions">
-							<button class="cta" type="submit">Vote!</button>
+							<button class="cta" type="submit">Vote</button>
 						</div>
 					</form>
 					<div class="poll-results" id="poll-results"></div>
 					<p class="muted small" id="poll-meta"></p>
+					<div class="poll-footer-actions">
+						<button class="ghost danger hidden" type="button" data-action="close-poll">
+							Close poll
+						</button>
+					</div>
 				</div>
 			</section>
 			</div>
@@ -267,27 +273,27 @@ function getSubmitterLabel(game?: Game | null) {
 				}
 
 				if (state.active) {
-					pollChip.textContent = "Active";
+					pollChip.textContent = "Voting live!";
 					pollChip.classList.add("is-active");
-					pollStatus.textContent = state.hasVoted
-						? "Thanks for voting. Current standings:"
-						: "Poll is active. Cast your ranked vote.";
+					pollChip.classList.remove("hidden");
+					pollStatus.textContent = state.hasVoted ? "Current standings:" : "";
 					pollMeta.textContent = `Started ${formatPollDate(state.poll?.started_at)}`;
 					if (state.hasVoted) {
 						renderResults(state.results || [], "Results will appear after votes land.");
 						setButtonVisibility({ canStart: false, canVote: false, canClose: true });
 						toggleVoteForm(false);
 					} else {
-						renderResults([], "Vote below to see results.");
+						renderResults([], "Vote to see results.");
 						setButtonVisibility({ canStart: false, canVote: false, canClose: false });
 						toggleVoteForm(true);
 					}
 				} else {
 					pollChip.textContent = "Inactive";
 					pollChip.classList.remove("is-active");
-					pollStatus.textContent = "No active poll right now.";
+					pollChip.classList.add("hidden");
+					pollStatus.textContent = "";
 					pollMeta.textContent = state.poll
-						? `Last poll: ${formatPollDate(state.poll.closed_at || state.poll.started_at)}`
+						? `Results from: ${formatPollDate(state.poll.closed_at || state.poll.started_at)} · Inactive`
 						: "No polls yet.";
 					renderResults(state.results || [], "No poll results yet.");
 					setButtonVisibility({ canStart: true, canVote: false, canClose: false });

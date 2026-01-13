@@ -264,6 +264,12 @@ main {
 	gap: 1rem;
 }
 
+.poll-header {
+	display: flex;
+	align-items: baseline;
+	gap: 0.8rem;
+}
+
 .poll-status-text {
 	font-size: 0.85rem;
 	font-weight: 600;
@@ -333,6 +339,12 @@ main {
 .poll-vote-actions {
 	display: flex;
 	justify-content: flex-end;
+}
+
+.poll-footer-actions {
+	display: flex;
+	justify-content: flex-end;
+	margin-top: 0.5rem;
 }
 
 .field {
