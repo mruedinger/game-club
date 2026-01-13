@@ -415,6 +415,14 @@ main {
 .footer-icon {
 	font-size: 0.95rem;
 	line-height: 1;
+	display: inline-flex;
+	align-items: center;
+}
+
+.footer-icon svg {
+	width: 0.95rem;
+	height: 0.95rem;
+	display: block;
 }
 
 @media (max-width: 600px) {
