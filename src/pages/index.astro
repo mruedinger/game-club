@@ -216,19 +216,8 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 						<input id="meeting-date" name="date" type="date" required />
 					</div>
 					<div class="field">
-						<label for="meeting-hour">Hour</label>
-						<input id="meeting-hour" name="hour" type="number" min="1" max="12" required />
-					</div>
-					<div class="field">
-						<label for="meeting-minute">Minute</label>
-						<input id="meeting-minute" name="minute" type="number" min="0" max="59" required />
-					</div>
-					<div class="field">
-						<label for="meeting-ampm">AM/PM</label>
-						<select id="meeting-ampm" name="ampm" required>
-							<option value="AM">AM</option>
-							<option value="PM">PM</option>
-						</select>
+						<label for="meeting-time">Time</label>
+						<input id="meeting-time" name="time" type="time" step="300" required />
 					</div>
 				</div>
 				<footer>
@@ -252,9 +241,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 			const meetingNode = document.querySelector("#next-meeting");
 			const meetingModal = document.querySelector("#meeting-modal");
 			const meetingDate = document.querySelector("#meeting-date");
-			const meetingHour = document.querySelector("#meeting-hour");
-			const meetingMinute = document.querySelector("#meeting-minute");
-			const meetingAmPm = document.querySelector("#meeting-ampm");
+			const meetingTime = document.querySelector("#meeting-time");
 			let isAuthenticated = false;
 			let isAdmin = false;
 			let currentPollState = initialPollState;
@@ -556,21 +543,19 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 			}
 
 			function populateMeetingForm(isoValue) {
-				if (!meetingDate || !meetingHour || !meetingMinute || !meetingAmPm) return;
+				if (!meetingDate || !meetingTime) return;
 				const parts = getMeetingParts(isoValue);
 				meetingDate.value = parts.date;
-				meetingHour.value = parts.hour;
-				meetingMinute.value = parts.minute;
-				meetingAmPm.value = parts.ampm;
+				meetingTime.value = parts.time;
 			}
 
 			function getMeetingParts(isoValue) {
 				if (!isoValue) {
-					return { date: "", hour: "8", minute: "15", ampm: "PM" };
+					return { date: "", time: "20:15" };
 				}
 				const date = new Date(isoValue);
 				if (Number.isNaN(date.getTime())) {
-					return { date: "", hour: "8", minute: "15", ampm: "PM" };
+					return { date: "", time: "20:15" };
 				}
 				const formatter = new Intl.DateTimeFormat("en-US", {
 					year: "numeric",
@@ -588,7 +573,11 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 				const hour = lookup("hour") || "8";
 				const minute = lookup("minute") || "15";
 				const dayPeriod = lookup("dayPeriod") || "PM";
-				return { date: `${year}-${month}-${day}`, hour, minute, ampm: dayPeriod };
+				const hourNumber = Number.parseInt(hour, 10);
+				let hour24 = Number.isNaN(hourNumber) ? 20 : hourNumber % 12;
+				if (dayPeriod === "PM") hour24 += 12;
+				const pad = (value) => String(value).padStart(2, "0");
+				return { date: `${year}-${month}-${day}`, time: `${pad(hour24)}:${minute}` };
 			}
 
 			if (meetingModal) {
@@ -601,14 +590,14 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 				});
 				meetingModal.addEventListener("submit", async (event) => {
 					event.preventDefault();
-					if (!meetingDate || !meetingHour || !meetingMinute || !meetingAmPm) return;
+					if (!meetingDate || !meetingTime) return;
 					const dateValue = meetingDate.value;
-					const hourValue = Number.parseInt(meetingHour.value, 10);
-					const minuteValue = Number.parseInt(meetingMinute.value, 10);
-					const ampmValue = meetingAmPm.value;
-					if (!dateValue || !hourValue || Number.isNaN(minuteValue)) return;
-					let hour24 = hourValue % 12;
-					if (ampmValue === "PM") hour24 += 12;
+					const timeValue = meetingTime.value;
+					if (!dateValue || !timeValue) return;
+					const [hourText, minuteText] = timeValue.split(":");
+					const hour24 = Number.parseInt(hourText, 10);
+					const minuteValue = Number.parseInt(minuteText, 10);
+					if (Number.isNaN(hour24) || Number.isNaN(minuteValue)) return;
 					const [year, month, day] = dateValue.split("-").map((val) => Number.parseInt(val, 10));
 					const localDate = new Date(year, month - 1, day, hour24, minuteValue);
 					if (Number.isNaN(localDate.getTime())) return;
