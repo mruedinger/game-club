@@ -34,6 +34,7 @@ export const prerender = false;
 					<button class="cta invite-cta" type="button" data-action="open-invite">
 						Add a new member
 					</button>
+					<div class="toast" aria-live="polite"></div>
 					<div class="table-wrapper scroll-rows" aria-live="polite">
 						<table class="games-table member-table">
 							<thead>
@@ -267,15 +268,6 @@ export const prerender = false;
 
 				cachedMembers = members;
 				memberList.innerHTML = "";
-				const toastRow = document.createElement("tr");
-				const toastCell = document.createElement("td");
-				toastCell.colSpan = 4;
-				const toast = document.createElement("div");
-				toast.className = "toast";
-				toast.setAttribute("aria-live", "polite");
-				toastCell.appendChild(toast);
-				toastRow.appendChild(toastCell);
-				memberList.appendChild(toastRow);
 				members.forEach((member) => {
 					const row = document.createElement("tr");
 					row.className = "clickable-row";
@@ -706,7 +698,7 @@ export const prerender = false;
 			}
 
 			function showToast(message, isError = false) {
-				const toast = document.querySelector(".toast");
+				const toast = document.querySelector(".members-card .toast");
 				if (!toast) return;
 				toast.textContent = message;
 				toast.classList.toggle("is-error", isError);
