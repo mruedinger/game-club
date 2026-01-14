@@ -11,6 +11,7 @@ type Game = {
 	time_to_beat_minutes?: number;
 	played_month?: string;
 	cover_art_url?: string;
+	itad_boxart_url?: string;
 	description?: string;
 	submitted_by_email?: string;
 	submitted_by_name?: string;
@@ -31,6 +32,25 @@ const games = gamesResponse.ok
 
 const backlogGames = games.backlog as Game[];
 const playedGames = games.played as Game[];
+
+function formatTimeToBeat(minutes?: number | null) {
+	if (!minutes && minutes !== 0) return "-";
+	const hours = Math.floor(minutes / 60);
+	const mins = Math.round(minutes % 60);
+	return `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
+}
+
+function formatUsd(value?: number | null) {
+	if (typeof value !== "number") return "-";
+	return new Intl.NumberFormat("en-US", {
+		style: "currency",
+		currency: "USD"
+	}).format(value / 100);
+}
+
+function getSubmitter(game: Game) {
+	return game.submitted_by_alias || game.submitted_by_name || game.submitted_by_email || "-";
+}
 ---
 
 <html lang="en">
@@ -51,71 +71,84 @@ const playedGames = games.played as Game[];
 					<div class="hero-text">
 						<p class="eyebrow">Game library</p>
 						<h1>Backlog and played games</h1>
-						<p class="lead">
-							Browse member-submitted games and revisit the titles we have already played
-							together.
-						</p>
+						<p class="lead">Dusting off the library one month at a time</p>
 					</div>
 				</section>
 
 				<section class="section">
 					<div class="section-head">
 						<h2>Backlog</h2>
-						<p>Games waiting to be picked in an upcoming poll.</p>
 						<button class="cta add-game hidden" type="button">Add a game</button>
 					</div>
-					<div class="games-grid">
-						{backlogGames.map((game, index) => (
-							<article
-								class="game-card"
-								style={`animation-delay: ${index * 70}ms`}
-								data-id={game.id}
-								data-title={game.title}
-								data-tags={game.tags_json || ""}
-								data-description={game.description || ""}
-								data-cover={game.cover_art_url || ""}
-								data-submitted={game.submitted_by_email || ""}
-								data-submitted-name={game.submitted_by_name || ""}
-								data-submitted-alias={game.submitted_by_alias || ""}
-								data-steam-app-id={game.steam_app_id ? String(game.steam_app_id) : ""}
-								data-itad-id={game.itad_game_id || ""}
-								data-itad-slug={game.itad_slug || ""}
-								data-current-price={
-									typeof game.current_price_cents === "number"
-										? String(game.current_price_cents)
-										: ""
-								}
-								data-best-price={
-									typeof game.best_price_cents === "number"
-										? String(game.best_price_cents)
-										: ""
-								}
-								data-status={game.status}
-							>
-								<h3>{game.title}</h3>
-								<div class="game-cover">
-									{game.cover_art_url ? (
-										<img
-											src={game.cover_art_url}
-											alt={`${game.title} cover art`}
-											loading="lazy"
-										/>
-									) : (
-										<div class="cover-placeholder">Cover coming soon</div>
-									)}
-								</div>
-								<p class="muted">
-									{game.tags_json ? JSON.parse(game.tags_json).join(" · ") : "Tags coming soon"}
-								</p>
-							</article>
-						))}
+					<div class="table-wrapper">
+						<table class="games-table">
+							<thead>
+								<tr>
+									<th data-sort="title" class="sortable">Title</th>
+									<th data-sort="submitter" class="sortable">Submitter</th>
+									<th data-sort="ttb" class="sortable">Time to beat</th>
+									<th data-sort="current" class="sortable">Current low</th>
+								</tr>
+							</thead>
+							<tbody>
+								{backlogGames.map((game) => (
+									<tr
+										class="game-row"
+										data-id={game.id}
+										data-title={game.title}
+										data-title-sort={game.title.toLowerCase()}
+										data-submitter={getSubmitter(game)}
+										data-submitter-sort={getSubmitter(game).toLowerCase()}
+										data-ttb={
+											typeof game.time_to_beat_minutes === "number"
+												? String(game.time_to_beat_minutes)
+												: ""
+										}
+										data-current-price={
+											typeof game.current_price_cents === "number"
+												? String(game.current_price_cents)
+												: ""
+										}
+										data-best-price={
+											typeof game.best_price_cents === "number"
+												? String(game.best_price_cents)
+												: ""
+										}
+										data-tags={game.tags_json || ""}
+										data-description={game.description || ""}
+										data-cover={game.cover_art_url || ""}
+										data-submitted={game.submitted_by_email || ""}
+										data-submitted-name={game.submitted_by_name || ""}
+										data-submitted-alias={game.submitted_by_alias || ""}
+										data-steam-app-id={game.steam_app_id ? String(game.steam_app_id) : ""}
+										data-itad-slug={game.itad_slug || ""}
+										data-status={game.status}
+									>
+										<td>
+											<div class="game-title-cell">
+												<div class="game-icon">
+													{game.itad_boxart_url || game.cover_art_url ? (
+														<img src={game.itad_boxart_url || game.cover_art_url} alt="" loading="lazy" />
+													) : (
+														<span class="cover-placeholder">—</span>
+													)}
+												</div>
+												<button class="game-link" type="button">{game.title}</button>
+											</div>
+										</td>
+										<td class="muted">{getSubmitter(game)}</td>
+										<td class="muted">{formatTimeToBeat(game.time_to_beat_minutes)}</td>
+										<td class="muted">{formatUsd(game.current_price_cents)}</td>
+									</tr>
+								))}
+							</tbody>
+						</table>
 					</div>
 				</section>
 
 				<section class="section">
 					<div class="section-head">
 						<h2>Played</h2>
-						<p>Games the club has finished and discussed.</p>
 					</div>
 					<div class="games-grid">
 						{playedGames.map((game, index) => (
@@ -131,7 +164,6 @@ const playedGames = games.played as Game[];
 								data-submitted-name={game.submitted_by_name || ""}
 								data-submitted-alias={game.submitted_by_alias || ""}
 								data-steam-app-id={game.steam_app_id ? String(game.steam_app_id) : ""}
-								data-itad-id={game.itad_game_id || ""}
 								data-itad-slug={game.itad_slug || ""}
 								data-current-price={
 									typeof game.current_price_cents === "number"
@@ -182,6 +214,7 @@ const playedGames = games.played as Game[];
 				</div>
 				<ul class="suggestions" aria-live="polite" role="listbox"></ul>
 				<p class="muted small">Start typing to see suggestions.</p>
+				<p class="form-error hidden" id="add-game-error" role="alert"></p>
 				<footer>
 					<button class="ghost" type="button" data-action="close-add-game">Cancel</button>
 					<button class="cta" type="submit">Submit</button>
@@ -223,6 +256,7 @@ const playedGames = games.played as Game[];
 			const addButton = document.querySelector(".add-game");
 			const addModal = document.querySelector("#add-game-modal");
 			const addForm = document.querySelector(".add-game-form");
+			const addError = document.querySelector("#add-game-error");
 			const titleInput = document.querySelector("#game-title");
 			const suggestionList = document.querySelector(".suggestions");
 			const detailModal = document.querySelector("#game-detail-modal");
@@ -264,6 +298,7 @@ const playedGames = games.played as Game[];
 						window.location.href = "/api/auth/login";
 						return;
 					}
+					clearFormError();
 					addModal?.showModal();
 				}
 				if (target.closest("[data-action='close-add-game']")) {
@@ -279,6 +314,11 @@ const playedGames = games.played as Game[];
 				const card = target.closest(".game-card");
 				if (card && detailModal) {
 					openGameDetail(card);
+				}
+				const link = target.closest(".game-link");
+				if (link && detailModal) {
+					const row = link.closest(".game-row");
+					if (row) openGameDetail(row);
 				}
 			});
 
@@ -307,9 +347,61 @@ const playedGames = games.played as Game[];
 					if (response.ok) {
 						addModal?.close();
 						window.location.reload();
+						return;
 					}
+					const message = await response.text();
+					showFormError(message || "Unable to add game.");
 				});
 			}
+
+			const tableBody = document.querySelector(".games-table tbody");
+			const sortHeaders = document.querySelectorAll(".games-table th[data-sort]");
+
+			const tableRows = tableBody
+				? Array.from(tableBody.querySelectorAll(".game-row"))
+				: [];
+
+			function getRowValue(row, key) {
+				if (key === "title") return row.dataset.titleSort || "";
+				if (key === "submitter") return row.dataset.submitterSort || "";
+				if (key === "ttb") return Number.parseInt(row.dataset.ttb || "0", 10);
+				if (key === "current") return Number.parseInt(row.dataset.currentPrice || "0", 10);
+				return "";
+			}
+
+			function compareRows(a, b, key, direction) {
+				const dir = direction === "desc" ? -1 : 1;
+				const aValue = getRowValue(a, key);
+				const bValue = getRowValue(b, key);
+				if (typeof aValue === "number" && typeof bValue === "number") {
+					const aScore = aValue || Number.MAX_SAFE_INTEGER;
+					const bScore = bValue || Number.MAX_SAFE_INTEGER;
+					return (aScore - bScore) * dir;
+				}
+				return String(aValue).localeCompare(String(bValue)) * dir;
+			}
+
+			function applySort(key, direction) {
+				if (!tableBody) return;
+				const sorted = [...tableRows].sort((a, b) => compareRows(a, b, key, direction));
+				sorted.forEach((row) => tableBody.appendChild(row));
+			}
+
+			sortHeaders.forEach((header) => {
+				header.addEventListener("click", () => {
+					const key = header.dataset.sort;
+					if (!key) return;
+					const current = header.dataset.direction || "asc";
+					const nextDirection = current === "asc" ? "desc" : "asc";
+					sortHeaders.forEach((th) => {
+						delete th.dataset.direction;
+					});
+					header.dataset.direction = nextDirection;
+					applySort(key, nextDirection);
+				});
+			});
+
+			applySort("title", "asc");
 
 			if (detailDelete) {
 				detailDelete.addEventListener("click", async () => {
@@ -330,6 +422,7 @@ const playedGames = games.played as Game[];
 				if (!input || !list) return;
 				let searchTimer;
 				input.addEventListener("input", () => {
+					clearFormError();
 					if (input === titleInput) {
 						input.dataset[steamIdKey] = "";
 					}
@@ -349,6 +442,18 @@ const playedGames = games.played as Game[];
 						renderSuggestions(list, data.results || []);
 					}, 300);
 				});
+			}
+
+			function showFormError(message) {
+				if (!addError) return;
+				addError.textContent = message;
+				addError.classList.remove("hidden");
+			}
+
+			function clearFormError() {
+				if (!addError) return;
+				addError.textContent = "";
+				addError.classList.add("hidden");
 			}
 
 			function renderSuggestions(list, items) {
@@ -398,7 +503,6 @@ const playedGames = games.played as Game[];
 				const submittedAlias = card.dataset.submittedAlias || "";
 				const cover = card.dataset.cover || "";
 				const steamAppId = card.dataset.steamAppId || "";
-				const itadId = card.dataset.itadId || "";
 				const itadSlug = card.dataset.itadSlug || "";
 				const currentPrice = card.dataset.currentPrice || "";
 				const bestPrice = card.dataset.bestPrice || "";
@@ -528,21 +632,6 @@ const playedGames = games.played as Game[];
 		color: var(--ink);
 		background: linear-gradient(120deg, #f6f9fc 0%, #e9eff6 60%, #dde5ef 100%);
 		min-height: 100vh;
-	}
-
-	.section {
-		display: grid;
-		gap: 1.5rem;
-	}
-
-	.section-head {
-		display: grid;
-		gap: 0.4rem;
-	}
-
-	.section-head p {
-		color: var(--muted);
-		max-width: 30rem;
 	}
 
 	.games-grid {
