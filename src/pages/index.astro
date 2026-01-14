@@ -53,35 +53,7 @@ function getSubmitterLabel(game?: Game | null) {
 	return submitter ? `Submitted by ${submitter}` : "Submitted by a member";
 }
 
-function formatMeeting(value?: string | null) {
-	if (!value) return "Next meeting: TBD";
-	const date = new Date(value);
-	if (Number.isNaN(date.getTime())) return "Next meeting: TBD";
-	const month = date.toLocaleString("en-US", { month: "long" });
-	const day = date.getDate();
-	const time = date.toLocaleString("en-US", {
-		hour: "numeric",
-		minute: "2-digit",
-		hour12: true
-	});
-	return `Next meeting: ${month} ${formatOrdinal(day)} @ ${time}`;
-}
-
-function formatOrdinal(day: number) {
-	if (day % 100 >= 11 && day % 100 <= 13) return `${day}th`;
-	switch (day % 10) {
-		case 1:
-			return `${day}st`;
-		case 2:
-			return `${day}nd`;
-		case 3:
-			return `${day}rd`;
-		default:
-			return `${day}th`;
-	}
-}
-
-const meetingLabel = formatMeeting(nextMeeting);
+const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: TBD";
 ---
 
 <html lang="en">
@@ -572,6 +544,10 @@ const meetingLabel = formatMeeting(nextMeeting);
 				});
 
 			if (meetingNode) {
+				meetingNode.textContent = formatMeetingLocal(meetingNode.dataset.iso || "");
+			}
+
+			if (meetingNode) {
 				meetingNode.addEventListener("click", async () => {
 					if (!isAdmin) return;
 					populateMeetingForm(meetingNode.dataset.iso || "");
@@ -645,6 +621,34 @@ const meetingLabel = formatMeeting(nextMeeting);
 						window.location.reload();
 					}
 				});
+			}
+
+			function formatMeetingLocal(isoValue) {
+				if (!isoValue) return "Next meeting: TBD";
+				const date = new Date(isoValue);
+				if (Number.isNaN(date.getTime())) return "Next meeting: TBD";
+				const month = date.toLocaleString("en-US", { month: "long" });
+				const day = date.getDate();
+				const time = date.toLocaleString("en-US", {
+					hour: "numeric",
+					minute: "2-digit",
+					hour12: true
+				});
+				return `Next meeting: ${month} ${formatOrdinal(day)} @ ${time}`;
+			}
+
+			function formatOrdinal(day) {
+				if (day % 100 >= 11 && day % 100 <= 13) return `${day}th`;
+				switch (day % 10) {
+					case 1:
+						return `${day}st`;
+					case 2:
+						return `${day}nd`;
+					case 3:
+						return `${day}rd`;
+					default:
+						return `${day}th`;
+				}
 			}
 		</script>
 	</body>
