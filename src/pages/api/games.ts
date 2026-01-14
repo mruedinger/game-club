@@ -28,6 +28,8 @@ type D1Database = {
 	prepare: (query: string) => {
 		bind: (...args: unknown[]) => {
 			all: <T>() => Promise<{ results: T[] }>;
+			first: <T>() => Promise<T | null>;
+			run: () => Promise<{ success: boolean }>;
 		};
 	};
 };
@@ -173,6 +175,13 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
 		return new Response("Not authorized.", { status: 403 });
 	}
 
+	await db
+		.prepare(
+			"delete from poll_votes where choice_1 = ?1 or choice_2 = ?1 or choice_3 = ?1"
+		)
+		.bind(id)
+		.run();
+	await db.prepare("delete from poll_games where game_id = ?1").bind(id).run();
 	await db.prepare("delete from games where id = ?1").bind(id).run();
 	return new Response(null, { status: 204 });
 };
