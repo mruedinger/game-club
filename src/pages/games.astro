@@ -510,7 +510,6 @@ function getSubmitter(game: Game) {
 				const submittedName = card.dataset.submittedName || "";
 				const submittedAlias = card.dataset.submittedAlias || "";
 				const cover = card.dataset.cover || "";
-				const itadBoxart = card.dataset.itadBoxart || "";
 				const steamAppId = card.dataset.steamAppId || "";
 				const itadId = card.dataset.itadId || "";
 				const itadSlug = card.dataset.itadSlug || "";
@@ -528,9 +527,8 @@ function getSubmitter(game: Game) {
 					detailSubmitted.textContent = `Submitted by ${submitter}`;
 				}
 				if (detailCover) {
-					const displayCover = itadBoxart || cover;
-					if (displayCover) {
-						detailCover.src = displayCover;
+					if (cover) {
+						detailCover.src = cover;
 						detailCover.alt = title;
 						detailCover.classList.remove("hidden");
 					} else {
