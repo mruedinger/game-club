@@ -47,20 +47,19 @@ export const prerender = false;
 					<p class="muted small">Tags: comma-separated list (e.g. Narrative, Roguelike, Puzzle)</p>
 					<div class="table-wrapper">
 						<table class="games-table games-editor-table">
-					<thead>
-						<tr>
-							<th>Title</th>
-							<th>Submitter</th>
-							<th>Status</th>
-							<th>Tags</th>
-							<th>Time to beat (hours)</th>
-							<th>Played month</th>
-							<th></th>
-						</tr>
-					</thead>
+							<thead>
+								<tr>
+									<th data-sort="title" class="sortable">Title</th>
+									<th data-sort="submitter" class="sortable">Submitter</th>
+									<th data-sort="status" class="sortable">Status</th>
+									<th data-sort="tags" class="sortable">Tags</th>
+									<th data-sort="ttb" class="sortable">Time to beat</th>
+									<th data-sort="played" class="sortable">Played month</th>
+								</tr>
+							</thead>
 							<tbody class="games-editor-body">
 								<tr>
-									<td class="muted small" colspan="7">Loading games…</td>
+									<td class="muted small" colspan="6">Loading games…</td>
 								</tr>
 							</tbody>
 						</table>
@@ -128,11 +127,64 @@ export const prerender = false;
 			</form>
 		</dialog>
 
+		<dialog class="modal" id="game-modal">
+			<form class="modal-card game-detail" novalidate>
+				<header>
+					<div>
+						<h3 id="game-modal-title">Game</h3>
+						<p class="muted small" id="game-modal-subtitle"></p>
+					</div>
+					<button class="ghost icon-button" type="button" data-action="close-game" aria-label="Close">
+						×
+					</button>
+				</header>
+				<div class="field">
+					<label for="edit-game-submitter">Submitter</label>
+					<select id="edit-game-submitter" name="submitted_by_email" required></select>
+				</div>
+				<div class="field">
+					<label for="edit-game-status">Status</label>
+					<select id="edit-game-status" name="status" required>
+						<option value="backlog">backlog</option>
+						<option value="current">current</option>
+						<option value="played">played</option>
+					</select>
+				</div>
+				<div class="field">
+					<label for="edit-game-tags">Tags</label>
+					<input id="edit-game-tags" name="tags" type="text" placeholder="Narrative, Roguelike" />
+				</div>
+				<div class="field">
+					<label for="edit-game-ttb">Time to beat (hours)</label>
+					<input id="edit-game-ttb" name="time_to_beat_hours" type="number" step="0.5" min="0" />
+				</div>
+				<div class="field">
+					<label for="edit-game-played">Played month</label>
+					<input id="edit-game-played" name="played_month" type="month" />
+				</div>
+				<p class="form-error hidden" id="game-modal-error" role="alert"></p>
+				<footer>
+					<button class="ghost" type="button" data-action="close-game">Cancel</button>
+					<button class="cta" type="submit">Save</button>
+				</footer>
+			</form>
+		</dialog>
+
 		<script>
 			const shell = document.querySelector(".admin-shell");
 			const inviteForm = document.querySelector("#invite-modal .invite-form");
 			const memberList = document.querySelector(".member-list");
 			const gamesBody = document.querySelector(".games-editor-body");
+			const gameModal = document.querySelector("#game-modal");
+			const gameModalTitle = document.querySelector("#game-modal-title");
+			const gameModalSubtitle = document.querySelector("#game-modal-subtitle");
+			const gameModalError = document.querySelector("#game-modal-error");
+			const gameSubmitter = document.querySelector("#edit-game-submitter");
+			const gameStatus = document.querySelector("#edit-game-status");
+			const gameTags = document.querySelector("#edit-game-tags");
+			const gameTtb = document.querySelector("#edit-game-ttb");
+			const gamePlayed = document.querySelector("#edit-game-played");
+			const gameSortHeaders = document.querySelectorAll(".games-editor-table th[data-sort]");
 			const inviteModal = document.querySelector("#invite-modal");
 			const memberModal = document.querySelector("#member-modal");
 			const memberName = document.querySelector("#member-name");
@@ -140,6 +192,7 @@ export const prerender = false;
 			const editRole = document.querySelector("#edit-role");
 			const editAlias = document.querySelector("#edit-alias");
 			let activeMember = null;
+			let activeGameId = null;
 			let cachedMembers = [];
 			let cachedGames = [];
 
@@ -225,10 +278,10 @@ export const prerender = false;
 
 			async function loadGames() {
 				if (!gamesBody) return;
-				gamesBody.innerHTML = '<tr><td class="muted small" colspan="7">Loading games…</td></tr>';
+				gamesBody.innerHTML = '<tr><td class="muted small" colspan="6">Loading games…</td></tr>';
 				const response = await fetch("/api/admin/games");
 				if (!response.ok) {
-					gamesBody.innerHTML = '<tr><td class="muted small" colspan="7">Unable to load games.</td></tr>';
+					gamesBody.innerHTML = '<tr><td class="muted small" colspan="6">Unable to load games.</td></tr>';
 					return;
 				}
 				const games = await response.json();
@@ -239,157 +292,39 @@ export const prerender = false;
 			function renderGames(games) {
 				if (!gamesBody) return;
 				if (!games || games.length === 0) {
-					gamesBody.innerHTML = '<tr><td class="muted small" colspan="7">No games yet.</td></tr>';
+					gamesBody.innerHTML = '<tr><td class="muted small" colspan="6">No games yet.</td></tr>';
 					return;
 				}
 				gamesBody.innerHTML = "";
 				games.forEach((game) => {
 					const row = document.createElement("tr");
+					const tags = parseTags(game.tags_json);
 					row.dataset.id = game.id;
+					row.dataset.title = game.title.toLowerCase();
+					row.dataset.submitter = game.submitted_by_email || "";
+					row.dataset.status = game.status || "";
+					row.dataset.tags = tags.join(", ");
+					row.dataset.ttb = typeof game.time_to_beat_minutes === "number" ? String(game.time_to_beat_minutes) : "";
+					row.dataset.played = game.played_month || "";
+					row.className = "clickable-row";
 
 					const titleCell = document.createElement("td");
 					titleCell.textContent = game.title;
 
 					const submitterCell = document.createElement("td");
-					const submitterSelect = document.createElement("select");
-					submitterSelect.className = "inline-select";
-					cachedMembers.forEach((member) => {
-						const option = document.createElement("option");
-						option.value = member.email;
-						const label = member.alias || member.name || member.email;
-						option.textContent = label;
-						if (member.email === game.submitted_by_email) option.selected = true;
-						submitterSelect.appendChild(option);
-					});
-					submitterCell.appendChild(submitterSelect);
+					submitterCell.textContent = getMemberLabel(game.submitted_by_email);
 
 					const statusCell = document.createElement("td");
-					const statusSelect = document.createElement("select");
-					statusSelect.className = "inline-select";
-					["backlog", "current", "played"].forEach((value) => {
-						const option = document.createElement("option");
-						option.value = value;
-						option.textContent = value;
-						if (value === game.status) option.selected = true;
-						statusSelect.appendChild(option);
-					});
-					statusCell.appendChild(statusSelect);
+					statusCell.textContent = game.status;
 
 					const tagsCell = document.createElement("td");
-					const tagsInput = document.createElement("input");
-					tagsInput.type = "text";
-					tagsInput.className = "inline-input";
-					tagsInput.value = game.tags_json ? JSON.parse(game.tags_json).join(", ") : "";
-					tagsCell.appendChild(tagsInput);
+					tagsCell.textContent = tags.length > 0 ? tags.join(", ") : "-";
 
 					const ttbCell = document.createElement("td");
-					const ttbInput = document.createElement("input");
-					ttbInput.type = "number";
-					ttbInput.min = "0";
-					ttbInput.step = "0.5";
-					ttbInput.className = "inline-input";
-					ttbInput.value = typeof game.time_to_beat_minutes === "number"
-						? String((game.time_to_beat_minutes / 60).toFixed(1))
-						: "";
-					ttbCell.appendChild(ttbInput);
+					ttbCell.textContent = formatHours(game.time_to_beat_minutes);
 
 					const playedCell = document.createElement("td");
-					const playedInput = document.createElement("input");
-					playedInput.type = "month";
-					playedInput.className = "inline-input";
-					playedInput.value = game.played_month || "";
-					playedCell.appendChild(playedInput);
-
-					const actionCell = document.createElement("td");
-					const statusBadge = document.createElement("span");
-					statusBadge.className = "row-status";
-					statusBadge.textContent = "Saved";
-					const saveButton = document.createElement("button");
-					saveButton.type = "button";
-					saveButton.className = "ghost small-button";
-					saveButton.textContent = "Save";
-					saveButton.disabled = true;
-					const errorText = document.createElement("div");
-					errorText.className = "inline-error";
-					actionCell.appendChild(statusBadge);
-					actionCell.appendChild(saveButton);
-					actionCell.appendChild(errorText);
-
-					const inputs = [submitterSelect, statusSelect, tagsInput, ttbInput, playedInput];
-					inputs.forEach((input) => {
-						input.dataset.initial = input.value;
-						input.addEventListener("input", () => {
-							errorText.textContent = "";
-							updateRowState();
-						});
-						input.addEventListener("change", () => {
-							errorText.textContent = "";
-							updateRowState();
-						});
-					});
-
-					function updateRowState() {
-						const dirty = inputs.some((input) => input.value !== input.dataset.initial);
-						saveButton.disabled = !dirty;
-						statusBadge.textContent = dirty ? "Unsaved" : "Saved";
-						statusBadge.classList.toggle("is-dirty", dirty);
-						statusBadge.classList.remove("is-error", "is-saved");
-					}
-
-					updateRowState();
-					saveButton.addEventListener("click", async () => {
-						const hoursValue = ttbInput.value ? Number.parseFloat(ttbInput.value) : null;
-						if (hoursValue !== null && Number.isNaN(hoursValue)) {
-							errorText.textContent = "Time to beat must be a number.";
-							statusBadge.textContent = "Fix errors";
-							statusBadge.classList.add("is-error");
-							return;
-						}
-						if (!submitterSelect.value) {
-							errorText.textContent = "Submitter is required.";
-							statusBadge.textContent = "Fix errors";
-							statusBadge.classList.add("is-error");
-							return;
-						}
-						const playedMonthValue = playedInput.value.trim();
-						if (playedMonthValue && !/^\d{4}-\d{2}$/.test(playedMonthValue)) {
-							errorText.textContent = "Played month must be YYYY-MM.";
-							statusBadge.textContent = "Fix errors";
-							statusBadge.classList.add("is-error");
-							return;
-						}
-						const payload = {
-							id: game.id,
-							submitted_by_email: submitterSelect.value,
-							status: statusSelect.value,
-							tags: tagsInput.value,
-							time_to_beat_hours: hoursValue,
-							played_month: playedInput.value
-						};
-						const response = await fetch("/api/admin/games", {
-							method: "PATCH",
-							headers: { "Content-Type": "application/json" },
-							body: JSON.stringify(payload)
-						});
-						if (response.ok) {
-							inputs.forEach((input) => {
-								input.dataset.initial = input.value;
-							});
-							updateRowState();
-							statusBadge.textContent = "Saved";
-							statusBadge.classList.add("is-saved");
-							statusBadge.classList.remove("is-error");
-							setTimeout(() => {
-								statusBadge.classList.remove("is-saved");
-							}, 1200);
-							loadGames();
-						} else {
-							showToast("Unable to update game.", true);
-							errorText.textContent = "Save failed. Try again.";
-							statusBadge.textContent = "Error";
-							statusBadge.classList.add("is-error");
-						}
-					});
+					playedCell.textContent = game.played_month || "-";
 
 					row.appendChild(titleCell);
 					row.appendChild(submitterCell);
@@ -397,10 +332,162 @@ export const prerender = false;
 					row.appendChild(tagsCell);
 					row.appendChild(ttbCell);
 					row.appendChild(playedCell);
-					row.appendChild(actionCell);
 					gamesBody.appendChild(row);
 				});
+				sortGameRows("title", "asc");
 			}
+
+			function getMemberLabel(email) {
+				const match = cachedMembers.find((member) => member.email === email);
+				if (!match) return email;
+				return match.alias || match.name || match.email;
+			}
+
+			function parseTags(tagsJson) {
+				if (!tagsJson) return [];
+				try {
+					const parsed = JSON.parse(tagsJson);
+					return Array.isArray(parsed) ? parsed : [];
+				} catch {
+					return [];
+				}
+			}
+
+			function formatHours(minutes) {
+				if (typeof minutes !== "number") return "-";
+				return (minutes / 60).toFixed(1);
+			}
+
+			if (gamesBody) {
+				gamesBody.addEventListener("click", (event) => {
+					const target = event.target;
+					if (!(target instanceof HTMLElement)) return;
+					const row = target.closest(".clickable-row");
+					if (!row) return;
+					const id = Number.parseInt(row.dataset.id || "", 10);
+					const game = cachedGames.find((item) => item.id === id);
+					if (!game) return;
+					openGameModal(game);
+				});
+			}
+
+			function openGameModal(game) {
+				if (!gameModal || !gameSubmitter || !gameStatus || !gameTags || !gameTtb || !gamePlayed) {
+					return;
+				}
+				activeGameId = game.id;
+				gameModalTitle.textContent = game.title;
+				gameModalSubtitle.textContent = game.submitted_by_email;
+				gameSubmitter.innerHTML = "";
+				cachedMembers.forEach((member) => {
+					const option = document.createElement("option");
+					option.value = member.email;
+					option.textContent = member.alias || member.name || member.email;
+					if (member.email === game.submitted_by_email) option.selected = true;
+					gameSubmitter.appendChild(option);
+				});
+				gameStatus.value = game.status;
+				gameTags.value = parseTags(game.tags_json).join(", ");
+				gameTtb.value = typeof game.time_to_beat_minutes === "number"
+					? String((game.time_to_beat_minutes / 60).toFixed(1))
+					: "";
+				gamePlayed.value = game.played_month || "";
+				gameModalError.classList.add("hidden");
+				gameModalError.textContent = "";
+				gameModal.showModal();
+			}
+
+			if (gameModal) {
+				gameModal.addEventListener("click", (event) => {
+					const target = event.target;
+					if (!(target instanceof HTMLElement)) return;
+					if (target.closest("[data-action='close-game']")) {
+						gameModal.close();
+					}
+				});
+				gameModal.addEventListener("submit", async (event) => {
+					event.preventDefault();
+					if (!activeGameId) return;
+					const hoursValue = gameTtb.value ? Number.parseFloat(gameTtb.value) : null;
+					if (hoursValue !== null && Number.isNaN(hoursValue)) {
+						gameModalError.textContent = "Time to beat must be a number.";
+						gameModalError.classList.remove("hidden");
+						return;
+					}
+					if (!gameSubmitter.value) {
+						gameModalError.textContent = "Submitter is required.";
+						gameModalError.classList.remove("hidden");
+						return;
+					}
+					const playedMonthValue = gamePlayed.value.trim();
+					if (playedMonthValue && !/^\d{4}-\d{2}$/.test(playedMonthValue)) {
+						gameModalError.textContent = "Played month must be YYYY-MM.";
+						gameModalError.classList.remove("hidden");
+						return;
+					}
+					const payload = {
+						id: activeGameId,
+						submitted_by_email: gameSubmitter.value,
+						status: gameStatus.value,
+						tags: gameTags.value,
+						time_to_beat_hours: hoursValue,
+						played_month: gamePlayed.value
+					};
+					const response = await fetch("/api/admin/games", {
+						method: "PATCH",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify(payload)
+					});
+					if (response.ok) {
+						gameModal.close();
+						loadGames();
+					} else {
+						gameModalError.textContent = "Unable to update game.";
+						gameModalError.classList.remove("hidden");
+					}
+				});
+			}
+
+			function getSortValue(row, key) {
+				if (key === "title") return row.dataset.title || "";
+				if (key === "submitter") return row.dataset.submitter || "";
+				if (key === "status") return row.dataset.status || "";
+				if (key === "tags") return row.dataset.tags || "";
+				if (key === "ttb") return Number.parseInt(row.dataset.ttb || "0", 10);
+				if (key === "played") return row.dataset.played || "";
+				return "";
+			}
+
+			function sortGameRows(key, direction) {
+				if (!gamesBody) return;
+				const rows = Array.from(gamesBody.querySelectorAll(".clickable-row"));
+				const dir = direction === "desc" ? -1 : 1;
+				const sorted = rows.sort((a, b) => {
+					const aValue = getSortValue(a, key);
+					const bValue = getSortValue(b, key);
+					if (typeof aValue === "number" && typeof bValue === "number") {
+						const aScore = aValue || Number.MAX_SAFE_INTEGER;
+						const bScore = bValue || Number.MAX_SAFE_INTEGER;
+						return (aScore - bScore) * dir;
+					}
+					return String(aValue).localeCompare(String(bValue)) * dir;
+				});
+				sorted.forEach((row) => gamesBody.appendChild(row));
+			}
+
+			gameSortHeaders.forEach((header) => {
+				header.addEventListener("click", () => {
+					const key = header.dataset.sort;
+					if (!key) return;
+					const current = header.dataset.direction || "asc";
+					const nextDirection = current === "asc" ? "desc" : "asc";
+					gameSortHeaders.forEach((th) => {
+						delete th.dataset.direction;
+					});
+					header.dataset.direction = nextDirection;
+					sortGameRows(key, nextDirection);
+				});
+			});
 
 			document.addEventListener("click", (event) => {
 				const target = event.target;
@@ -693,117 +780,19 @@ export const prerender = false;
 		font-size: 0.82rem;
 	}
 
-	.switch {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.6rem;
-		font-weight: 600;
-		font-size: 0.85rem;
-	}
-
-	.switch input {
-		display: none;
-	}
-
-	.switch .slider {
-		position: relative;
-		width: 38px;
-		height: 20px;
-		background: rgba(33, 51, 70, 0.18);
-		border-radius: 999px;
-		transition: background 0.2s ease;
-	}
-
-	.switch .slider::before {
-		content: "";
-		position: absolute;
-		top: 2px;
-		left: 2px;
-		width: 16px;
-		height: 16px;
-		background: #fff;
-		border-radius: 50%;
-		transition: transform 0.2s ease;
-		box-shadow: 0 4px 8px rgba(31, 41, 51, 0.25);
-	}
-
-	.switch input:checked + .slider {
-		background: rgba(59, 110, 165, 0.7);
-	}
-
-	.switch input:checked + .slider::before {
-		transform: translateX(18px);
-	}
-
-	.switch-label {
-		color: var(--ink-soft);
-	}
-
-	.status {
-		display: inline-flex;
-		align-items: center;
-		padding: 0.2rem 0.6rem;
-		border-radius: 999px;
-		font-size: 0.75rem;
-		background: rgba(255, 255, 255, 0.6);
-		border: 1px solid var(--border);
-	}
-
-	.status-active {
-		color: #1b6346;
-		background: rgba(43, 177, 120, 0.15);
-		border-color: rgba(43, 177, 120, 0.4);
-	}
-
-	.status-disabled {
-		color: #7a4c4c;
-		background: rgba(200, 90, 90, 0.12);
-		border-color: rgba(200, 90, 90, 0.4);
-	}
-
-	.actions {
-		display: flex;
-		gap: 0.5rem;
-		flex-wrap: wrap;
-	}
-
-	.small-button {
-		padding: 0.4rem 0.7rem;
-		font-size: 0.75rem;
-	}
+		.small-button {
+			padding: 0.4rem 0.7rem;
+			font-size: 0.75rem;
+		}
 
 	.ghost.danger {
 		border-color: rgba(200, 90, 90, 0.5);
 		color: #8a2f2f;
 	}
 
-	.actions {
-		display: flex;
-		gap: 0.6rem;
-		flex-wrap: wrap;
-	}
-
-	.chip {
-		border-radius: 999px;
-		padding: 0.4rem 0.85rem;
-		font-size: 0.75rem;
-		background: var(--tan);
-		font-weight: 500;
-	}
-
 		.invite-cta {
 			width: fit-content;
 		}
-
-	.toggle-row {
-		display: grid;
-		gap: 0.8rem;
-	}
-
-	.switch input:disabled + .slider {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
 
 	@media (max-width: 900px) {
 		.invite-form {
@@ -820,8 +809,4 @@ export const prerender = false;
 		display: none;
 	}
 
-	.games-editor-table select,
-	.games-editor-table input {
-		font-size: 0.85rem;
-	}
 </style>
