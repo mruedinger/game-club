@@ -184,30 +184,12 @@ main {
 	color: var(--ink);
 }
 
-.row-status {
-	display: inline-flex;
-	align-items: center;
-	font-size: 0.75rem;
-	color: var(--muted);
-	margin-right: 0.5rem;
+.games-table .clickable-row {
+	cursor: pointer;
 }
 
-.row-status.is-dirty {
-	color: var(--accent);
-}
-
-.row-status.is-saved {
-	color: #1b6346;
-}
-
-.row-status.is-error {
-	color: #8b1e24;
-}
-
-.inline-error {
-	font-size: 0.75rem;
-	color: #8b1e24;
-	margin-top: 0.2rem;
+.games-table .clickable-row:hover {
+	background: rgba(219, 226, 234, 0.4);
 }
 
 .game-icon {
