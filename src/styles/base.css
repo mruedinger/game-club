@@ -133,13 +133,6 @@ main {
 	justify-content: start;
 }
 
-.table-controls {
-	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-	gap: 0.8rem;
-	margin-bottom: 1rem;
-}
-
 .table-wrapper {
 	overflow-x: auto;
 }
@@ -164,6 +157,15 @@ main {
 	text-transform: uppercase;
 	color: var(--muted);
 	font-weight: 600;
+}
+
+.games-table th.sortable {
+	cursor: pointer;
+	user-select: none;
+}
+
+.games-table th.sortable:hover {
+	color: var(--ink);
 }
 
 .game-icon {
