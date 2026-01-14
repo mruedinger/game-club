@@ -351,6 +351,10 @@ main {
 	gap: 0.6rem;
 }
 
+.game-title {
+	font-weight: 600;
+}
+
 .games-table th {
 	font-size: 0.75rem;
 	letter-spacing: 0.08em;
@@ -392,19 +396,6 @@ main {
 	display: block;
 }
 
-.game-link {
-	background: none;
-	border: none;
-	padding: 0;
-	color: inherit;
-	font: inherit;
-	cursor: pointer;
-	text-align: left;
-}
-
-.game-link:hover {
-	text-decoration: underline;
-}
 
 .games-grid .game-card {
 	width: 100%;

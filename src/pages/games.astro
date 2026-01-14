@@ -133,7 +133,7 @@ function getSubmitter(game: Game) {
 														<span class="cover-placeholder">—</span>
 													)}
 												</div>
-												<button class="game-link" type="button">{game.title}</button>
+												<span class="game-title">{game.title}</span>
 											</div>
 										</td>
 										<td class="muted">{getSubmitter(game)}</td>
@@ -315,10 +315,9 @@ function getSubmitter(game: Game) {
 				if (card && detailModal) {
 					openGameDetail(card);
 				}
-				const link = target.closest(".game-link");
-				if (link && detailModal) {
-					const row = link.closest(".game-row");
-					if (row) openGameDetail(row);
+				const row = target.closest(".game-row");
+				if (row && detailModal) {
+					openGameDetail(row);
 				}
 			});
 
