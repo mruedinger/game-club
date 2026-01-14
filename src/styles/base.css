@@ -47,6 +47,16 @@ main {
 	margin-top: 1.6rem;
 }
 
+.section-head {
+	display: grid;
+	gap: 0.4rem;
+}
+
+.section-head p {
+	color: var(--muted);
+	max-width: 30rem;
+}
+
 .section {
 	margin-top: 2rem;
 }
