@@ -151,6 +151,12 @@ main {
 	vertical-align: middle;
 }
 
+.game-title-cell {
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+}
+
 .games-table th {
 	font-size: 0.75rem;
 	letter-spacing: 0.08em;

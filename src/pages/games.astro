@@ -88,7 +88,6 @@ function getSubmitter(game: Game) {
 						<table class="games-table">
 							<thead>
 								<tr>
-									<th></th>
 									<th data-sort="title" class="sortable">Title</th>
 									<th data-sort="submitter" class="sortable">Submitter</th>
 									<th data-sort="ttb" class="sortable">Time to beat</th>
@@ -132,16 +131,16 @@ function getSubmitter(game: Game) {
 										data-status={game.status}
 									>
 										<td>
-											<div class="game-icon">
-												{game.itad_boxart_url || game.cover_art_url ? (
-													<img src={game.itad_boxart_url || game.cover_art_url} alt="" loading="lazy" />
-												) : (
-													<span class="cover-placeholder">—</span>
-												)}
+											<div class="game-title-cell">
+												<div class="game-icon">
+													{game.itad_boxart_url || game.cover_art_url ? (
+														<img src={game.itad_boxart_url || game.cover_art_url} alt="" loading="lazy" />
+													) : (
+														<span class="cover-placeholder">—</span>
+													)}
+												</div>
+												<button class="game-link" type="button">{game.title}</button>
 											</div>
-										</td>
-										<td>
-											<button class="game-link" type="button">{game.title}</button>
 										</td>
 										<td class="muted">{getSubmitter(game)}</td>
 										<td class="muted">{formatTimeToBeat(game.time_to_beat_minutes)}</td>
