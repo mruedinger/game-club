@@ -115,37 +115,24 @@ export const prerender = false;
 
 			let currentUserEmail = null;
 
-			fetch("/api/me")
+			fetch("/api/admin/summary")
 				.then((response) => {
 					if (response.status === 401) {
 						window.location.href = "/api/auth/login";
 						throw new Error("Unauthorized");
 					}
+					if (response.status === 403) {
+						window.location.href = "/auth/denied";
+						throw new Error("Forbidden");
+					}
 					return response.json();
 				})
 				.then((data) => {
-					if (data.role !== "admin") {
-						window.location.href = "/auth/denied";
-						return;
-					}
-					currentUserEmail = data.email;
+					currentUserEmail = data?.me?.email || null;
 					if (shell) shell.classList.remove("is-hidden");
-					loadMembers();
+					renderMembers(data?.members || []);
 				})
 				.catch(() => {});
-
-			async function loadMembers() {
-				if (!memberList) return;
-				memberList.innerHTML = '<p class="muted small">Loading members…</p>';
-				const response = await fetch("/api/admin/members");
-				if (!response.ok) {
-					memberList.innerHTML = '<p class="muted small">Unable to load members.</p>';
-					return;
-				}
-				const members = await response.json();
-				cachedMembers = members;
-				renderMembers(members);
-			}
 
 			function renderMembers(members) {
 				if (!memberList) return;
@@ -154,6 +141,7 @@ export const prerender = false;
 					return;
 				}
 
+				cachedMembers = members;
 				memberList.innerHTML = '<div class="toast" aria-live="polite"></div>';
 				const grid = document.createElement("div");
 				grid.className = "member-grid";
