@@ -53,19 +53,16 @@ function getSubmitterLabel(game?: Game | null) {
 	return submitter ? `Submitted by ${submitter}` : "Submitted by a member";
 }
 
-const MEETING_TIMEZONE = "America/New_York";
-
 function formatMeeting(value?: string | null) {
 	if (!value) return "Next meeting: TBD";
 	const date = new Date(value);
 	if (Number.isNaN(date.getTime())) return "Next meeting: TBD";
-	const month = date.toLocaleString("en-US", { month: "long", timeZone: MEETING_TIMEZONE });
+	const month = date.toLocaleString("en-US", { month: "long" });
 	const day = date.getDate();
 	const time = date.toLocaleString("en-US", {
 		hour: "numeric",
 		minute: "2-digit",
-		hour12: true,
-		timeZone: MEETING_TIMEZONE
+		hour12: true
 	});
 	return `Next meeting: ${month} ${formatOrdinal(day)} @ ${time}`;
 }
@@ -600,7 +597,6 @@ const meetingLabel = formatMeeting(nextMeeting);
 					return { date: "", hour: "8", minute: "15", ampm: "PM" };
 				}
 				const formatter = new Intl.DateTimeFormat("en-US", {
-					timeZone: "America/New_York",
 					year: "numeric",
 					month: "2-digit",
 					day: "2-digit",
