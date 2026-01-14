@@ -92,7 +92,7 @@ function getSubmitter(game: Game) {
 									<th data-sort="submitter" class="sortable">Submitter</th>
 									<th data-sort="ttb" class="sortable">Time to beat</th>
 									<th data-sort="current" class="sortable">Current low</th>
-									<th>Historical low</th>
+									<th data-sort="best" class="sortable">Historical low</th>
 								</tr>
 							</thead>
 							<tbody>
@@ -375,6 +375,7 @@ function getSubmitter(game: Game) {
 				if (key === "submitter") return row.dataset.submitterSort || "";
 				if (key === "ttb") return Number.parseInt(row.dataset.ttb || "0", 10);
 				if (key === "current") return Number.parseInt(row.dataset.current || "0", 10);
+				if (key === "best") return Number.parseInt(row.dataset.best || "0", 10);
 				return "";
 			}
 
