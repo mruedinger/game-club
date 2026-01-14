@@ -126,7 +126,6 @@ function getSubmitter(game: Game) {
 										data-submitted-name={game.submitted_by_name || ""}
 										data-submitted-alias={game.submitted_by_alias || ""}
 										data-steam-app-id={game.steam_app_id ? String(game.steam_app_id) : ""}
-										data-itad-id={game.itad_game_id || ""}
 										data-itad-slug={game.itad_slug || ""}
 										data-status={game.status}
 									>
@@ -171,7 +170,6 @@ function getSubmitter(game: Game) {
 								data-submitted-name={game.submitted_by_name || ""}
 								data-submitted-alias={game.submitted_by_alias || ""}
 								data-steam-app-id={game.steam_app_id ? String(game.steam_app_id) : ""}
-								data-itad-id={game.itad_game_id || ""}
 								data-itad-slug={game.itad_slug || ""}
 								data-current-price={
 									typeof game.current_price_cents === "number"
@@ -511,7 +509,6 @@ function getSubmitter(game: Game) {
 				const submittedAlias = card.dataset.submittedAlias || "";
 				const cover = card.dataset.cover || "";
 				const steamAppId = card.dataset.steamAppId || "";
-				const itadId = card.dataset.itadId || "";
 				const itadSlug = card.dataset.itadSlug || "";
 				const currentPrice = card.dataset.currentPrice || "";
 				const bestPrice = card.dataset.bestPrice || "";

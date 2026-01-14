@@ -234,6 +234,18 @@ export const prerender = false;
 				});
 			}
 
+			async function loadMembers() {
+				if (!memberList) return;
+				memberList.innerHTML = '<p class="muted small">Loading members…</p>';
+				const response = await fetch("/api/admin/members");
+				if (!response.ok) {
+					memberList.innerHTML = '<p class="muted small">Unable to load members.</p>';
+					return;
+				}
+				const members = await response.json();
+				renderMembers(members);
+			}
+
 			function openMemberModal(email) {
 				activeMember = email;
 				const row = document.querySelector(`.member-row[data-email="${email}"]`);
@@ -300,16 +312,16 @@ export const prerender = false;
 				});
 			}
 
-				function showToast(message, isError = false) {
-					const toast = document.querySelector(".toast");
-					if (!toast) return;
-					toast.textContent = message;
-					toast.classList.toggle("is-error", isError);
-					toast.classList.add("is-visible");
-					setTimeout(() => {
-						toast.classList.remove("is-visible");
-					}, 2000);
-				}
+			function showToast(message, isError = false) {
+				const toast = document.querySelector(".toast");
+				if (!toast) return;
+				toast.textContent = message;
+				toast.classList.toggle("is-error", isError);
+				toast.classList.add("is-visible");
+				setTimeout(() => {
+					toast.classList.remove("is-visible");
+				}, 2000);
+			}
 		</script>
 	</body>
 </html>
