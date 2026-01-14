@@ -11,6 +11,7 @@ type GameRow = {
 	status: "backlog" | "current" | "played";
 	created_at: string;
 	cover_art_url?: string;
+	itad_boxart_url?: string;
 	tags_json?: string;
 	description?: string;
 	time_to_beat_minutes?: number;
@@ -27,6 +28,8 @@ type D1Database = {
 	prepare: (query: string) => {
 		bind: (...args: unknown[]) => {
 			all: <T>() => Promise<{ results: T[] }>;
+			first: <T>() => Promise<T | null>;
+			run: () => Promise<{ success: boolean }>;
 		};
 	};
 };
@@ -42,7 +45,7 @@ export const GET: APIRoute = async ({ locals }) => {
 
 	const { results } = await db
 		.prepare(
-			"select games.id, games.title, games.submitted_by_email, members.name as submitted_by_name, members.alias as submitted_by_alias, games.status, games.created_at, games.cover_art_url, games.tags_json, games.description, games.time_to_beat_minutes, games.current_price_cents, games.best_price_cents, games.played_month, games.steam_app_id, games.itad_game_id, games.itad_slug " +
+			"select games.id, games.title, games.submitted_by_email, members.name as submitted_by_name, members.alias as submitted_by_alias, games.status, games.created_at, games.cover_art_url, games.itad_boxart_url, games.tags_json, games.description, games.time_to_beat_minutes, games.current_price_cents, games.best_price_cents, games.played_month, games.steam_app_id, games.itad_game_id, games.itad_slug " +
 				"from games left join members on members.email = games.submitted_by_email order by games.status asc, games.title asc"
 		)
 		.bind()
@@ -60,7 +63,10 @@ export const GET: APIRoute = async ({ locals }) => {
 		}),
 		{
 			status: 200,
-			headers: { "Content-Type": "application/json" }
+			headers: {
+				"Content-Type": "application/json",
+				"Cache-Control": "public, max-age=30"
+			}
 		}
 	);
 };
@@ -89,6 +95,24 @@ export const POST: APIRoute = async ({ request, locals }) => {
 		return new Response("Title is required.", { status: 400 });
 	}
 
+	const existingBySteam = steamAppId
+		? await db
+				.prepare("select id from games where steam_app_id = ?1 limit 1")
+				.bind(steamAppId)
+				.first<{ id: number }>()
+		: null;
+	if (existingBySteam) {
+		return new Response("Game already exists in the backlog.", { status: 409 });
+	}
+
+	const existingByTitle = await db
+		.prepare("select id from games where lower(title) = ?1 limit 1")
+		.bind(title.toLowerCase())
+		.first<{ id: number }>();
+	if (existingByTitle) {
+		return new Response("Game already exists in the backlog.", { status: 409 });
+	}
+
 	const coverArtUrl = steamData?.header_image ?? null;
 	const description = steamData?.short_description ?? null;
 	const tagsJson =
@@ -101,7 +125,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 	await db
 		.prepare(
-			"insert into games (title, submitted_by_email, status, cover_art_url, tags_json, description, steam_app_id, itad_game_id, itad_slug, current_price_cents, best_price_cents, price_checked_at) values (?1, ?2, 'backlog', ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)"
+			"insert into games (title, submitted_by_email, status, cover_art_url, tags_json, description, steam_app_id, itad_game_id, itad_slug, itad_boxart_url, current_price_cents, best_price_cents, price_checked_at) values (?1, ?2, 'backlog', ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)"
 		)
 		.bind(
 			title,
@@ -112,6 +136,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 			steamAppId,
 			itadGame?.id ?? null,
 			itadGame?.slug ?? null,
+			itadGame?.boxart ?? null,
 			currentPriceCents,
 			bestPriceCents,
 			priceCheckedAt
@@ -153,6 +178,13 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
 		return new Response("Not authorized.", { status: 403 });
 	}
 
+	await db
+		.prepare(
+			"delete from poll_votes where choice_1 = ?1 or choice_2 = ?1 or choice_3 = ?1"
+		)
+		.bind(id)
+		.run();
+	await db.prepare("delete from poll_games where game_id = ?1").bind(id).run();
 	await db.prepare("delete from games where id = ?1").bind(id).run();
 	return new Response(null, { status: 204 });
 };

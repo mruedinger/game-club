@@ -18,7 +18,7 @@ export const prerender = false;
 
 		<main>
 			<div class="container centered-container">
-				<section class="card">
+				<section class="card denied-card">
 					<h1>Looks like you are not a member of Game Club.</h1>
 					<p class="muted">
 						Please contact an administrator if you believe you've reached this page in error.
@@ -64,25 +64,20 @@ export const prerender = false;
 		min-height: 60vh;
 	}
 
-	.card {
+	.denied-card {
 		max-width: 520px;
-		background: rgba(255, 255, 255, 0.78);
-		border-radius: var(--radius);
-		padding: 2rem;
-		box-shadow: 0 24px 50px -30px var(--shadow);
-		border: 1px solid var(--border);
 		display: grid;
 		gap: 1rem;
 		text-align: center;
 	}
 
-	.card h1,
-	.card p,
-	.card a {
+	.denied-card h1,
+	.denied-card p,
+	.denied-card a {
 		text-align: center;
 	}
 
-	.card .cta {
+	.denied-card .cta {
 		margin: 0 auto;
 	}
 
@@ -90,17 +85,4 @@ export const prerender = false;
 		font-size: 1.7rem;
 	}
 
-	.cta {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		padding: 0.7rem 1.4rem;
-		border-radius: 999px;
-		font-weight: 600;
-		font-size: 0.9rem;
-		text-decoration: none;
-		background: var(--accent);
-		color: #fff;
-		box-shadow: 0 12px 20px -16px var(--accent-dark);
-	}
 </style>

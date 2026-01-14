@@ -20,15 +20,17 @@ type Game = {
 	best_price_cents?: number;
 };
 
-const gamesResponse = await fetch(new URL("/api/games", Astro.url), {
-	headers: Astro.request.headers
-});
-const games = gamesResponse.ok ? await gamesResponse.json() : { current: [] };
-const currentGame = (games.current as Game[])[0] ?? null;
+const [currentResponse, pollResponse] = await Promise.all([
+	fetch(new URL("/api/games/current", Astro.url), {
+		headers: Astro.request.headers
+	}),
+	fetch(new URL("/api/polls", Astro.url), {
+		headers: Astro.request.headers
+	})
+]);
 
-const pollResponse = await fetch(new URL("/api/polls", Astro.url), {
-	headers: Astro.request.headers
-});
+const currentPayload = currentResponse.ok ? await currentResponse.json() : { current: null };
+const currentGame = (currentPayload.current as Game | null) ?? null;
 const pollState = pollResponse.ok ? await pollResponse.json() : null;
 
 function formatUsd(value?: number) {
@@ -55,7 +57,7 @@ function getSubmitterLabel(game?: Game | null) {
 		<meta name="generator" content={Astro.generator} />
 		<meta
 			name="description"
-			content="Invite-only video game club."
+			content="Video game club."
 		/>
 		<title>Game Club</title>
 	</head>
@@ -67,15 +69,15 @@ function getSubmitterLabel(game?: Game | null) {
 			<section class="hero centered">
 				<div class="hero-text">
 					<p class="eyebrow">Monthly(ish) Video Game Club</p>
-					<h1>A Shindigging good time.</h1>
-					<p class="lead">Next meeting of the minds: February 3rd @ 8:15</p>
+					<h1>A Shindigging good time</h1>
+					<p class="lead">Next meeting: February 3rd @ 8:15</p>
 				</div>
 			</section>
 
 			<section class="section current-game two-column-grid">
 				<div>
 					{currentGame ? (
-						<div class="current-game-card">
+						<div class="card current-game-card">
 							<div class="game-cover">
 								{currentGame.cover_art_url ? (
 									<img
@@ -141,7 +143,7 @@ function getSubmitterLabel(game?: Game | null) {
 						<p class="muted">No current game set yet.</p>
 					)}
 				</div>
-				<div class="poll-summary" id="poll-summary">
+				<div class="card poll-summary" id="poll-summary">
 					<div class="poll-summary-header">
 						<div class="poll-header">
 							<h3>Poll</h3>

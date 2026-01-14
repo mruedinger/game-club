@@ -35,12 +35,40 @@ main {
 	gap: 0.4rem;
 }
 
+.hero-text h1 {
+	margin-bottom: 0.2rem;
+}
+
+.hero-text .eyebrow {
+	margin-bottom: 0.1rem;
+}
+
 .hero + .section {
 	margin-top: 1.6rem;
 }
 
+.section-head {
+	display: grid;
+	gap: 0.4rem;
+}
+
+.section-head p {
+	color: var(--muted);
+	max-width: 30rem;
+}
+
 .section {
 	margin-top: 2rem;
+}
+
+.card {
+	background: rgba(255, 255, 255, 0.78);
+	border-radius: var(--radius);
+	padding: 1.6rem;
+	box-shadow: 0 24px 50px -30px var(--shadow);
+	border: 1px solid var(--border);
+	display: grid;
+	gap: 1rem;
 }
 
 .eyebrow {
@@ -113,6 +141,77 @@ main {
 	grid-template-columns: repeat(auto-fit, minmax(220px, 260px));
 	gap: 1.2rem;
 	justify-content: start;
+}
+
+.table-wrapper {
+	overflow-x: auto;
+}
+
+.games-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 0.92rem;
+}
+
+.games-table th,
+.games-table td {
+	padding: 0.25rem 0.5rem;
+	text-align: left;
+	border-bottom: 1px solid var(--border);
+	vertical-align: middle;
+}
+
+.game-title-cell {
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+}
+
+.games-table th {
+	font-size: 0.75rem;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--muted);
+	font-weight: 600;
+}
+
+.games-table th.sortable {
+	cursor: pointer;
+	user-select: none;
+}
+
+.games-table th.sortable:hover {
+	color: var(--ink);
+}
+
+.game-icon {
+	width: 36px;
+	height: 36px;
+	border-radius: 10px;
+	overflow: hidden;
+	display: grid;
+	place-items: center;
+}
+
+.game-icon img {
+	width: 100%;
+	height: 100%;
+	object-fit: contain;
+	display: block;
+}
+
+.game-link {
+	background: none;
+	border: none;
+	padding: 0;
+	color: inherit;
+	font: inherit;
+	cursor: pointer;
+	text-align: left;
+}
+
+.game-link:hover {
+	text-decoration: underline;
 }
 
 .games-grid .game-card {
@@ -229,11 +328,6 @@ main {
 .current-game-card {
 	display: grid;
 	gap: 0.7rem;
-	background: rgba(255, 255, 255, 0.78);
-	border-radius: var(--radius);
-	padding: 1.6rem;
-	box-shadow: 0 24px 50px -30px var(--shadow);
-	border: 1px solid var(--border);
 }
 
 .game-title {
@@ -244,11 +338,6 @@ main {
 .poll-summary {
 	display: grid;
 	gap: 0.8rem;
-	background: rgba(255, 255, 255, 0.78);
-	border-radius: var(--radius);
-	padding: 1.6rem;
-	box-shadow: 0 24px 50px -30px var(--shadow);
-	border: 1px solid var(--border);
 }
 
 .poll-summary-actions {
@@ -380,6 +469,11 @@ main {
 	border-color: var(--accent);
 }
 
+.form-error {
+	color: #8b1e24;
+	font-size: 0.85rem;
+}
+
 .site-footer {
 	padding: 1rem 6vw;
 	border-top: 1px solid var(--border);
@@ -489,6 +583,7 @@ main {
 	cursor: pointer;
 	transition: transform 0.2s ease, box-shadow 0.2s ease;
 	width: fit-content;
+	text-decoration: none;
 }
 
 .cta:hover {
