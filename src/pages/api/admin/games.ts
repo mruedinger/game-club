@@ -132,13 +132,29 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
 		)
 		.bind(
 			session.email.toLowerCase(),
-			"update",
+			"game_edit",
 			"game",
 			id,
 			JSON.stringify(existing),
 			JSON.stringify(updated)
 		)
 		.run();
+
+	if (existing.status !== "current" && updated?.status === "current") {
+		await db
+			.prepare(
+				"insert into audit_logs (actor_email, action, entity_type, entity_id, before_json, after_json) values (?1, ?2, ?3, ?4, ?5, ?6)"
+			)
+			.bind(
+				session.email.toLowerCase(),
+				"game_set_current",
+				"game",
+				id,
+				JSON.stringify(existing),
+				JSON.stringify(updated)
+			)
+			.run();
+	}
 
 	return new Response(null, { status: 204 });
 };

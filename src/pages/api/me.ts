@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
 import { createSession, getRuntimeEnv, readSession } from "../../lib/auth";
+import { writeAudit } from "../../lib/audit";
 
 export const prerender = false;
 
@@ -42,6 +43,10 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
 	}
 
 	const alias = body.alias.trim();
+	const existing = await db
+		.prepare("select email, alias from members where email = ?1")
+		.bind(session.email.toLowerCase())
+		.first<{ email: string; alias?: string }>();
 	await db
 		.prepare("update members set alias = ?1 where email = ?2")
 		.bind(alias ? alias : null, session.email.toLowerCase())
@@ -53,6 +58,15 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
 	};
 	const secureCookie = new URL(request.url).protocol === "https:";
 	const cookie = await createSession(env, updatedSession, secureCookie);
+	await writeAudit(
+		env,
+		session.email,
+		"member_alias_change",
+		"member",
+		0,
+		existing,
+		{ email: session.email.toLowerCase(), alias: alias ? alias : null }
+	);
 
 	return new Response(null, {
 		status: 204,
@@ -65,6 +79,7 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
 type D1Database = {
 	prepare: (query: string) => {
 		bind: (...args: unknown[]) => {
+			first: <T>() => Promise<T | null>;
 			run: () => Promise<{ success: boolean }>;
 		};
 	};

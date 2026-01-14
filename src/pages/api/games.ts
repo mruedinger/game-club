@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
 import { getRuntimeEnv, readSession } from "../../lib/auth";
+import { writeAudit } from "../../lib/audit";
 import { fetchItadGame, fetchItadPrices } from "../../lib/itad";
 
 type GameRow = {
@@ -123,9 +124,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
 	const bestPriceCents = itadPrices?.bestPriceCents ?? null;
 	const priceCheckedAt = itadPrices ? new Date().toISOString() : null;
 
-	await db
+	const inserted = await db
 		.prepare(
-			"insert into games (title, submitted_by_email, status, cover_art_url, tags_json, description, steam_app_id, itad_game_id, itad_slug, itad_boxart_url, current_price_cents, best_price_cents, price_checked_at) values (?1, ?2, 'backlog', ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)"
+			"insert into games (title, submitted_by_email, status, cover_art_url, tags_json, description, steam_app_id, itad_game_id, itad_slug, itad_boxart_url, current_price_cents, best_price_cents, price_checked_at) values (?1, ?2, 'backlog', ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12) returning id"
 		)
 		.bind(
 			title,
@@ -141,7 +142,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
 			bestPriceCents,
 			priceCheckedAt
 		)
-		.run();
+		.first<{ id: number }>();
+
+	if (inserted?.id) {
+		await writeAudit(
+			env,
+			session.email,
+			"game_add",
+			"game",
+			inserted.id,
+			null,
+			{ id: inserted.id, title }
+		);
+	}
 
 	return new Response(null, { status: 204 });
 };
@@ -164,15 +177,17 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
 		return new Response("Game id is required.", { status: 400 });
 	}
 
-	const owner = await db
-		.prepare("select submitted_by_email from games where id = ?1")
+	const game = await db
+		.prepare(
+			"select id, title, submitted_by_email, status, played_month, steam_app_id from games where id = ?1"
+		)
 		.bind(id)
-		.first<{ submitted_by_email: string }>();
-	if (!owner) {
+		.first<{ id: number; title: string; submitted_by_email: string; status: string; played_month?: string; steam_app_id?: number }>();
+	if (!game) {
 		return new Response("Game not found.", { status: 404 });
 	}
 
-	const isOwner = owner.submitted_by_email === session.email.toLowerCase();
+	const isOwner = game.submitted_by_email === session.email.toLowerCase();
 	const isAdmin = session.role === "admin";
 	if (!isOwner && !isAdmin) {
 		return new Response("Not authorized.", { status: 403 });
@@ -186,6 +201,16 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
 		.run();
 	await db.prepare("delete from poll_games where game_id = ?1").bind(id).run();
 	await db.prepare("delete from games where id = ?1").bind(id).run();
+
+	await writeAudit(
+		env,
+		session.email,
+		"game_delete",
+		"game",
+		id,
+		game,
+		null
+	);
 	return new Response(null, { status: 204 });
 };
 
@@ -264,6 +289,11 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
 
 	const playedMonth = getCurrentMonth();
 
+	const existing = await db
+		.prepare("select id, title, status, played_month from games where id = ?1")
+		.bind(id)
+		.first<{ id: number; title: string; status: string; played_month?: string }>();
+
 	await db
 		.prepare(
 			"update games set status = 'played', played_month = coalesce(played_month, ?1) where status = 'current' and id != ?2"
@@ -275,6 +305,16 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
 		.prepare("update games set status = 'current', played_month = ?1 where id = ?2")
 		.bind(playedMonth, id)
 		.run();
+
+	await writeAudit(
+		env,
+		session.email,
+		"game_set_current",
+		"game",
+		id,
+		existing,
+		{ id, status: "current", played_month: playedMonth }
+	);
 
 	return new Response(null, { status: 204 });
 };

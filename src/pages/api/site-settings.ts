@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
 import { getRuntimeEnv, readSession } from "../../lib/auth";
+import { writeAudit } from "../../lib/audit";
 
 type D1Database = {
 	prepare: (query: string) => {
@@ -60,6 +61,11 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
 		return new Response("Settings database not configured.", { status: 500 });
 	}
 
+	const existing = await db
+		.prepare("select value from site_settings where key = ?1")
+		.bind("next_meeting")
+		.first<SettingRow>();
+
 	await db
 		.prepare(
 			"insert into site_settings (key, value, updated_at) values (?1, ?2, datetime('now')) " +
@@ -67,6 +73,16 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
 		)
 		.bind("next_meeting", value)
 		.run();
+
+	await writeAudit(
+		env,
+		session.email,
+		"update_next_meeting",
+		"site_setting",
+		0,
+		{ next_meeting: existing?.value || null },
+		{ next_meeting: value }
+	);
 
 	return new Response(null, { status: 204 });
 };
