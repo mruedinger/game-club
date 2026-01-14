@@ -133,6 +133,71 @@ main {
 	justify-content: start;
 }
 
+.table-controls {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+	gap: 0.8rem;
+	margin-bottom: 1rem;
+}
+
+.table-wrapper {
+	overflow-x: auto;
+}
+
+.games-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 0.92rem;
+}
+
+.games-table th,
+.games-table td {
+	padding: 0.6rem 0.8rem;
+	text-align: left;
+	border-bottom: 1px solid var(--border);
+	vertical-align: middle;
+}
+
+.games-table th {
+	font-size: 0.75rem;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--muted);
+	font-weight: 600;
+}
+
+.game-icon {
+	width: 36px;
+	height: 36px;
+	border-radius: 10px;
+	border: 1px solid var(--border);
+	background: rgba(219, 226, 234, 0.6);
+	overflow: hidden;
+	display: grid;
+	place-items: center;
+}
+
+.game-icon img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
+}
+
+.game-link {
+	background: none;
+	border: none;
+	padding: 0;
+	color: inherit;
+	font: inherit;
+	cursor: pointer;
+	text-align: left;
+}
+
+.game-link:hover {
+	text-decoration: underline;
+}
+
 .games-grid .game-card {
 	width: 100%;
 	max-width: 260px;

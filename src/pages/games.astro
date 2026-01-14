@@ -31,6 +31,25 @@ const games = gamesResponse.ok
 
 const backlogGames = games.backlog as Game[];
 const playedGames = games.played as Game[];
+
+function formatTimeToBeat(minutes?: number | null) {
+	if (!minutes && minutes !== 0) return "-";
+	const hours = Math.floor(minutes / 60);
+	const mins = Math.round(minutes % 60);
+	return `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
+}
+
+function formatUsd(value?: number | null) {
+	if (typeof value !== "number") return "-";
+	return new Intl.NumberFormat("en-US", {
+		style: "currency",
+		currency: "USD"
+	}).format(value / 100);
+}
+
+function getSubmitter(game: Game) {
+	return game.submitted_by_alias || game.submitted_by_name || game.submitted_by_email || "-";
+}
 ---
 
 <html lang="en">
@@ -64,51 +83,107 @@ const playedGames = games.played as Game[];
 						<p>Games waiting to be picked in an upcoming poll.</p>
 						<button class="cta add-game hidden" type="button">Add a game</button>
 					</div>
-					<div class="games-grid">
-						{backlogGames.map((game, index) => (
-							<article
-								class="game-card"
-								style={`animation-delay: ${index * 70}ms`}
-								data-id={game.id}
-								data-title={game.title}
-								data-tags={game.tags_json || ""}
-								data-description={game.description || ""}
-								data-cover={game.cover_art_url || ""}
-								data-submitted={game.submitted_by_email || ""}
-								data-submitted-name={game.submitted_by_name || ""}
-								data-submitted-alias={game.submitted_by_alias || ""}
-								data-steam-app-id={game.steam_app_id ? String(game.steam_app_id) : ""}
-								data-itad-id={game.itad_game_id || ""}
-								data-itad-slug={game.itad_slug || ""}
-								data-current-price={
-									typeof game.current_price_cents === "number"
-										? String(game.current_price_cents)
-										: ""
-								}
-								data-best-price={
-									typeof game.best_price_cents === "number"
-										? String(game.best_price_cents)
-										: ""
-								}
-								data-status={game.status}
-							>
-								<h3>{game.title}</h3>
-								<div class="game-cover">
-									{game.cover_art_url ? (
-										<img
-											src={game.cover_art_url}
-											alt={`${game.title} cover art`}
-											loading="lazy"
-										/>
-									) : (
-										<div class="cover-placeholder">Cover coming soon</div>
-									)}
-								</div>
-								<p class="muted">
-									{game.tags_json ? JSON.parse(game.tags_json).join(" · ") : "Tags coming soon"}
-								</p>
-							</article>
-						))}
+					<div class="table-controls">
+						<div class="field">
+							<label for="filter-title">Title</label>
+							<input id="filter-title" type="text" placeholder="Search titles" />
+						</div>
+						<div class="field">
+							<label for="filter-submitter">Submitter</label>
+							<input id="filter-submitter" type="text" placeholder="Search submitter" />
+						</div>
+						<div class="field">
+							<label for="filter-ttb">Time to beat (hours)</label>
+							<input id="filter-ttb" type="number" step="0.5" min="0" placeholder="Max hours" />
+						</div>
+						<div class="field">
+							<label for="filter-price">Current price (USD)</label>
+							<input id="filter-price" type="number" step="0.01" min="0" placeholder="Max price" />
+						</div>
+						<div class="field">
+							<label for="sort-by">Sort by</label>
+							<select id="sort-by">
+								<option value="title">Title</option>
+								<option value="submitter">Submitter</option>
+								<option value="ttb">Time to beat</option>
+								<option value="current">Current price</option>
+							</select>
+						</div>
+						<div class="field">
+							<label for="sort-dir">Direction</label>
+							<select id="sort-dir">
+								<option value="asc">A → Z</option>
+								<option value="desc">Z → A</option>
+							</select>
+						</div>
+					</div>
+					<div class="table-wrapper">
+						<table class="games-table">
+							<thead>
+								<tr>
+									<th>Icon</th>
+									<th>Title</th>
+									<th>Submitter</th>
+									<th>Time to beat</th>
+									<th>Current low</th>
+									<th>Historical low</th>
+								</tr>
+							</thead>
+							<tbody>
+								{backlogGames.map((game) => (
+									<tr
+										class="game-row"
+										data-id={game.id}
+										data-title={game.title}
+										data-title-sort={game.title.toLowerCase()}
+										data-submitter={getSubmitter(game)}
+										data-submitter-sort={getSubmitter(game).toLowerCase()}
+										data-ttb={
+											typeof game.time_to_beat_minutes === "number"
+												? String(game.time_to_beat_minutes)
+												: ""
+										}
+										data-current={
+											typeof game.current_price_cents === "number"
+												? String(game.current_price_cents)
+												: ""
+										}
+										data-best={
+											typeof game.best_price_cents === "number"
+												? String(game.best_price_cents)
+												: ""
+										}
+										data-tags={game.tags_json || ""}
+										data-description={game.description || ""}
+										data-cover={game.cover_art_url || ""}
+										data-submitted={game.submitted_by_email || ""}
+										data-submitted-name={game.submitted_by_name || ""}
+										data-submitted-alias={game.submitted_by_alias || ""}
+										data-steam-app-id={game.steam_app_id ? String(game.steam_app_id) : ""}
+										data-itad-id={game.itad_game_id || ""}
+										data-itad-slug={game.itad_slug || ""}
+										data-status={game.status}
+									>
+										<td>
+											<div class="game-icon">
+												{game.cover_art_url ? (
+													<img src={game.cover_art_url} alt="" loading="lazy" />
+												) : (
+													<span class="cover-placeholder">—</span>
+												)}
+											</div>
+										</td>
+										<td>
+											<button class="game-link" type="button">{game.title}</button>
+										</td>
+										<td class="muted">{getSubmitter(game)}</td>
+										<td class="muted">{formatTimeToBeat(game.time_to_beat_minutes)}</td>
+										<td class="muted">{formatUsd(game.current_price_cents)}</td>
+										<td class="muted">{formatUsd(game.best_price_cents)}</td>
+									</tr>
+								))}
+							</tbody>
+						</table>
 					</div>
 				</section>
 
@@ -283,6 +358,11 @@ const playedGames = games.played as Game[];
 				if (card && detailModal) {
 					openGameDetail(card);
 				}
+				const link = target.closest(".game-link");
+				if (link && detailModal) {
+					const row = link.closest(".game-row");
+					if (row) openGameDetail(row);
+				}
 			});
 
 			document.addEventListener("keydown", (event) => {
@@ -316,6 +396,86 @@ const playedGames = games.played as Game[];
 					showFormError(message || "Unable to add game.");
 				});
 			}
+
+			const tableBody = document.querySelector(".games-table tbody");
+			const filterTitle = document.querySelector("#filter-title");
+			const filterSubmitter = document.querySelector("#filter-submitter");
+			const filterTtb = document.querySelector("#filter-ttb");
+			const filterPrice = document.querySelector("#filter-price");
+			const sortBy = document.querySelector("#sort-by");
+			const sortDir = document.querySelector("#sort-dir");
+
+			const tableRows = tableBody
+				? Array.from(tableBody.querySelectorAll(".game-row"))
+				: [];
+
+			function getRowValue(row, key) {
+				if (key === "title") return row.dataset.titleSort || "";
+				if (key === "submitter") return row.dataset.submitterSort || "";
+				if (key === "ttb") return Number.parseInt(row.dataset.ttb || "0", 10);
+				if (key === "current") return Number.parseInt(row.dataset.current || "0", 10);
+				return "";
+			}
+
+			function compareRows(a, b, key, direction) {
+				const dir = direction === "desc" ? -1 : 1;
+				const aValue = getRowValue(a, key);
+				const bValue = getRowValue(b, key);
+				if (typeof aValue === "number" && typeof bValue === "number") {
+					const aScore = aValue || Number.MAX_SAFE_INTEGER;
+					const bScore = bValue || Number.MAX_SAFE_INTEGER;
+					return (aScore - bScore) * dir;
+				}
+				return String(aValue).localeCompare(String(bValue)) * dir;
+			}
+
+			function applyFilters() {
+				const titleValue = filterTitle?.value.trim().toLowerCase() || "";
+				const submitterValue = filterSubmitter?.value.trim().toLowerCase() || "";
+				const maxTtb = filterTtb?.value ? Number.parseFloat(filterTtb.value) : null;
+				const maxPrice = filterPrice?.value ? Number.parseFloat(filterPrice.value) : null;
+
+				tableRows.forEach((row) => {
+					const title = row.dataset.titleSort || "";
+					const submitter = row.dataset.submitterSort || "";
+					const ttbMinutes = Number.parseInt(row.dataset.ttb || "0", 10);
+					const ttbHours = ttbMinutes ? ttbMinutes / 60 : null;
+					const currentCents = Number.parseInt(row.dataset.current || "0", 10);
+					const currentUsd = currentCents ? currentCents / 100 : null;
+
+					const matchesTitle = !titleValue || title.includes(titleValue);
+					const matchesSubmitter = !submitterValue || submitter.includes(submitterValue);
+					const matchesTtb =
+						maxTtb === null || (ttbHours !== null && ttbHours <= maxTtb);
+					const matchesPrice =
+						maxPrice === null || (currentUsd !== null && currentUsd <= maxPrice);
+
+					row.style.display =
+						matchesTitle && matchesSubmitter && matchesTtb && matchesPrice ? "" : "none";
+				});
+			}
+
+			function applySort() {
+				if (!tableBody) return;
+				const key = sortBy?.value || "title";
+				const direction = sortDir?.value || "asc";
+				const sorted = [...tableRows].sort((a, b) => compareRows(a, b, key, direction));
+				sorted.forEach((row) => tableBody.appendChild(row));
+			}
+
+			function onTableControlChange() {
+				applySort();
+				applyFilters();
+			}
+
+			[filterTitle, filterSubmitter, filterTtb, filterPrice, sortBy, sortDir].forEach((control) => {
+				if (!control) return;
+				control.addEventListener("input", onTableControlChange);
+				control.addEventListener("change", onTableControlChange);
+			});
+
+			applySort();
+			applyFilters();
 
 			if (detailDelete) {
 				detailDelete.addEventListener("click", async () => {
