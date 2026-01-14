@@ -34,8 +34,22 @@ export const prerender = false;
 					<button class="cta invite-cta" type="button" data-action="open-invite">
 						Add a new member
 					</button>
-					<div class="member-list" aria-live="polite">
-						<p class="muted small">Loading members…</p>
+					<div class="table-wrapper scroll-rows" aria-live="polite">
+						<table class="games-table member-table">
+							<thead>
+								<tr>
+									<th>User</th>
+									<th>Alias</th>
+									<th>Email</th>
+									<th>Role</th>
+								</tr>
+							</thead>
+							<tbody class="member-list">
+								<tr>
+									<td class="muted small" colspan="4">Loading members…</td>
+								</tr>
+							</tbody>
+						</table>
 					</div>
 				</section>
 
@@ -247,20 +261,29 @@ export const prerender = false;
 			function renderMembers(members) {
 				if (!memberList) return;
 				if (!members || members.length === 0) {
-					memberList.innerHTML = '<p class="muted small">No members yet.</p>';
+					memberList.innerHTML = '<tr><td class="muted small" colspan="4">No members yet.</td></tr>';
 					return;
 				}
 
 				cachedMembers = members;
-				memberList.innerHTML = '<div class="toast" aria-live="polite"></div>';
-				const grid = document.createElement("div");
-				grid.className = "member-grid";
+				memberList.innerHTML = "";
+				const toastRow = document.createElement("tr");
+				const toastCell = document.createElement("td");
+				toastCell.colSpan = 4;
+				const toast = document.createElement("div");
+				toast.className = "toast";
+				toast.setAttribute("aria-live", "polite");
+				toastCell.appendChild(toast);
+				toastRow.appendChild(toastCell);
+				memberList.appendChild(toastRow);
 				members.forEach((member) => {
-					const row = document.createElement("button");
-					row.className = "member-row";
-					row.type = "button";
+					const row = document.createElement("tr");
+					row.className = "clickable-row";
 					row.dataset.email = member.email;
 
+					const userCell = document.createElement("td");
+					const userWrap = document.createElement("div");
+					userWrap.className = "member-user";
 					const avatar = document.createElement("div");
 					avatar.className = "avatar";
 					if (member.picture) {
@@ -280,26 +303,29 @@ export const prerender = false;
 						avatar.appendChild(fallback);
 					}
 
-					const details = document.createElement("div");
 					const name = document.createElement("div");
 					name.className = "member-name";
 					name.textContent = member.name || "—";
-					const email = document.createElement("div");
-					email.className = "member-email";
-					email.textContent = member.email;
-					details.appendChild(name);
-					details.appendChild(email);
+					userWrap.appendChild(avatar);
+					userWrap.appendChild(name);
+					userCell.appendChild(userWrap);
 
-					const role = document.createElement("span");
-					role.className = "role-pill";
-					role.textContent = member.role === "admin" ? "Admin" : "Member";
+					const aliasCell = document.createElement("td");
+					aliasCell.textContent = member.alias || "—";
 
-					row.appendChild(avatar);
-					row.appendChild(details);
-					row.appendChild(role);
-					grid.appendChild(row);
+					const emailCell = document.createElement("td");
+					emailCell.className = "member-email";
+					emailCell.textContent = member.email;
+
+					const roleCell = document.createElement("td");
+					roleCell.textContent = member.role === "admin" ? "Admin" : "Member";
+
+					row.appendChild(userCell);
+					row.appendChild(aliasCell);
+					row.appendChild(emailCell);
+					row.appendChild(roleCell);
+					memberList.appendChild(row);
 				});
-				memberList.appendChild(grid);
 			}
 
 			async function loadGames() {
@@ -574,7 +600,7 @@ export const prerender = false;
 				if (closeMember && memberModal) {
 					memberModal.close();
 				}
-				const row = target.closest(".member-row");
+				const row = target.closest("tr[data-email]");
 				if (row && memberModal) {
 					const email = row.dataset.email;
 					if (!email) return;
@@ -603,10 +629,10 @@ export const prerender = false;
 
 			async function loadMembers() {
 				if (!memberList) return;
-				memberList.innerHTML = '<p class="muted small">Loading members…</p>';
+				memberList.innerHTML = '<tr><td class="muted small" colspan="4">Loading members…</td></tr>';
 				const response = await fetch("/api/admin/members");
 				if (!response.ok) {
-					memberList.innerHTML = '<p class="muted small">Unable to load members.</p>';
+					memberList.innerHTML = '<tr><td class="muted small" colspan="4">Unable to load members.</td></tr>';
 					return;
 				}
 				const members = await response.json();
@@ -615,7 +641,7 @@ export const prerender = false;
 
 			function openMemberModal(email) {
 				activeMember = email;
-				const row = document.querySelector(`.member-row[data-email="${email}"]`);
+				const row = document.querySelector(`tr[data-email="${email}"]`);
 				if (!row || !memberModal) return;
 				const name = row.querySelector(".member-name")?.textContent || "Member";
 				if (memberName) memberName.textContent = name;
@@ -746,37 +772,10 @@ export const prerender = false;
 		gap: 1rem;
 	}
 
-
-	.member-list {
-		display: grid;
-		gap: 0.6rem;
-	}
-
-	:global(.member-grid) {
-		display: grid;
-		gap: 0.8rem;
-	}
-
-	:global(.member-row) {
-		appearance: none;
-		border: none;
-		display: grid;
-		grid-template-columns: auto 1fr auto;
+	:global(.member-user) {
+		display: inline-flex;
 		align-items: center;
-		gap: 1rem;
-		padding: 0.9rem 1.1rem;
-		border-radius: 16px;
-		border: 1px solid var(--border);
-		background: var(--glass-strong);
-		text-align: left;
-		cursor: pointer;
-		width: 100%;
-		transition: transform 0.2s ease, box-shadow 0.2s ease;
-	}
-
-	:global(.member-row:hover) {
-		transform: translateY(-1px);
-		box-shadow: 0 18px 36px -30px var(--shadow);
+		gap: 0.6rem;
 	}
 
 	:global(.avatar) {
@@ -803,14 +802,6 @@ export const prerender = false;
 		place-items: center;
 		width: 100%;
 		height: 100%;
-	}
-
-	:global(.role-pill) {
-		padding: 0.25rem 0.7rem;
-		border-radius: 999px;
-		border: 1px solid var(--border);
-		font-size: 0.75rem;
-		background: rgba(255, 255, 255, 0.7);
 	}
 
 		:global(.toast) {
