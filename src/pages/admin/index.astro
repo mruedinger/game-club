@@ -34,7 +34,6 @@ export const prerender = false;
 					<button class="cta invite-cta" type="button" data-action="open-invite">
 						Add a new member
 					</button>
-					<div class="toast" aria-live="polite"></div>
 					<div class="table-wrapper scroll-rows" aria-live="polite">
 						<table class="games-table member-table">
 							<thead>
@@ -698,14 +697,11 @@ export const prerender = false;
 			}
 
 			function showToast(message, isError = false) {
-				const toast = document.querySelector(".members-card .toast");
-				if (!toast) return;
-				toast.textContent = message;
-				toast.classList.toggle("is-error", isError);
-				toast.classList.add("is-visible");
-				setTimeout(() => {
-					toast.classList.remove("is-visible");
-				}, 2000);
+				if (isError) {
+					console.error(message);
+				} else {
+					console.log(message);
+				}
 			}
 		</script>
 	</body>
