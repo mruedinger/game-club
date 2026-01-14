@@ -11,6 +11,7 @@ type GameRow = {
 	status: "backlog" | "current" | "played";
 	created_at: string;
 	cover_art_url?: string;
+	itad_boxart_url?: string;
 	tags_json?: string;
 	description?: string;
 	time_to_beat_minutes?: number;
@@ -42,7 +43,7 @@ export const GET: APIRoute = async ({ locals }) => {
 
 	const { results } = await db
 		.prepare(
-			"select games.id, games.title, games.submitted_by_email, members.name as submitted_by_name, members.alias as submitted_by_alias, games.status, games.created_at, games.cover_art_url, games.tags_json, games.description, games.time_to_beat_minutes, games.current_price_cents, games.best_price_cents, games.played_month, games.steam_app_id, games.itad_game_id, games.itad_slug " +
+			"select games.id, games.title, games.submitted_by_email, members.name as submitted_by_name, members.alias as submitted_by_alias, games.status, games.created_at, games.cover_art_url, games.itad_boxart_url, games.tags_json, games.description, games.time_to_beat_minutes, games.current_price_cents, games.best_price_cents, games.played_month, games.steam_app_id, games.itad_game_id, games.itad_slug " +
 				"from games left join members on members.email = games.submitted_by_email order by games.status asc, games.title asc"
 		)
 		.bind()
@@ -119,7 +120,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 	await db
 		.prepare(
-			"insert into games (title, submitted_by_email, status, cover_art_url, tags_json, description, steam_app_id, itad_game_id, itad_slug, current_price_cents, best_price_cents, price_checked_at) values (?1, ?2, 'backlog', ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)"
+			"insert into games (title, submitted_by_email, status, cover_art_url, tags_json, description, steam_app_id, itad_game_id, itad_slug, itad_boxart_url, current_price_cents, best_price_cents, price_checked_at) values (?1, ?2, 'backlog', ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)"
 		)
 		.bind(
 			title,
@@ -130,6 +131,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 			steamAppId,
 			itadGame?.id ?? null,
 			itadGame?.slug ?? null,
+			itadGame?.boxart ?? null,
 			currentPriceCents,
 			bestPriceCents,
 			priceCheckedAt

@@ -11,6 +11,7 @@ type Game = {
 	time_to_beat_minutes?: number;
 	played_month?: string;
 	cover_art_url?: string;
+	itad_boxart_url?: string;
 	description?: string;
 	submitted_by_email?: string;
 	submitted_by_name?: string;
@@ -92,7 +93,6 @@ function getSubmitter(game: Game) {
 									<th data-sort="submitter" class="sortable">Submitter</th>
 									<th data-sort="ttb" class="sortable">Time to beat</th>
 									<th data-sort="current" class="sortable">Current low</th>
-									<th data-sort="best" class="sortable">Historical low</th>
 								</tr>
 							</thead>
 							<tbody>
@@ -122,6 +122,7 @@ function getSubmitter(game: Game) {
 										data-tags={game.tags_json || ""}
 										data-description={game.description || ""}
 										data-cover={game.cover_art_url || ""}
+										data-itad-boxart={game.itad_boxart_url || ""}
 										data-submitted={game.submitted_by_email || ""}
 										data-submitted-name={game.submitted_by_name || ""}
 										data-submitted-alias={game.submitted_by_alias || ""}
@@ -132,8 +133,8 @@ function getSubmitter(game: Game) {
 									>
 										<td>
 											<div class="game-icon">
-												{game.cover_art_url ? (
-													<img src={game.cover_art_url} alt="" loading="lazy" />
+												{game.itad_boxart_url || game.cover_art_url ? (
+													<img src={game.itad_boxart_url || game.cover_art_url} alt="" loading="lazy" />
 												) : (
 													<span class="cover-placeholder">—</span>
 												)}
@@ -145,7 +146,6 @@ function getSubmitter(game: Game) {
 										<td class="muted">{getSubmitter(game)}</td>
 										<td class="muted">{formatTimeToBeat(game.time_to_beat_minutes)}</td>
 										<td class="muted">{formatUsd(game.current_price_cents)}</td>
-										<td class="muted">{formatUsd(game.best_price_cents)}</td>
 									</tr>
 								))}
 							</tbody>
@@ -375,7 +375,6 @@ function getSubmitter(game: Game) {
 				if (key === "submitter") return row.dataset.submitterSort || "";
 				if (key === "ttb") return Number.parseInt(row.dataset.ttb || "0", 10);
 				if (key === "current") return Number.parseInt(row.dataset.current || "0", 10);
-				if (key === "best") return Number.parseInt(row.dataset.best || "0", 10);
 				return "";
 			}
 
@@ -512,6 +511,7 @@ function getSubmitter(game: Game) {
 				const submittedName = card.dataset.submittedName || "";
 				const submittedAlias = card.dataset.submittedAlias || "";
 				const cover = card.dataset.cover || "";
+				const itadBoxart = card.dataset.itadBoxart || "";
 				const steamAppId = card.dataset.steamAppId || "";
 				const itadId = card.dataset.itadId || "";
 				const itadSlug = card.dataset.itadSlug || "";
@@ -529,8 +529,9 @@ function getSubmitter(game: Game) {
 					detailSubmitted.textContent = `Submitted by ${submitter}`;
 				}
 				if (detailCover) {
-					if (cover) {
-						detailCover.src = cover;
+					const displayCover = itadBoxart || cover;
+					if (displayCover) {
+						detailCover.src = displayCover;
 						detailCover.alt = title;
 						detailCover.classList.remove("hidden");
 					} else {
