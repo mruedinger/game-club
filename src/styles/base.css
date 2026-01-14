@@ -482,6 +482,16 @@ main {
 	text-decoration: underline;
 }
 
+.meeting-form {
+	gap: 1rem;
+}
+
+.meeting-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+	gap: 0.8rem;
+}
+
 .site-footer {
 	padding: 1rem 6vw;
 	border-top: 1px solid var(--border);
