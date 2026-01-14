@@ -152,6 +152,13 @@ main {
 	overflow-y: auto;
 }
 
+.table-wrapper.scroll-rows thead th {
+	position: sticky;
+	top: 0;
+	background: var(--glass-strong);
+	z-index: 1;
+}
+
 .games-table {
 	width: 100%;
 	border-collapse: collapse;
