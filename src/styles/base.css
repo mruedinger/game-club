@@ -474,6 +474,14 @@ main {
 	font-size: 0.85rem;
 }
 
+.editable {
+	cursor: pointer;
+}
+
+.editable:hover {
+	text-decoration: underline;
+}
+
 .site-footer {
 	padding: 1rem 6vw;
 	border-top: 1px solid var(--border);

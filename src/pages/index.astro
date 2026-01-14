@@ -20,11 +20,14 @@ type Game = {
 	best_price_cents?: number;
 };
 
-const [currentResponse, pollResponse] = await Promise.all([
+const [currentResponse, pollResponse, settingsResponse] = await Promise.all([
 	fetch(new URL("/api/games/current", Astro.url), {
 		headers: Astro.request.headers
 	}),
 	fetch(new URL("/api/polls", Astro.url), {
+		headers: Astro.request.headers
+	}),
+	fetch(new URL("/api/site-settings", Astro.url), {
 		headers: Astro.request.headers
 	})
 ]);
@@ -32,6 +35,8 @@ const [currentResponse, pollResponse] = await Promise.all([
 const currentPayload = currentResponse.ok ? await currentResponse.json() : { current: null };
 const currentGame = (currentPayload.current as Game | null) ?? null;
 const pollState = pollResponse.ok ? await pollResponse.json() : null;
+const settingsPayload = settingsResponse.ok ? await settingsResponse.json() : { next_meeting: null };
+const nextMeeting = typeof settingsPayload.next_meeting === "string" ? settingsPayload.next_meeting : null;
 
 function formatUsd(value?: number) {
 	if (typeof value !== "number") return "TBD";
@@ -47,6 +52,36 @@ function getSubmitterLabel(game?: Game | null) {
 		game.submitted_by_alias || game.submitted_by_name || game.submitted_by_email;
 	return submitter ? `Submitted by ${submitter}` : "Submitted by a member";
 }
+
+function formatMeeting(value?: string | null) {
+	if (!value) return "Next meeting: TBD";
+	const date = new Date(value);
+	if (Number.isNaN(date.getTime())) return "Next meeting: TBD";
+	const month = date.toLocaleString("en-US", { month: "long" });
+	const day = date.getDate();
+	const time = date.toLocaleString("en-US", {
+		hour: "numeric",
+		minute: "2-digit",
+		hour12: true
+	});
+	return `Next meeting: ${month} ${formatOrdinal(day)} @ ${time}`;
+}
+
+function formatOrdinal(day: number) {
+	if (day % 100 >= 11 && day % 100 <= 13) return `${day}th`;
+	switch (day % 10) {
+		case 1:
+			return `${day}st`;
+		case 2:
+			return `${day}nd`;
+		case 3:
+			return `${day}rd`;
+		default:
+			return `${day}th`;
+	}
+}
+
+const meetingLabel = formatMeeting(nextMeeting);
 ---
 
 <html lang="en">
@@ -70,7 +105,9 @@ function getSubmitterLabel(game?: Game | null) {
 				<div class="hero-text">
 					<p class="eyebrow">Monthly(ish) Video Game Club</p>
 					<h1>A Shindigging good time</h1>
-					<p class="lead">Next meeting: February 3rd @ 8:15</p>
+					<p class="lead" id="next-meeting" data-iso={nextMeeting || ""}>
+						{meetingLabel}
+					</p>
 				</div>
 			</section>
 
@@ -205,7 +242,9 @@ function getSubmitterLabel(game?: Game | null) {
 			const pollError = document.querySelector("#poll-error");
 			const startButton = document.querySelector("[data-action='start-poll']");
 			const closeButton = document.querySelector("[data-action='close-poll']");
+			const meetingNode = document.querySelector("#next-meeting");
 			let isAuthenticated = false;
+			let isAdmin = false;
 			let currentPollState = initialPollState;
 
 			function formatPollDate(value) {
@@ -476,12 +515,61 @@ function getSubmitterLabel(game?: Game | null) {
 			fetch("/api/me")
 				.then((response) => {
 					if (response.ok) {
-						isAuthenticated = true;
+						return response.json();
+					}
+				})
+				.then((data) => {
+					if (!data) return;
+					isAuthenticated = true;
+					isAdmin = data.role === "admin";
+					if (meetingNode && isAdmin) {
+						meetingNode.classList.add("editable");
+						meetingNode.title = "Click to edit next meeting";
 					}
 				})
 				.finally(() => {
 					renderPoll(currentPollState);
 				});
+
+			if (meetingNode) {
+				meetingNode.addEventListener("click", async () => {
+					if (!isAdmin) return;
+					const currentIso = meetingNode.dataset.iso || "";
+					const nextValue = promptForMeeting(currentIso);
+					if (!nextValue) return;
+					const response = await fetch("/api/site-settings", {
+						method: "PATCH",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ next_meeting: nextValue })
+					});
+					if (response.ok) {
+						window.location.reload();
+					}
+				});
+			}
+
+			function promptForMeeting(isoValue) {
+				const inputValue = toLocalInputValue(isoValue);
+				const next = window.prompt("Set next meeting (YYYY-MM-DDTHH:MM)", inputValue);
+				if (!next) return null;
+				const trimmed = next.trim();
+				const date = new Date(trimmed);
+				if (Number.isNaN(date.getTime())) return null;
+				return date.toISOString();
+			}
+
+			function toLocalInputValue(isoValue) {
+				if (!isoValue) return "";
+				const date = new Date(isoValue);
+				if (Number.isNaN(date.getTime())) return "";
+				const pad = (value) => String(value).padStart(2, "0");
+				const year = date.getFullYear();
+				const month = pad(date.getMonth() + 1);
+				const day = pad(date.getDate());
+				const hours = pad(date.getHours());
+				const minutes = pad(date.getMinutes());
+				return `${year}-${month}-${day}T${hours}:${minutes}`;
+			}
 		</script>
 	</body>
 </html>
