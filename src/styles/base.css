@@ -147,6 +147,11 @@ main {
 	overflow-x: auto;
 }
 
+.table-wrapper.scroll-rows {
+	max-height: 360px;
+	overflow-y: auto;
+}
+
 .games-table {
 	width: 100%;
 	border-collapse: collapse;
