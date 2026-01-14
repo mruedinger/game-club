@@ -83,49 +83,15 @@ function getSubmitter(game: Game) {
 						<p>Games waiting to be picked in an upcoming poll.</p>
 						<button class="cta add-game hidden" type="button">Add a game</button>
 					</div>
-					<div class="table-controls">
-						<div class="field">
-							<label for="filter-title">Title</label>
-							<input id="filter-title" type="text" placeholder="Search titles" />
-						</div>
-						<div class="field">
-							<label for="filter-submitter">Submitter</label>
-							<input id="filter-submitter" type="text" placeholder="Search submitter" />
-						</div>
-						<div class="field">
-							<label for="filter-ttb">Time to beat (hours)</label>
-							<input id="filter-ttb" type="number" step="0.5" min="0" placeholder="Max hours" />
-						</div>
-						<div class="field">
-							<label for="filter-price">Current price (USD)</label>
-							<input id="filter-price" type="number" step="0.01" min="0" placeholder="Max price" />
-						</div>
-						<div class="field">
-							<label for="sort-by">Sort by</label>
-							<select id="sort-by">
-								<option value="title">Title</option>
-								<option value="submitter">Submitter</option>
-								<option value="ttb">Time to beat</option>
-								<option value="current">Current price</option>
-							</select>
-						</div>
-						<div class="field">
-							<label for="sort-dir">Direction</label>
-							<select id="sort-dir">
-								<option value="asc">A → Z</option>
-								<option value="desc">Z → A</option>
-							</select>
-						</div>
-					</div>
 					<div class="table-wrapper">
 						<table class="games-table">
 							<thead>
 								<tr>
-									<th>Icon</th>
-									<th>Title</th>
-									<th>Submitter</th>
-									<th>Time to beat</th>
-									<th>Current low</th>
+									<th></th>
+									<th data-sort="title" class="sortable">Title</th>
+									<th data-sort="submitter" class="sortable">Submitter</th>
+									<th data-sort="ttb" class="sortable">Time to beat</th>
+									<th data-sort="current" class="sortable">Current low</th>
 									<th>Historical low</th>
 								</tr>
 							</thead>
@@ -398,12 +364,7 @@ function getSubmitter(game: Game) {
 			}
 
 			const tableBody = document.querySelector(".games-table tbody");
-			const filterTitle = document.querySelector("#filter-title");
-			const filterSubmitter = document.querySelector("#filter-submitter");
-			const filterTtb = document.querySelector("#filter-ttb");
-			const filterPrice = document.querySelector("#filter-price");
-			const sortBy = document.querySelector("#sort-by");
-			const sortDir = document.querySelector("#sort-dir");
+			const sortHeaders = document.querySelectorAll(".games-table th[data-sort]");
 
 			const tableRows = tableBody
 				? Array.from(tableBody.querySelectorAll(".game-row"))
@@ -429,53 +390,27 @@ function getSubmitter(game: Game) {
 				return String(aValue).localeCompare(String(bValue)) * dir;
 			}
 
-			function applyFilters() {
-				const titleValue = filterTitle?.value.trim().toLowerCase() || "";
-				const submitterValue = filterSubmitter?.value.trim().toLowerCase() || "";
-				const maxTtb = filterTtb?.value ? Number.parseFloat(filterTtb.value) : null;
-				const maxPrice = filterPrice?.value ? Number.parseFloat(filterPrice.value) : null;
-
-				tableRows.forEach((row) => {
-					const title = row.dataset.titleSort || "";
-					const submitter = row.dataset.submitterSort || "";
-					const ttbMinutes = Number.parseInt(row.dataset.ttb || "0", 10);
-					const ttbHours = ttbMinutes ? ttbMinutes / 60 : null;
-					const currentCents = Number.parseInt(row.dataset.current || "0", 10);
-					const currentUsd = currentCents ? currentCents / 100 : null;
-
-					const matchesTitle = !titleValue || title.includes(titleValue);
-					const matchesSubmitter = !submitterValue || submitter.includes(submitterValue);
-					const matchesTtb =
-						maxTtb === null || (ttbHours !== null && ttbHours <= maxTtb);
-					const matchesPrice =
-						maxPrice === null || (currentUsd !== null && currentUsd <= maxPrice);
-
-					row.style.display =
-						matchesTitle && matchesSubmitter && matchesTtb && matchesPrice ? "" : "none";
-				});
-			}
-
-			function applySort() {
+			function applySort(key, direction) {
 				if (!tableBody) return;
-				const key = sortBy?.value || "title";
-				const direction = sortDir?.value || "asc";
 				const sorted = [...tableRows].sort((a, b) => compareRows(a, b, key, direction));
 				sorted.forEach((row) => tableBody.appendChild(row));
 			}
 
-			function onTableControlChange() {
-				applySort();
-				applyFilters();
-			}
-
-			[filterTitle, filterSubmitter, filterTtb, filterPrice, sortBy, sortDir].forEach((control) => {
-				if (!control) return;
-				control.addEventListener("input", onTableControlChange);
-				control.addEventListener("change", onTableControlChange);
+			sortHeaders.forEach((header) => {
+				header.addEventListener("click", () => {
+					const key = header.dataset.sort;
+					if (!key) return;
+					const current = header.dataset.direction || "asc";
+					const nextDirection = current === "asc" ? "desc" : "asc";
+					sortHeaders.forEach((th) => {
+						delete th.dataset.direction;
+					});
+					header.dataset.direction = nextDirection;
+					applySort(key, nextDirection);
+				});
 			});
 
-			applySort();
-			applyFilters();
+			applySort("title", "asc");
 
 			if (detailDelete) {
 				detailDelete.addEventListener("click", async () => {
