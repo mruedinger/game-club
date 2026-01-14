@@ -670,11 +670,10 @@ export const prerender = false;
 						body: JSON.stringify(payload)
 					});
 					if (response.ok) {
-						showToast("Member updated.");
 						memberModal.close();
 						loadMembers();
 					} else {
-						showToast("Unable to update member.", true);
+						console.error("Unable to update member.");
 					}
 				});
 
@@ -696,46 +695,11 @@ export const prerender = false;
 				});
 			}
 
-			function showToast(message, isError = false) {
-				if (isError) {
-					console.error(message);
-				} else {
-					console.log(message);
-				}
-			}
 		</script>
 	</body>
 </html>
 
 <style>
-	:root {
-		color-scheme: light;
-		--ink: #1f2933;
-		--muted: #5b6672;
-		--tan: #dbe2ea;
-		--ink-soft: #364152;
-		--shadow: rgba(13, 30, 48, 0.18);
-		--border: rgba(33, 51, 70, 0.14);
-		--accent: #3b6ea5;
-		--accent-dark: #2a5581;
-		--radius: 22px;
-		--glass: rgba(255, 255, 255, 0.7);
-		--glass-strong: rgba(255, 255, 255, 0.88);
-		font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-		background: radial-gradient(circle at top right, #f7fbff 0%, #eef2f6 55%, #e2e8f0 100%);
-	}
-
-	* {
-		box-sizing: border-box;
-	}
-
-	body {
-		margin: 0;
-		color: var(--ink);
-		background: linear-gradient(120deg, #f6f9fc 0%, #e9eff6 60%, #dde5ef 100%);
-		min-height: 100vh;
-	}
-
 	main {
 		display: grid;
 		gap: 2rem;
@@ -747,9 +711,9 @@ export const prerender = false;
 		max-width: 520px;
 	}
 
-.hero .muted {
-	max-width: 34rem;
-}
+	.hero .muted {
+		max-width: 34rem;
+	}
 
 	.members-card {
 		max-width: 600px;
@@ -758,66 +722,6 @@ export const prerender = false;
 	.invite-form {
 		display: grid;
 		gap: 1rem;
-	}
-
-	:global(.member-user) {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.6rem;
-	}
-
-	:global(.avatar) {
-		width: 40px;
-		height: 40px;
-		border-radius: 50%;
-		background: rgba(59, 110, 165, 0.18);
-		display: grid;
-		place-items: center;
-		font-weight: 700;
-		color: var(--ink-soft);
-		overflow: hidden;
-	}
-
-	:global(.avatar-img) {
-		width: 100%;
-		height: 100%;
-		object-fit: cover;
-		display: block;
-	}
-
-	:global(.avatar-fallback) {
-		display: grid;
-		place-items: center;
-		width: 100%;
-		height: 100%;
-	}
-
-		:global(.toast) {
-			margin-bottom: 0;
-		padding: 0.4rem 0.8rem;
-		border-radius: 999px;
-		font-size: 0.8rem;
-		background: rgba(43, 177, 120, 0.2);
-		color: #1b6346;
-		border: 1px solid rgba(43, 177, 120, 0.4);
-		display: inline-flex;
-		align-items: center;
-		gap: 0.4rem;
-		opacity: 0;
-		transform: translateY(-4px);
-		transition: opacity 0.2s ease, transform 0.2s ease;
-	}
-
-		:global(.toast.is-visible) {
-			opacity: 1;
-			transform: translateY(0);
-			margin-bottom: 0.6rem;
-		}
-
-	:global(.toast.is-error) {
-		background: rgba(200, 90, 90, 0.18);
-		color: #8a2f2f;
-		border-color: rgba(200, 90, 90, 0.4);
 	}
 
 	.member-name {
@@ -829,19 +733,19 @@ export const prerender = false;
 		font-size: 0.82rem;
 	}
 
-		.small-button {
-			padding: 0.4rem 0.7rem;
-			font-size: 0.75rem;
-		}
+	.small-button {
+		padding: 0.4rem 0.7rem;
+		font-size: 0.75rem;
+	}
 
 	.ghost.danger {
 		border-color: rgba(200, 90, 90, 0.5);
 		color: #8a2f2f;
 	}
 
-		.invite-cta {
-			width: fit-content;
-		}
+	.invite-cta {
+		width: fit-content;
+	}
 
 	@media (max-width: 900px) {
 		.invite-form {
