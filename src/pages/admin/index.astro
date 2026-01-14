@@ -47,17 +47,17 @@ export const prerender = false;
 					<p class="muted small">Tags: comma-separated list (e.g. Narrative, Roguelike, Puzzle)</p>
 					<div class="table-wrapper">
 						<table class="games-table games-editor-table">
-							<thead>
-								<tr>
-									<th>Title</th>
-									<th>Submitter</th>
-									<th>Status</th>
-									<th>Tags</th>
-									<th>Time to beat (hours)</th>
-									<th>Played month</th>
-									<th></th>
-								</tr>
-							</thead>
+					<thead>
+						<tr>
+							<th>Title</th>
+							<th>Submitter</th>
+							<th>Status</th>
+							<th>Tags</th>
+							<th>Time to beat (hours)</th>
+							<th>Played month</th>
+							<th></th>
+						</tr>
+					</thead>
 							<tbody class="games-editor-body">
 								<tr>
 									<td class="muted small" colspan="7">Loading games…</td>
@@ -301,13 +301,61 @@ export const prerender = false;
 					playedCell.appendChild(playedInput);
 
 					const actionCell = document.createElement("td");
+					const statusBadge = document.createElement("span");
+					statusBadge.className = "row-status";
+					statusBadge.textContent = "Saved";
 					const saveButton = document.createElement("button");
 					saveButton.type = "button";
 					saveButton.className = "ghost small-button";
 					saveButton.textContent = "Save";
+					saveButton.disabled = true;
+					const errorText = document.createElement("div");
+					errorText.className = "inline-error";
+					actionCell.appendChild(statusBadge);
+					actionCell.appendChild(saveButton);
+					actionCell.appendChild(errorText);
+
+					const inputs = [submitterSelect, statusSelect, tagsInput, ttbInput, playedInput];
+					inputs.forEach((input) => {
+						input.dataset.initial = input.value;
+						input.addEventListener("input", () => {
+							errorText.textContent = "";
+							updateRowState();
+						});
+						input.addEventListener("change", () => {
+							errorText.textContent = "";
+							updateRowState();
+						});
+					});
+
+					function updateRowState() {
+						const dirty = inputs.some((input) => input.value !== input.dataset.initial);
+						saveButton.disabled = !dirty;
+						statusBadge.textContent = dirty ? "Unsaved" : "Saved";
+						statusBadge.classList.toggle("is-dirty", dirty);
+						statusBadge.classList.remove("is-error", "is-saved");
+					}
+
+					updateRowState();
 					saveButton.addEventListener("click", async () => {
 						const hoursValue = ttbInput.value ? Number.parseFloat(ttbInput.value) : null;
 						if (hoursValue !== null && Number.isNaN(hoursValue)) {
+							errorText.textContent = "Time to beat must be a number.";
+							statusBadge.textContent = "Fix errors";
+							statusBadge.classList.add("is-error");
+							return;
+						}
+						if (!submitterSelect.value) {
+							errorText.textContent = "Submitter is required.";
+							statusBadge.textContent = "Fix errors";
+							statusBadge.classList.add("is-error");
+							return;
+						}
+						const playedMonthValue = playedInput.value.trim();
+						if (playedMonthValue && !/^\d{4}-\d{2}$/.test(playedMonthValue)) {
+							errorText.textContent = "Played month must be YYYY-MM.";
+							statusBadge.textContent = "Fix errors";
+							statusBadge.classList.add("is-error");
 							return;
 						}
 						const payload = {
@@ -324,12 +372,24 @@ export const prerender = false;
 							body: JSON.stringify(payload)
 						});
 						if (response.ok) {
+							inputs.forEach((input) => {
+								input.dataset.initial = input.value;
+							});
+							updateRowState();
+							statusBadge.textContent = "Saved";
+							statusBadge.classList.add("is-saved");
+							statusBadge.classList.remove("is-error");
+							setTimeout(() => {
+								statusBadge.classList.remove("is-saved");
+							}, 1200);
 							loadGames();
 						} else {
 							showToast("Unable to update game.", true);
+							errorText.textContent = "Save failed. Try again.";
+							statusBadge.textContent = "Error";
+							statusBadge.classList.add("is-error");
 						}
 					});
-					actionCell.appendChild(saveButton);
 
 					row.appendChild(titleCell);
 					row.appendChild(submitterCell);
