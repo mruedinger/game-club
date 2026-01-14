@@ -71,17 +71,13 @@ function getSubmitter(game: Game) {
 					<div class="hero-text">
 						<p class="eyebrow">Game library</p>
 						<h1>Backlog and played games</h1>
-						<p class="lead">
-							Browse member-submitted games and revisit the titles we have already played
-							together.
-						</p>
+						<p class="lead">Dusting off the library one month at a time</p>
 					</div>
 				</section>
 
 				<section class="section">
 					<div class="section-head">
 						<h2>Backlog</h2>
-						<p>Games waiting to be picked in an upcoming poll.</p>
 						<button class="cta add-game hidden" type="button">Add a game</button>
 					</div>
 					<div class="table-wrapper">
@@ -108,12 +104,12 @@ function getSubmitter(game: Game) {
 												? String(game.time_to_beat_minutes)
 												: ""
 										}
-										data-current={
+										data-current-price={
 											typeof game.current_price_cents === "number"
 												? String(game.current_price_cents)
 												: ""
 										}
-										data-best={
+										data-best-price={
 											typeof game.best_price_cents === "number"
 												? String(game.best_price_cents)
 												: ""
@@ -121,7 +117,6 @@ function getSubmitter(game: Game) {
 										data-tags={game.tags_json || ""}
 										data-description={game.description || ""}
 										data-cover={game.cover_art_url || ""}
-										data-itad-boxart={game.itad_boxart_url || ""}
 										data-submitted={game.submitted_by_email || ""}
 										data-submitted-name={game.submitted_by_name || ""}
 										data-submitted-alias={game.submitted_by_alias || ""}
@@ -154,7 +149,6 @@ function getSubmitter(game: Game) {
 				<section class="section">
 					<div class="section-head">
 						<h2>Played</h2>
-						<p>Games the club has finished and discussed.</p>
 					</div>
 					<div class="games-grid">
 						{playedGames.map((game, index) => (
@@ -371,7 +365,7 @@ function getSubmitter(game: Game) {
 				if (key === "title") return row.dataset.titleSort || "";
 				if (key === "submitter") return row.dataset.submitterSort || "";
 				if (key === "ttb") return Number.parseInt(row.dataset.ttb || "0", 10);
-				if (key === "current") return Number.parseInt(row.dataset.current || "0", 10);
+				if (key === "current") return Number.parseInt(row.dataset.currentPrice || "0", 10);
 				return "";
 			}
 
