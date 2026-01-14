@@ -65,6 +65,30 @@ export const prerender = false;
 						</table>
 					</div>
 				</section>
+
+				<section class="section card audit-card">
+					<div class="section-head">
+						<h2>Audit logs</h2>
+						<p class="muted">Track recent administrative activity.</p>
+					</div>
+					<div class="table-wrapper">
+						<table class="games-table audit-table">
+							<thead>
+								<tr>
+									<th>When</th>
+									<th>Actor</th>
+									<th>Action</th>
+									<th>Entity</th>
+								</tr>
+							</thead>
+							<tbody class="audit-body">
+								<tr>
+									<td class="muted small" colspan="4">Loading activity…</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+				</section>
 			</div>
 		</main>
 		<AppFooter />
@@ -175,6 +199,7 @@ export const prerender = false;
 			const inviteForm = document.querySelector("#invite-modal .invite-form");
 			const memberList = document.querySelector(".member-list");
 			const gamesBody = document.querySelector(".games-editor-body");
+			const auditBody = document.querySelector(".audit-body");
 			const gameModal = document.querySelector("#game-modal");
 			const gameModalTitle = document.querySelector("#game-modal-title");
 			const gameModalSubtitle = document.querySelector("#game-modal-subtitle");
@@ -215,6 +240,7 @@ export const prerender = false;
 					if (shell) shell.classList.remove("is-hidden");
 					renderMembers(data?.members || []);
 					loadGames();
+					loadAuditLogs();
 				})
 				.catch(() => {});
 
@@ -287,6 +313,50 @@ export const prerender = false;
 				const games = await response.json();
 				cachedGames = games || [];
 				renderGames(cachedGames);
+			}
+
+			async function loadAuditLogs() {
+				if (!auditBody) return;
+				auditBody.innerHTML = '<tr><td class="muted small" colspan="4">Loading activity…</td></tr>';
+				const response = await fetch("/api/admin/audit-logs");
+				if (!response.ok) {
+					auditBody.innerHTML = '<tr><td class="muted small" colspan="4">Unable to load audit logs.</td></tr>';
+					return;
+				}
+				const logs = await response.json();
+				renderAuditLogs(logs || []);
+			}
+
+			function renderAuditLogs(logs) {
+				if (!auditBody) return;
+				if (!logs || logs.length === 0) {
+					auditBody.innerHTML = '<tr><td class="muted small" colspan="4">No audit activity yet.</td></tr>';
+					return;
+				}
+				auditBody.innerHTML = "";
+				logs.forEach((entry) => {
+					const row = document.createElement("tr");
+
+					const whenCell = document.createElement("td");
+					whenCell.textContent = entry.created_at;
+
+					const actorCell = document.createElement("td");
+					actorCell.textContent = entry.actor_email;
+
+					const actionCell = document.createElement("td");
+					actionCell.textContent = entry.action;
+
+					const entityCell = document.createElement("td");
+					entityCell.textContent = entry.entity_id
+						? `${entry.entity_type} #${entry.entity_id}`
+						: entry.entity_type;
+
+					row.appendChild(whenCell);
+					row.appendChild(actorCell);
+					row.appendChild(actionCell);
+					row.appendChild(entityCell);
+					auditBody.appendChild(row);
+				});
 			}
 
 			function renderGames(games) {
