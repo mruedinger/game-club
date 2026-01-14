@@ -145,7 +145,7 @@ main {
 
 .games-table th,
 .games-table td {
-	padding: 0.45rem 0.6rem;
+	padding: 0.25rem 0.5rem;
 	text-align: left;
 	border-bottom: 1px solid var(--border);
 	vertical-align: middle;
