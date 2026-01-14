@@ -20,11 +20,14 @@ type Game = {
 	best_price_cents?: number;
 };
 
-const [currentResponse, pollResponse] = await Promise.all([
+const [currentResponse, pollResponse, settingsResponse] = await Promise.all([
 	fetch(new URL("/api/games/current", Astro.url), {
 		headers: Astro.request.headers
 	}),
 	fetch(new URL("/api/polls", Astro.url), {
+		headers: Astro.request.headers
+	}),
+	fetch(new URL("/api/site-settings", Astro.url), {
 		headers: Astro.request.headers
 	})
 ]);
@@ -32,6 +35,8 @@ const [currentResponse, pollResponse] = await Promise.all([
 const currentPayload = currentResponse.ok ? await currentResponse.json() : { current: null };
 const currentGame = (currentPayload.current as Game | null) ?? null;
 const pollState = pollResponse.ok ? await pollResponse.json() : null;
+const settingsPayload = settingsResponse.ok ? await settingsResponse.json() : { next_meeting: null };
+const nextMeeting = typeof settingsPayload.next_meeting === "string" ? settingsPayload.next_meeting : null;
 
 function formatUsd(value?: number) {
 	if (typeof value !== "number") return "TBD";
@@ -47,6 +52,8 @@ function getSubmitterLabel(game?: Game | null) {
 		game.submitted_by_alias || game.submitted_by_name || game.submitted_by_email;
 	return submitter ? `Submitted by ${submitter}` : "Submitted by a member";
 }
+
+const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: TBD";
 ---
 
 <html lang="en">
@@ -70,7 +77,9 @@ function getSubmitterLabel(game?: Game | null) {
 				<div class="hero-text">
 					<p class="eyebrow">Monthly(ish) Video Game Club</p>
 					<h1>A Shindigging good time</h1>
-					<p class="lead">Next meeting: February 3rd @ 8:15</p>
+					<p class="lead" id="next-meeting" data-iso={nextMeeting || ""}>
+						{meetingLabel}
+					</p>
 				</div>
 			</section>
 
@@ -193,6 +202,30 @@ function getSubmitterLabel(game?: Game | null) {
 		</main>
 
 		<AppFooter />
+		<dialog class="modal" id="meeting-modal">
+			<form class="modal-card meeting-form" novalidate>
+				<header>
+					<h3>Set next meeting</h3>
+					<button class="ghost icon-button" type="button" data-action="close-meeting" aria-label="Close">
+						×
+					</button>
+				</header>
+				<div class="meeting-grid">
+					<div class="field">
+						<label for="meeting-date">Date</label>
+						<input id="meeting-date" name="date" type="date" required />
+					</div>
+					<div class="field">
+						<label for="meeting-time">Time</label>
+						<input id="meeting-time" name="time" type="time" step="300" required />
+					</div>
+				</div>
+				<footer>
+					<button class="ghost" type="button" data-action="close-meeting">Cancel</button>
+					<button class="cta" type="submit">Save</button>
+				</footer>
+			</form>
+		</dialog>
 		<script define:vars={{ initialPollState: pollState ?? null }}>
 			const pollChip = document.querySelector("#poll-chip");
 			const pollStatus = document.querySelector("#poll-status");
@@ -205,7 +238,12 @@ function getSubmitterLabel(game?: Game | null) {
 			const pollError = document.querySelector("#poll-error");
 			const startButton = document.querySelector("[data-action='start-poll']");
 			const closeButton = document.querySelector("[data-action='close-poll']");
+			const meetingNode = document.querySelector("#next-meeting");
+			const meetingModal = document.querySelector("#meeting-modal");
+			const meetingDate = document.querySelector("#meeting-date");
+			const meetingTime = document.querySelector("#meeting-time");
 			let isAuthenticated = false;
+			let isAdmin = false;
 			let currentPollState = initialPollState;
 
 			function formatPollDate(value) {
@@ -476,12 +514,131 @@ function getSubmitterLabel(game?: Game | null) {
 			fetch("/api/me")
 				.then((response) => {
 					if (response.ok) {
-						isAuthenticated = true;
+						return response.json();
+					}
+				})
+				.then((data) => {
+					if (!data) return;
+					isAuthenticated = true;
+					isAdmin = data.role === "admin";
+					if (meetingNode && isAdmin) {
+						meetingNode.classList.add("editable");
+						meetingNode.title = "Click to edit next meeting";
 					}
 				})
 				.finally(() => {
 					renderPoll(currentPollState);
 				});
+
+			if (meetingNode) {
+				meetingNode.textContent = formatMeetingLocal(meetingNode.dataset.iso || "");
+			}
+
+			if (meetingNode) {
+				meetingNode.addEventListener("click", async () => {
+					if (!isAdmin) return;
+					populateMeetingForm(meetingNode.dataset.iso || "");
+					meetingModal?.showModal();
+				});
+			}
+
+			function populateMeetingForm(isoValue) {
+				if (!meetingDate || !meetingTime) return;
+				const parts = getMeetingParts(isoValue);
+				meetingDate.value = parts.date;
+				meetingTime.value = parts.time;
+			}
+
+			function getMeetingParts(isoValue) {
+				if (!isoValue) {
+					return { date: "", time: "20:15" };
+				}
+				const date = new Date(isoValue);
+				if (Number.isNaN(date.getTime())) {
+					return { date: "", time: "20:15" };
+				}
+				const formatter = new Intl.DateTimeFormat("en-US", {
+					year: "numeric",
+					month: "2-digit",
+					day: "2-digit",
+					hour: "numeric",
+					minute: "2-digit",
+					hour12: true
+				});
+				const parts = formatter.formatToParts(date);
+				const lookup = (type) => parts.find((part) => part.type === type)?.value;
+				const year = lookup("year") || "";
+				const month = lookup("month") || "";
+				const day = lookup("day") || "";
+				const hour = lookup("hour") || "8";
+				const minute = lookup("minute") || "15";
+				const dayPeriod = lookup("dayPeriod") || "PM";
+				const hourNumber = Number.parseInt(hour, 10);
+				let hour24 = Number.isNaN(hourNumber) ? 20 : hourNumber % 12;
+				if (dayPeriod === "PM") hour24 += 12;
+				const pad = (value) => String(value).padStart(2, "0");
+				return { date: `${year}-${month}-${day}`, time: `${pad(hour24)}:${minute}` };
+			}
+
+			if (meetingModal) {
+				meetingModal.addEventListener("click", (event) => {
+					const target = event.target;
+					if (!(target instanceof HTMLElement)) return;
+					if (target.closest("[data-action='close-meeting']")) {
+						meetingModal.close();
+					}
+				});
+				meetingModal.addEventListener("submit", async (event) => {
+					event.preventDefault();
+					if (!meetingDate || !meetingTime) return;
+					const dateValue = meetingDate.value;
+					const timeValue = meetingTime.value;
+					if (!dateValue || !timeValue) return;
+					const [hourText, minuteText] = timeValue.split(":");
+					const hour24 = Number.parseInt(hourText, 10);
+					const minuteValue = Number.parseInt(minuteText, 10);
+					if (Number.isNaN(hour24) || Number.isNaN(minuteValue)) return;
+					const [year, month, day] = dateValue.split("-").map((val) => Number.parseInt(val, 10));
+					const localDate = new Date(year, month - 1, day, hour24, minuteValue);
+					if (Number.isNaN(localDate.getTime())) return;
+					const response = await fetch("/api/site-settings", {
+						method: "PATCH",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ next_meeting: localDate.toISOString() })
+					});
+					if (response.ok) {
+						window.location.reload();
+					}
+				});
+			}
+
+			function formatMeetingLocal(isoValue) {
+				if (!isoValue) return "Next meeting: TBD";
+				const date = new Date(isoValue);
+				if (Number.isNaN(date.getTime())) return "Next meeting: TBD";
+				const month = date.toLocaleString("en-US", { month: "long" });
+				const day = date.getDate();
+				const time = date.toLocaleString("en-US", {
+					hour: "numeric",
+					minute: "2-digit",
+					hour12: true
+				});
+				return `Next meeting: ${month} ${formatOrdinal(day)} @ ${time}`;
+			}
+
+			function formatOrdinal(day) {
+				if (day % 100 >= 11 && day % 100 <= 13) return `${day}th`;
+				switch (day % 10) {
+					case 1:
+						return `${day}st`;
+					case 2:
+						return `${day}nd`;
+					case 3:
+						return `${day}rd`;
+					default:
+						return `${day}th`;
+				}
+			}
 		</script>
 	</body>
 </html>
