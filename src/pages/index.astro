@@ -53,16 +53,19 @@ function getSubmitterLabel(game?: Game | null) {
 	return submitter ? `Submitted by ${submitter}` : "Submitted by a member";
 }
 
+const MEETING_TIMEZONE = "America/New_York";
+
 function formatMeeting(value?: string | null) {
 	if (!value) return "Next meeting: TBD";
 	const date = new Date(value);
 	if (Number.isNaN(date.getTime())) return "Next meeting: TBD";
-	const month = date.toLocaleString("en-US", { month: "long" });
+	const month = date.toLocaleString("en-US", { month: "long", timeZone: MEETING_TIMEZONE });
 	const day = date.getDate();
 	const time = date.toLocaleString("en-US", {
 		hour: "numeric",
 		minute: "2-digit",
-		hour12: true
+		hour12: true,
+		timeZone: MEETING_TIMEZONE
 	});
 	return `Next meeting: ${month} ${formatOrdinal(day)} @ ${time}`;
 }
@@ -230,6 +233,41 @@ const meetingLabel = formatMeeting(nextMeeting);
 		</main>
 
 		<AppFooter />
+		<dialog class="modal" id="meeting-modal">
+			<form class="modal-card meeting-form" novalidate>
+				<header>
+					<h3>Set next meeting</h3>
+					<button class="ghost icon-button" type="button" data-action="close-meeting" aria-label="Close">
+						×
+					</button>
+				</header>
+				<div class="meeting-grid">
+					<div class="field">
+						<label for="meeting-date">Date</label>
+						<input id="meeting-date" name="date" type="date" required />
+					</div>
+					<div class="field">
+						<label for="meeting-hour">Hour</label>
+						<input id="meeting-hour" name="hour" type="number" min="1" max="12" required />
+					</div>
+					<div class="field">
+						<label for="meeting-minute">Minute</label>
+						<input id="meeting-minute" name="minute" type="number" min="0" max="59" required />
+					</div>
+					<div class="field">
+						<label for="meeting-ampm">AM/PM</label>
+						<select id="meeting-ampm" name="ampm" required>
+							<option value="AM">AM</option>
+							<option value="PM">PM</option>
+						</select>
+					</div>
+				</div>
+				<footer>
+					<button class="ghost" type="button" data-action="close-meeting">Cancel</button>
+					<button class="cta" type="submit">Save</button>
+				</footer>
+			</form>
+		</dialog>
 		<script define:vars={{ initialPollState: pollState ?? null }}>
 			const pollChip = document.querySelector("#poll-chip");
 			const pollStatus = document.querySelector("#poll-status");
@@ -243,6 +281,11 @@ const meetingLabel = formatMeeting(nextMeeting);
 			const startButton = document.querySelector("[data-action='start-poll']");
 			const closeButton = document.querySelector("[data-action='close-poll']");
 			const meetingNode = document.querySelector("#next-meeting");
+			const meetingModal = document.querySelector("#meeting-modal");
+			const meetingDate = document.querySelector("#meeting-date");
+			const meetingHour = document.querySelector("#meeting-hour");
+			const meetingMinute = document.querySelector("#meeting-minute");
+			const meetingAmPm = document.querySelector("#meeting-ampm");
 			let isAuthenticated = false;
 			let isAdmin = false;
 			let currentPollState = initialPollState;
@@ -534,41 +577,78 @@ const meetingLabel = formatMeeting(nextMeeting);
 			if (meetingNode) {
 				meetingNode.addEventListener("click", async () => {
 					if (!isAdmin) return;
-					const currentIso = meetingNode.dataset.iso || "";
-					const nextValue = promptForMeeting(currentIso);
-					if (!nextValue) return;
+					populateMeetingForm(meetingNode.dataset.iso || "");
+					meetingModal?.showModal();
+				});
+			}
+
+			function populateMeetingForm(isoValue) {
+				if (!meetingDate || !meetingHour || !meetingMinute || !meetingAmPm) return;
+				const parts = getMeetingParts(isoValue);
+				meetingDate.value = parts.date;
+				meetingHour.value = parts.hour;
+				meetingMinute.value = parts.minute;
+				meetingAmPm.value = parts.ampm;
+			}
+
+			function getMeetingParts(isoValue) {
+				if (!isoValue) {
+					return { date: "", hour: "8", minute: "15", ampm: "PM" };
+				}
+				const date = new Date(isoValue);
+				if (Number.isNaN(date.getTime())) {
+					return { date: "", hour: "8", minute: "15", ampm: "PM" };
+				}
+				const formatter = new Intl.DateTimeFormat("en-US", {
+					timeZone: "America/New_York",
+					year: "numeric",
+					month: "2-digit",
+					day: "2-digit",
+					hour: "numeric",
+					minute: "2-digit",
+					hour12: true
+				});
+				const parts = formatter.formatToParts(date);
+				const lookup = (type) => parts.find((part) => part.type === type)?.value;
+				const year = lookup("year") || "";
+				const month = lookup("month") || "";
+				const day = lookup("day") || "";
+				const hour = lookup("hour") || "8";
+				const minute = lookup("minute") || "15";
+				const dayPeriod = lookup("dayPeriod") || "PM";
+				return { date: `${year}-${month}-${day}`, hour, minute, ampm: dayPeriod };
+			}
+
+			if (meetingModal) {
+				meetingModal.addEventListener("click", (event) => {
+					const target = event.target;
+					if (!(target instanceof HTMLElement)) return;
+					if (target.closest("[data-action='close-meeting']")) {
+						meetingModal.close();
+					}
+				});
+				meetingModal.addEventListener("submit", async (event) => {
+					event.preventDefault();
+					if (!meetingDate || !meetingHour || !meetingMinute || !meetingAmPm) return;
+					const dateValue = meetingDate.value;
+					const hourValue = Number.parseInt(meetingHour.value, 10);
+					const minuteValue = Number.parseInt(meetingMinute.value, 10);
+					const ampmValue = meetingAmPm.value;
+					if (!dateValue || !hourValue || Number.isNaN(minuteValue)) return;
+					let hour24 = hourValue % 12;
+					if (ampmValue === "PM") hour24 += 12;
+					const [year, month, day] = dateValue.split("-").map((val) => Number.parseInt(val, 10));
+					const localDate = new Date(year, month - 1, day, hour24, minuteValue);
+					if (Number.isNaN(localDate.getTime())) return;
 					const response = await fetch("/api/site-settings", {
 						method: "PATCH",
 						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({ next_meeting: nextValue })
+						body: JSON.stringify({ next_meeting: localDate.toISOString() })
 					});
 					if (response.ok) {
 						window.location.reload();
 					}
 				});
-			}
-
-			function promptForMeeting(isoValue) {
-				const inputValue = toLocalInputValue(isoValue);
-				const next = window.prompt("Set next meeting (YYYY-MM-DDTHH:MM)", inputValue);
-				if (!next) return null;
-				const trimmed = next.trim();
-				const date = new Date(trimmed);
-				if (Number.isNaN(date.getTime())) return null;
-				return date.toISOString();
-			}
-
-			function toLocalInputValue(isoValue) {
-				if (!isoValue) return "";
-				const date = new Date(isoValue);
-				if (Number.isNaN(date.getTime())) return "";
-				const pad = (value) => String(value).padStart(2, "0");
-				const year = date.getFullYear();
-				const month = pad(date.getMonth() + 1);
-				const day = pad(date.getDate());
-				const hours = pad(date.getHours());
-				const minutes = pad(date.getMinutes());
-				return `${year}-${month}-${day}T${hours}:${minutes}`;
 			}
 		</script>
 	</body>
