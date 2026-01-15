@@ -405,6 +405,8 @@ function getSubmitter(game: Game) {
 			if (detailDelete) {
 				detailDelete.addEventListener("click", async () => {
 					if (!selectedGameId) return;
+					const confirmed = window.confirm("Delete this game? This cannot be undone.");
+					if (!confirmed) return;
 					const response = await fetch("/api/games", {
 						method: "DELETE",
 						headers: { "Content-Type": "application/json" },
