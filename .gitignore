@@ -26,5 +26,8 @@ pnpm-debug.log*
 # screenshots
 screenshots/
 
+# playwright results
+test-results/
+
 # jetbrains setting folder
 .idea/
