@@ -104,6 +104,11 @@ function getSubmitter(game: Game) {
 												? String(game.time_to_beat_minutes)
 												: ""
 										}
+										data-ttb-minutes={
+											typeof game.time_to_beat_minutes === "number"
+												? String(game.time_to_beat_minutes)
+												: ""
+										}
 										data-current-price={
 											typeof game.current_price_cents === "number"
 												? String(game.current_price_cents)
@@ -168,6 +173,11 @@ function getSubmitter(game: Game) {
 								data-current-price={
 									typeof game.current_price_cents === "number"
 										? String(game.current_price_cents)
+										: ""
+								}
+								data-ttb-minutes={
+									typeof game.time_to_beat_minutes === "number"
+										? String(game.time_to_beat_minutes)
 										: ""
 								}
 								data-best-price={
@@ -240,6 +250,14 @@ function getSubmitter(game: Game) {
 							<a class="ghost small-pill game-detail-hltb" target="_blank" rel="noreferrer" title="View on HowLongToBeat">HLTB</a>
 							<a class="ghost small-pill game-detail-itad" target="_blank" rel="noreferrer" title="View on IsThereAnyDeal">ITAD</a>
 						</div>
+						<div class="game-detail-ttb-edit hidden">
+							<div class="field">
+								<label for="game-detail-ttb">Time to beat (hours)</label>
+								<input id="game-detail-ttb" type="number" min="0" step="0.5" />
+							</div>
+							<button class="ghost small-pill game-detail-ttb-save" type="button">Save time</button>
+							<p class="form-error hidden game-detail-ttb-error" role="alert"></p>
+						</div>
 						<p class="meta-line tight game-detail-prices">Current low: TBD · Historical low: TBD</p>
 						<p class="muted small game-detail-submitted"></p>
 					</div>
@@ -271,6 +289,10 @@ function getSubmitter(game: Game) {
 			const detailHltb = document.querySelector(".game-detail-hltb");
 			const detailItad = document.querySelector(".game-detail-itad");
 			const detailPrices = document.querySelector(".game-detail-prices");
+			const detailTtbEdit = document.querySelector(".game-detail-ttb-edit");
+			const detailTtbInput = document.querySelector("#game-detail-ttb");
+			const detailTtbSave = document.querySelector(".game-detail-ttb-save");
+			const detailTtbError = document.querySelector(".game-detail-ttb-error");
 			let selectedGameId = null;
 			let currentUserEmail = "";
 			let currentUserRole = "";
@@ -419,6 +441,36 @@ function getSubmitter(game: Game) {
 				});
 			}
 
+			if (detailTtbSave) {
+				detailTtbSave.addEventListener("click", async () => {
+					if (!selectedGameId || !detailTtbInput) return;
+					const hoursValue = detailTtbInput.value.trim();
+					const parsed = Number.parseFloat(hoursValue);
+					if (!hoursValue || Number.isNaN(parsed) || parsed < 0) {
+						if (detailTtbError) {
+							detailTtbError.textContent = "Enter a valid number of hours.";
+							detailTtbError.classList.remove("hidden");
+						}
+						return;
+					}
+					const response = await fetch("/api/admin/games", {
+						method: "PATCH",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({
+							id: Number.parseInt(String(selectedGameId), 10),
+							time_to_beat_hours: parsed
+						})
+					});
+					if (response.ok) {
+						detailModal?.close();
+						window.location.reload();
+					} else if (detailTtbError) {
+						detailTtbError.textContent = "Unable to save time to beat.";
+						detailTtbError.classList.remove("hidden");
+					}
+				});
+			}
+
 			function bindSearch(input, list) {
 				if (!input || !list) return;
 				let searchTimer;
@@ -508,6 +560,7 @@ function getSubmitter(game: Game) {
 				const currentPrice = card.dataset.currentPrice || "";
 				const bestPrice = card.dataset.bestPrice || "";
 				const status = card.dataset.status || "";
+				const ttbMinutes = card.dataset.ttbMinutes || "";
 				selectedGameId = card.dataset.id || null;
 
 				if (detailTitle) detailTitle.textContent = title;
@@ -550,6 +603,16 @@ function getSubmitter(game: Game) {
 				}
 				if (detailPrices) {
 					detailPrices.textContent = `Current low: ${formatUsd(currentPrice)} · Historical low: ${formatUsd(bestPrice)}`;
+				}
+				if (detailTtbEdit) {
+					const hasTtb = Boolean(ttbMinutes);
+					const isAdmin = currentUserRole === "admin";
+					detailTtbEdit.classList.toggle("hidden", hasTtb || !isAdmin);
+					if (detailTtbInput) detailTtbInput.value = "";
+					if (detailTtbError) {
+						detailTtbError.classList.add("hidden");
+						detailTtbError.textContent = "";
+					}
 				}
 				if (detailDelete) {
 					detailDelete.classList.toggle("hidden", !isSignedIn);
