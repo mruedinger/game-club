@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
 import { getRuntimeEnv, readSession } from "../../lib/auth";
+import { writeAudit } from "../../lib/audit";
 
 type D1Database = {
 	prepare: (query: string) => {
@@ -128,6 +129,16 @@ export const POST: APIRoute = async ({ locals, request }) => {
 			.run();
 	}
 
+	await writeAudit(
+		env,
+		session.email,
+		"poll_start",
+		"poll",
+		pollRow.id,
+		null,
+		{ poll_id: pollRow.id, game_count: backlogGames.results.length }
+	);
+
 	return jsonResponse({ active: true, pollId: pollRow.id }, 201);
 };
 
@@ -160,6 +171,16 @@ export const PATCH: APIRoute = async ({ locals, request }) => {
 		.prepare("update polls set status = 'closed', closed_at = datetime('now') where id = ?1")
 		.bind(activePoll.id)
 		.run();
+
+	await writeAudit(
+		env,
+		session.email,
+		"poll_close",
+		"poll",
+		activePoll.id,
+		null,
+		{ poll_id: activePoll.id }
+	);
 
 	return new Response(null, { status: 204 });
 };

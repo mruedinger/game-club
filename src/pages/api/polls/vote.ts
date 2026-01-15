@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
 import { getRuntimeEnv, readSession } from "../../../lib/auth";
+import { writeAudit } from "../../../lib/audit";
 
 type D1Database = {
 	prepare: (query: string) => {
@@ -67,6 +68,16 @@ export const POST: APIRoute = async ({ locals, request }) => {
 		)
 		.bind(activePoll.id, voterEmail, choice1, choice2 ?? null, choice3 ?? null)
 		.run();
+
+	await writeAudit(
+		env,
+		session.email,
+		"poll_vote",
+		"poll",
+		activePoll.id,
+		null,
+		{ poll_id: activePoll.id, choices }
+	);
 
 	return new Response(null, { status: 204 });
 };
