@@ -472,6 +472,25 @@ main {
 	gap: 0.5rem;
 }
 
+.game-detail-ttb-edit {
+	display: grid;
+	gap: 0.6rem;
+}
+
+.game-detail-ttb-row {
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+}
+
+.game-detail-ttb-row input {
+	flex: 1;
+}
+
+.game-detail-ttb-edit .small-pill {
+	width: fit-content;
+}
+
 .small-pill {
 	padding: 0.4rem 0.85rem;
 	font-size: 0.75rem;
