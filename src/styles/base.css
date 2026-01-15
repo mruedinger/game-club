@@ -477,6 +477,16 @@ main {
 	gap: 0.6rem;
 }
 
+.game-detail-ttb-row {
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+}
+
+.game-detail-ttb-row input {
+	flex: 1;
+}
+
 .game-detail-ttb-edit .small-pill {
 	width: fit-content;
 }

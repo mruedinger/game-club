@@ -253,9 +253,11 @@ function getSubmitter(game: Game) {
 						<div class="game-detail-ttb-edit hidden">
 							<div class="field">
 								<label for="game-detail-ttb">Time to beat (hours)</label>
-								<input id="game-detail-ttb" type="number" min="0" step="0.5" />
+								<div class="game-detail-ttb-row">
+									<input id="game-detail-ttb" type="number" min="0" step="0.5" />
+									<button class="ghost small-pill game-detail-ttb-save" type="button">Save TTB</button>
+								</div>
 							</div>
-							<button class="ghost small-pill game-detail-ttb-save" type="button">Save time</button>
 							<p class="form-error hidden game-detail-ttb-error" role="alert"></p>
 						</div>
 						<p class="meta-line tight game-detail-prices">Current low: TBD · Historical low: TBD</p>
@@ -453,8 +455,8 @@ function getSubmitter(game: Game) {
 						}
 						return;
 					}
-					const response = await fetch("/api/admin/games", {
-						method: "PATCH",
+					const response = await fetch("/api/games/ttb", {
+						method: "POST",
 						headers: { "Content-Type": "application/json" },
 						body: JSON.stringify({
 							id: Number.parseInt(String(selectedGameId), 10),
@@ -565,7 +567,6 @@ function getSubmitter(game: Game) {
 
 				if (detailTitle) detailTitle.textContent = title;
 				if (detailDescription) detailDescription.textContent = description;
-				if (detailTags) detailTags.textContent = tags || "Tags coming soon";
 				if (detailSubmitted) {
 					const submitter =
 						submittedAlias || submittedName || submitted || "a member";
@@ -606,12 +607,19 @@ function getSubmitter(game: Game) {
 				}
 				if (detailTtbEdit) {
 					const hasTtb = Boolean(ttbMinutes);
-					const isAdmin = currentUserRole === "admin";
-					detailTtbEdit.classList.toggle("hidden", hasTtb || !isAdmin);
+					detailTtbEdit.classList.toggle("hidden", hasTtb || !isSignedIn);
 					if (detailTtbInput) detailTtbInput.value = "";
 					if (detailTtbError) {
 						detailTtbError.classList.add("hidden");
 						detailTtbError.textContent = "";
+					}
+				}
+				if (detailTags) {
+					const tagLine = tags || "Tags coming soon";
+					if (ttbMinutes) {
+						detailTags.textContent = `${formatTtbHours(ttbMinutes)} | ${tagLine}`;
+					} else {
+						detailTags.textContent = tagLine;
 					}
 				}
 				if (detailDelete) {
@@ -641,6 +649,15 @@ function getSubmitter(game: Game) {
 					}
 				} catch {}
 				return value;
+			}
+
+			function formatTtbHours(value) {
+				const minutes = Number.parseFloat(String(value));
+				if (!Number.isFinite(minutes) || minutes <= 0) return "0 Hours";
+				const hours = minutes / 60;
+				const rounded = Math.round(hours * 10) / 10;
+				const text = rounded % 1 === 0 ? String(Math.trunc(rounded)) : String(rounded);
+				return `${text} Hours`;
 			}
 
 			function formatUsd(value) {
