@@ -9,6 +9,7 @@ import {
 	readOAuthState,
 	updateMemberProfile
 } from "../../../lib/auth";
+import { writeAudit } from "../../../lib/audit";
 
 export const prerender = false;
 
@@ -75,6 +76,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 		const headers = new Headers({ Location: "/" });
 		headers.append("Set-Cookie", sessionCookie);
 		headers.append("Set-Cookie", clearCookie);
+		await writeAudit(env, email, "sign_in", "session", 0, null, { email });
 		return new Response(null, {
 			status: 302,
 			headers

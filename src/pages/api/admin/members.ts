@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
 import { getRuntimeEnv, readSession } from "../../../lib/auth";
+import { writeAudit } from "../../../lib/audit";
 
 type MemberRow = {
 	email: string;
@@ -15,6 +16,7 @@ type D1Database = {
 	prepare: (query: string) => {
 		bind: (...args: unknown[]) => {
 			all: <T>() => Promise<{ results: T[] }>;
+			first: <T>() => Promise<T | null>;
 			run: () => Promise<{ success: boolean }>;
 		};
 	};
@@ -72,6 +74,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
 		return new Response("Members database not configured.", { status: 500 });
 	}
 
+	const existing = await db
+		.prepare("select email, name, alias, role, active from members where email = ?1")
+		.bind(email)
+		.first<MemberRow>();
+
 	await db
 		.prepare(
 			"insert into members (email, name, alias, role, active) values (?1, null, null, ?2, 1) " +
@@ -79,6 +86,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
 		)
 		.bind(email, role)
 		.run();
+
+	const updated = await db
+		.prepare("select email, name, alias, role, active from members where email = ?1")
+		.bind(email)
+		.first<MemberRow>();
+
+	await writeAudit(
+		env,
+		session.email,
+		"member_add",
+		"member",
+		0,
+		existing,
+		updated
+	);
 
 	return new Response(null, { status: 204 });
 };
@@ -130,6 +152,14 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
 		return new Response("Members database not configured.", { status: 500 });
 	}
 
+	const existing = await db
+		.prepare("select email, name, alias, role, active from members where email = ?1")
+		.bind(email)
+		.first<MemberRow>();
+	if (!existing) {
+		return new Response("Member not found.", { status: 404 });
+	}
+
 	const assignments = updates.join(", ");
 	const sql = `update members set ${assignments} where email = ?${values.length + 1}`;
 	values.push(email);
@@ -138,6 +168,35 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
 		.prepare(sql)
 		.bind(...values)
 		.run();
+
+	const updated = await db
+		.prepare("select email, name, alias, role, active from members where email = ?1")
+		.bind(email)
+		.first<MemberRow>();
+
+	if (existing.role !== updated?.role) {
+		await writeAudit(
+			env,
+			session.email,
+			"member_role_change",
+			"member",
+			0,
+			existing,
+			updated
+		);
+	}
+
+	if ((existing.alias || "") !== (updated?.alias || "")) {
+		await writeAudit(
+			env,
+			session.email,
+			"member_alias_change",
+			"member",
+			0,
+			existing,
+			updated
+		);
+	}
 
 	return new Response(null, { status: 204 });
 };
@@ -166,10 +225,27 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
 		return new Response("Members database not configured.", { status: 500 });
 	}
 
+	const existing = await db
+		.prepare("select email, name, alias, role, active from members where email = ?1")
+		.bind(email)
+		.first<MemberRow>();
+
 	await db
 		.prepare("delete from members where email = ?1")
 		.bind(email)
 		.run();
+
+	if (existing) {
+		await writeAudit(
+			env,
+			session.email,
+			"member_delete",
+			"member",
+			0,
+			existing,
+			null
+		);
+	}
 
 	return new Response(null, { status: 204 });
 };

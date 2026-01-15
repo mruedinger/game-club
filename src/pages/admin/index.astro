@@ -34,8 +34,73 @@ export const prerender = false;
 					<button class="cta invite-cta" type="button" data-action="open-invite">
 						Add a new member
 					</button>
-					<div class="member-list" aria-live="polite">
-						<p class="muted small">Loading members…</p>
+					<div class="table-wrapper scroll-rows" aria-live="polite">
+						<table class="games-table member-table">
+							<thead>
+								<tr>
+									<th>User</th>
+									<th>Alias</th>
+									<th>Email</th>
+									<th>Role</th>
+								</tr>
+							</thead>
+							<tbody class="member-list">
+								<tr>
+									<td class="muted small" colspan="4">Loading members…</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+				</section>
+
+				<section class="section card games-editor">
+					<div class="section-head">
+						<h2>Games data editor</h2>
+						<p class="muted">Edit submitters, status, tags, and timing details.</p>
+					</div>
+					<p class="muted small">Tags: comma-separated list (e.g. Narrative, Roguelike, Puzzle)</p>
+					<div class="table-wrapper scroll-rows">
+						<table class="games-table games-editor-table">
+							<thead>
+								<tr>
+									<th data-sort="title" class="sortable">Title</th>
+									<th data-sort="submitter" class="sortable">Submitter</th>
+									<th data-sort="status" class="sortable">Status</th>
+									<th data-sort="tags" class="sortable">Tags</th>
+									<th data-sort="ttb" class="sortable">Time to beat</th>
+									<th data-sort="played" class="sortable">Played month</th>
+								</tr>
+							</thead>
+							<tbody class="games-editor-body">
+								<tr>
+									<td class="muted small" colspan="6">Loading games…</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+				</section>
+
+				<section class="section card audit-card">
+					<div class="section-head">
+						<h2>Audit logs</h2>
+						<p class="muted">Track recent administrative activity.</p>
+					</div>
+					<div class="table-wrapper scroll-rows">
+						<table class="games-table audit-table">
+							<thead>
+								<tr>
+									<th>When</th>
+									<th>Actor</th>
+									<th>Action</th>
+									<th>Entity</th>
+								</tr>
+							</thead>
+							<tbody class="audit-body">
+								<tr>
+									<td class="muted small" colspan="4">Loading activity…</td>
+								</tr>
+							</tbody>
+						</table>
 					</div>
 				</section>
 			</div>
@@ -100,10 +165,65 @@ export const prerender = false;
 			</form>
 		</dialog>
 
+		<dialog class="modal" id="game-modal">
+			<form class="modal-card game-detail" novalidate>
+				<header>
+					<div>
+						<h3 id="game-modal-title">Game</h3>
+						<p class="muted small" id="game-modal-subtitle"></p>
+					</div>
+					<button class="ghost icon-button" type="button" data-action="close-game" aria-label="Close">
+						×
+					</button>
+				</header>
+				<div class="field">
+					<label for="edit-game-submitter">Submitter</label>
+					<select id="edit-game-submitter" name="submitted_by_email" required></select>
+				</div>
+				<div class="field">
+					<label for="edit-game-status">Status</label>
+					<select id="edit-game-status" name="status" required>
+						<option value="backlog">backlog</option>
+						<option value="current">current</option>
+						<option value="played">played</option>
+					</select>
+				</div>
+				<div class="field">
+					<label for="edit-game-tags">Tags</label>
+					<input id="edit-game-tags" name="tags" type="text" placeholder="Narrative, Roguelike" />
+				</div>
+				<div class="field">
+					<label for="edit-game-ttb">Time to beat (hours)</label>
+					<input id="edit-game-ttb" name="time_to_beat_hours" type="number" step="0.5" min="0" />
+				</div>
+				<div class="field">
+					<label for="edit-game-played">Played month</label>
+					<input id="edit-game-played" name="played_month" type="month" />
+				</div>
+				<p class="form-error hidden" id="game-modal-error" role="alert"></p>
+				<footer>
+					<button class="ghost" type="button" data-action="close-game">Cancel</button>
+					<button class="cta" type="submit">Save</button>
+				</footer>
+			</form>
+		</dialog>
+
 		<script>
 			const shell = document.querySelector(".admin-shell");
 			const inviteForm = document.querySelector("#invite-modal .invite-form");
 			const memberList = document.querySelector(".member-list");
+			const gamesBody = document.querySelector(".games-editor-body");
+			const auditBody = document.querySelector(".audit-body");
+			const gameModal = document.querySelector("#game-modal");
+			const gameModalTitle = document.querySelector("#game-modal-title");
+			const gameModalSubtitle = document.querySelector("#game-modal-subtitle");
+			const gameModalError = document.querySelector("#game-modal-error");
+			const gameSubmitter = document.querySelector("#edit-game-submitter");
+			const gameStatus = document.querySelector("#edit-game-status");
+			const gameTags = document.querySelector("#edit-game-tags");
+			const gameTtb = document.querySelector("#edit-game-ttb");
+			const gamePlayed = document.querySelector("#edit-game-played");
+			const gameSortHeaders = document.querySelectorAll(".games-editor-table th[data-sort]");
 			const inviteModal = document.querySelector("#invite-modal");
 			const memberModal = document.querySelector("#member-modal");
 			const memberName = document.querySelector("#member-name");
@@ -111,7 +231,9 @@ export const prerender = false;
 			const editRole = document.querySelector("#edit-role");
 			const editAlias = document.querySelector("#edit-alias");
 			let activeMember = null;
+			let activeGameId = null;
 			let cachedMembers = [];
+			let cachedGames = [];
 
 			let currentUserEmail = null;
 
@@ -131,26 +253,28 @@ export const prerender = false;
 					currentUserEmail = data?.me?.email || null;
 					if (shell) shell.classList.remove("is-hidden");
 					renderMembers(data?.members || []);
+					loadGames();
+					loadAuditLogs();
 				})
 				.catch(() => {});
 
 			function renderMembers(members) {
 				if (!memberList) return;
 				if (!members || members.length === 0) {
-					memberList.innerHTML = '<p class="muted small">No members yet.</p>';
+					memberList.innerHTML = '<tr><td class="muted small" colspan="4">No members yet.</td></tr>';
 					return;
 				}
 
 				cachedMembers = members;
-				memberList.innerHTML = '<div class="toast" aria-live="polite"></div>';
-				const grid = document.createElement("div");
-				grid.className = "member-grid";
+				memberList.innerHTML = "";
 				members.forEach((member) => {
-					const row = document.createElement("button");
-					row.className = "member-row";
-					row.type = "button";
+					const row = document.createElement("tr");
+					row.className = "clickable-row";
 					row.dataset.email = member.email;
 
+					const userCell = document.createElement("td");
+					const userWrap = document.createElement("div");
+					userWrap.className = "member-user";
 					const avatar = document.createElement("div");
 					avatar.className = "avatar";
 					if (member.picture) {
@@ -170,27 +294,287 @@ export const prerender = false;
 						avatar.appendChild(fallback);
 					}
 
-					const details = document.createElement("div");
 					const name = document.createElement("div");
 					name.className = "member-name";
 					name.textContent = member.name || "—";
-					const email = document.createElement("div");
-					email.className = "member-email";
-					email.textContent = member.email;
-					details.appendChild(name);
-					details.appendChild(email);
+					userWrap.appendChild(avatar);
+					userWrap.appendChild(name);
+					userCell.appendChild(userWrap);
 
-					const role = document.createElement("span");
-					role.className = "role-pill";
-					role.textContent = member.role === "admin" ? "Admin" : "Member";
+					const aliasCell = document.createElement("td");
+					aliasCell.textContent = member.alias || "—";
 
-					row.appendChild(avatar);
-					row.appendChild(details);
-					row.appendChild(role);
-					grid.appendChild(row);
+					const emailCell = document.createElement("td");
+					emailCell.className = "member-email";
+					emailCell.textContent = member.email;
+
+					const roleCell = document.createElement("td");
+					roleCell.textContent = member.role === "admin" ? "Admin" : "Member";
+
+					row.appendChild(userCell);
+					row.appendChild(aliasCell);
+					row.appendChild(emailCell);
+					row.appendChild(roleCell);
+					memberList.appendChild(row);
 				});
-				memberList.appendChild(grid);
 			}
+
+			async function loadGames() {
+				if (!gamesBody) return;
+				gamesBody.innerHTML = '<tr><td class="muted small" colspan="6">Loading games…</td></tr>';
+				const response = await fetch("/api/admin/games");
+				if (!response.ok) {
+					gamesBody.innerHTML = '<tr><td class="muted small" colspan="6">Unable to load games.</td></tr>';
+					return;
+				}
+				const games = await response.json();
+				cachedGames = games || [];
+				renderGames(cachedGames);
+			}
+
+			async function loadAuditLogs() {
+				if (!auditBody) return;
+				auditBody.innerHTML = '<tr><td class="muted small" colspan="4">Loading activity…</td></tr>';
+				const response = await fetch("/api/admin/audit-logs");
+				if (!response.ok) {
+					auditBody.innerHTML = '<tr><td class="muted small" colspan="4">Unable to load audit logs.</td></tr>';
+					return;
+				}
+				const logs = await response.json();
+				renderAuditLogs(logs || []);
+			}
+
+			function renderAuditLogs(logs) {
+				if (!auditBody) return;
+				if (!logs || logs.length === 0) {
+					auditBody.innerHTML = '<tr><td class="muted small" colspan="4">No audit activity yet.</td></tr>';
+					return;
+				}
+				auditBody.innerHTML = "";
+				logs.forEach((entry) => {
+					const row = document.createElement("tr");
+
+					const whenCell = document.createElement("td");
+					whenCell.textContent = entry.created_at;
+
+					const actorCell = document.createElement("td");
+					actorCell.textContent = entry.actor_email;
+
+					const actionCell = document.createElement("td");
+					actionCell.textContent = entry.action;
+
+					const entityCell = document.createElement("td");
+					entityCell.textContent = entry.entity_id
+						? `${entry.entity_type} #${entry.entity_id}`
+						: entry.entity_type;
+
+					row.appendChild(whenCell);
+					row.appendChild(actorCell);
+					row.appendChild(actionCell);
+					row.appendChild(entityCell);
+					auditBody.appendChild(row);
+				});
+			}
+
+			function renderGames(games) {
+				if (!gamesBody) return;
+				if (!games || games.length === 0) {
+					gamesBody.innerHTML = '<tr><td class="muted small" colspan="6">No games yet.</td></tr>';
+					return;
+				}
+				gamesBody.innerHTML = "";
+				games.forEach((game) => {
+					const row = document.createElement("tr");
+					const tags = parseTags(game.tags_json);
+					row.dataset.id = game.id;
+					row.dataset.title = game.title.toLowerCase();
+					row.dataset.submitter = game.submitted_by_email || "";
+					row.dataset.status = game.status || "";
+					row.dataset.tags = tags.join(", ");
+					row.dataset.ttb = typeof game.time_to_beat_minutes === "number" ? String(game.time_to_beat_minutes) : "";
+					row.dataset.played = game.played_month || "";
+					row.className = "clickable-row";
+
+					const titleCell = document.createElement("td");
+					titleCell.textContent = game.title;
+
+					const submitterCell = document.createElement("td");
+					submitterCell.textContent = getMemberLabel(game.submitted_by_email);
+
+					const statusCell = document.createElement("td");
+					statusCell.textContent = game.status;
+
+					const tagsCell = document.createElement("td");
+					tagsCell.textContent = tags.length > 0 ? tags.join(", ") : "-";
+
+					const ttbCell = document.createElement("td");
+					ttbCell.textContent = formatHours(game.time_to_beat_minutes);
+
+					const playedCell = document.createElement("td");
+					playedCell.textContent = game.played_month || "-";
+
+					row.appendChild(titleCell);
+					row.appendChild(submitterCell);
+					row.appendChild(statusCell);
+					row.appendChild(tagsCell);
+					row.appendChild(ttbCell);
+					row.appendChild(playedCell);
+					gamesBody.appendChild(row);
+				});
+				sortGameRows("title", "asc");
+			}
+
+			function getMemberLabel(email) {
+				const match = cachedMembers.find((member) => member.email === email);
+				if (!match) return email;
+				return match.alias || match.name || match.email;
+			}
+
+			function parseTags(tagsJson) {
+				if (!tagsJson) return [];
+				try {
+					const parsed = JSON.parse(tagsJson);
+					return Array.isArray(parsed) ? parsed : [];
+				} catch {
+					return [];
+				}
+			}
+
+			function formatHours(minutes) {
+				if (typeof minutes !== "number") return "-";
+				return (minutes / 60).toFixed(1);
+			}
+
+			if (gamesBody) {
+				gamesBody.addEventListener("click", (event) => {
+					const target = event.target;
+					if (!(target instanceof HTMLElement)) return;
+					const row = target.closest(".clickable-row");
+					if (!row) return;
+					const id = Number.parseInt(row.dataset.id || "", 10);
+					const game = cachedGames.find((item) => item.id === id);
+					if (!game) return;
+					openGameModal(game);
+				});
+			}
+
+			function openGameModal(game) {
+				if (!gameModal || !gameSubmitter || !gameStatus || !gameTags || !gameTtb || !gamePlayed) {
+					return;
+				}
+				activeGameId = game.id;
+				gameModalTitle.textContent = game.title;
+				gameModalSubtitle.textContent = game.submitted_by_email;
+				gameSubmitter.innerHTML = "";
+				cachedMembers.forEach((member) => {
+					const option = document.createElement("option");
+					option.value = member.email;
+					option.textContent = member.alias || member.name || member.email;
+					if (member.email === game.submitted_by_email) option.selected = true;
+					gameSubmitter.appendChild(option);
+				});
+				gameStatus.value = game.status;
+				gameTags.value = parseTags(game.tags_json).join(", ");
+				gameTtb.value = typeof game.time_to_beat_minutes === "number"
+					? String((game.time_to_beat_minutes / 60).toFixed(1))
+					: "";
+				gamePlayed.value = game.played_month || "";
+				gameModalError.classList.add("hidden");
+				gameModalError.textContent = "";
+				gameModal.showModal();
+			}
+
+			if (gameModal) {
+				gameModal.addEventListener("click", (event) => {
+					const target = event.target;
+					if (!(target instanceof HTMLElement)) return;
+					if (target.closest("[data-action='close-game']")) {
+						gameModal.close();
+					}
+				});
+				gameModal.addEventListener("submit", async (event) => {
+					event.preventDefault();
+					if (!activeGameId) return;
+					const hoursValue = gameTtb.value ? Number.parseFloat(gameTtb.value) : null;
+					if (hoursValue !== null && Number.isNaN(hoursValue)) {
+						gameModalError.textContent = "Time to beat must be a number.";
+						gameModalError.classList.remove("hidden");
+						return;
+					}
+					if (!gameSubmitter.value) {
+						gameModalError.textContent = "Submitter is required.";
+						gameModalError.classList.remove("hidden");
+						return;
+					}
+					const playedMonthValue = gamePlayed.value.trim();
+					if (playedMonthValue && !/^\d{4}-\d{2}$/.test(playedMonthValue)) {
+						gameModalError.textContent = "Played month must be YYYY-MM.";
+						gameModalError.classList.remove("hidden");
+						return;
+					}
+					const payload = {
+						id: activeGameId,
+						submitted_by_email: gameSubmitter.value,
+						status: gameStatus.value,
+						tags: gameTags.value,
+						time_to_beat_hours: hoursValue,
+						played_month: gamePlayed.value
+					};
+					const response = await fetch("/api/admin/games", {
+						method: "PATCH",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify(payload)
+					});
+					if (response.ok) {
+						gameModal.close();
+						loadGames();
+					} else {
+						gameModalError.textContent = "Unable to update game.";
+						gameModalError.classList.remove("hidden");
+					}
+				});
+			}
+
+			function getSortValue(row, key) {
+				if (key === "title") return row.dataset.title || "";
+				if (key === "submitter") return row.dataset.submitter || "";
+				if (key === "status") return row.dataset.status || "";
+				if (key === "tags") return row.dataset.tags || "";
+				if (key === "ttb") return Number.parseInt(row.dataset.ttb || "0", 10);
+				if (key === "played") return row.dataset.played || "";
+				return "";
+			}
+
+			function sortGameRows(key, direction) {
+				if (!gamesBody) return;
+				const rows = Array.from(gamesBody.querySelectorAll(".clickable-row"));
+				const dir = direction === "desc" ? -1 : 1;
+				const sorted = rows.sort((a, b) => {
+					const aValue = getSortValue(a, key);
+					const bValue = getSortValue(b, key);
+					if (typeof aValue === "number" && typeof bValue === "number") {
+						const aScore = aValue || Number.MAX_SAFE_INTEGER;
+						const bScore = bValue || Number.MAX_SAFE_INTEGER;
+						return (aScore - bScore) * dir;
+					}
+					return String(aValue).localeCompare(String(bValue)) * dir;
+				});
+				sorted.forEach((row) => gamesBody.appendChild(row));
+			}
+
+			gameSortHeaders.forEach((header) => {
+				header.addEventListener("click", () => {
+					const key = header.dataset.sort;
+					if (!key) return;
+					const current = header.dataset.direction || "asc";
+					const nextDirection = current === "asc" ? "desc" : "asc";
+					gameSortHeaders.forEach((th) => {
+						delete th.dataset.direction;
+					});
+					header.dataset.direction = nextDirection;
+					sortGameRows(key, nextDirection);
+				});
+			});
 
 			document.addEventListener("click", (event) => {
 				const target = event.target;
@@ -207,7 +591,7 @@ export const prerender = false;
 				if (closeMember && memberModal) {
 					memberModal.close();
 				}
-				const row = target.closest(".member-row");
+				const row = target.closest("tr[data-email]");
 				if (row && memberModal) {
 					const email = row.dataset.email;
 					if (!email) return;
@@ -236,10 +620,10 @@ export const prerender = false;
 
 			async function loadMembers() {
 				if (!memberList) return;
-				memberList.innerHTML = '<p class="muted small">Loading members…</p>';
+				memberList.innerHTML = '<tr><td class="muted small" colspan="4">Loading members…</td></tr>';
 				const response = await fetch("/api/admin/members");
 				if (!response.ok) {
-					memberList.innerHTML = '<p class="muted small">Unable to load members.</p>';
+					memberList.innerHTML = '<tr><td class="muted small" colspan="4">Unable to load members.</td></tr>';
 					return;
 				}
 				const members = await response.json();
@@ -248,7 +632,7 @@ export const prerender = false;
 
 			function openMemberModal(email) {
 				activeMember = email;
-				const row = document.querySelector(`.member-row[data-email="${email}"]`);
+				const row = document.querySelector(`tr[data-email="${email}"]`);
 				if (!row || !memberModal) return;
 				const name = row.querySelector(".member-name")?.textContent || "Member";
 				if (memberName) memberName.textContent = name;
@@ -286,11 +670,10 @@ export const prerender = false;
 						body: JSON.stringify(payload)
 					});
 					if (response.ok) {
-						showToast("Member updated.");
 						memberModal.close();
 						loadMembers();
 					} else {
-						showToast("Unable to update member.", true);
+						console.error("Unable to update member.");
 					}
 				});
 
@@ -312,49 +695,11 @@ export const prerender = false;
 				});
 			}
 
-			function showToast(message, isError = false) {
-				const toast = document.querySelector(".toast");
-				if (!toast) return;
-				toast.textContent = message;
-				toast.classList.toggle("is-error", isError);
-				toast.classList.add("is-visible");
-				setTimeout(() => {
-					toast.classList.remove("is-visible");
-				}, 2000);
-			}
 		</script>
 	</body>
 </html>
 
 <style>
-	:root {
-		color-scheme: light;
-		--ink: #1f2933;
-		--muted: #5b6672;
-		--tan: #dbe2ea;
-		--ink-soft: #364152;
-		--shadow: rgba(13, 30, 48, 0.18);
-		--border: rgba(33, 51, 70, 0.14);
-		--accent: #3b6ea5;
-		--accent-dark: #2a5581;
-		--radius: 22px;
-		--glass: rgba(255, 255, 255, 0.7);
-		--glass-strong: rgba(255, 255, 255, 0.88);
-		font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-		background: radial-gradient(circle at top right, #f7fbff 0%, #eef2f6 55%, #e2e8f0 100%);
-	}
-
-	* {
-		box-sizing: border-box;
-	}
-
-	body {
-		margin: 0;
-		color: var(--ink);
-		background: linear-gradient(120deg, #f6f9fc 0%, #e9eff6 60%, #dde5ef 100%);
-		min-height: 100vh;
-	}
-
 	main {
 		display: grid;
 		gap: 2rem;
@@ -366,9 +711,9 @@ export const prerender = false;
 		max-width: 520px;
 	}
 
-.hero .muted {
-	max-width: 34rem;
-}
+	.hero .muted {
+		max-width: 34rem;
+	}
 
 	.members-card {
 		max-width: 600px;
@@ -379,101 +724,6 @@ export const prerender = false;
 		gap: 1rem;
 	}
 
-
-	.member-list {
-		display: grid;
-		gap: 0.6rem;
-	}
-
-	:global(.member-grid) {
-		display: grid;
-		gap: 0.8rem;
-	}
-
-	:global(.member-row) {
-		appearance: none;
-		border: none;
-		display: grid;
-		grid-template-columns: auto 1fr auto;
-		align-items: center;
-		gap: 1rem;
-		padding: 0.9rem 1.1rem;
-		border-radius: 16px;
-		border: 1px solid var(--border);
-		background: var(--glass-strong);
-		text-align: left;
-		cursor: pointer;
-		width: 100%;
-		transition: transform 0.2s ease, box-shadow 0.2s ease;
-	}
-
-	:global(.member-row:hover) {
-		transform: translateY(-1px);
-		box-shadow: 0 18px 36px -30px var(--shadow);
-	}
-
-	:global(.avatar) {
-		width: 40px;
-		height: 40px;
-		border-radius: 50%;
-		background: rgba(59, 110, 165, 0.18);
-		display: grid;
-		place-items: center;
-		font-weight: 700;
-		color: var(--ink-soft);
-		overflow: hidden;
-	}
-
-	:global(.avatar-img) {
-		width: 100%;
-		height: 100%;
-		object-fit: cover;
-		display: block;
-	}
-
-	:global(.avatar-fallback) {
-		display: grid;
-		place-items: center;
-		width: 100%;
-		height: 100%;
-	}
-
-	:global(.role-pill) {
-		padding: 0.25rem 0.7rem;
-		border-radius: 999px;
-		border: 1px solid var(--border);
-		font-size: 0.75rem;
-		background: rgba(255, 255, 255, 0.7);
-	}
-
-		:global(.toast) {
-			margin-bottom: 0;
-		padding: 0.4rem 0.8rem;
-		border-radius: 999px;
-		font-size: 0.8rem;
-		background: rgba(43, 177, 120, 0.2);
-		color: #1b6346;
-		border: 1px solid rgba(43, 177, 120, 0.4);
-		display: inline-flex;
-		align-items: center;
-		gap: 0.4rem;
-		opacity: 0;
-		transform: translateY(-4px);
-		transition: opacity 0.2s ease, transform 0.2s ease;
-	}
-
-		:global(.toast.is-visible) {
-			opacity: 1;
-			transform: translateY(0);
-			margin-bottom: 0.6rem;
-		}
-
-	:global(.toast.is-error) {
-		background: rgba(200, 90, 90, 0.18);
-		color: #8a2f2f;
-		border-color: rgba(200, 90, 90, 0.4);
-	}
-
 	.member-name {
 		font-weight: 600;
 	}
@@ -481,80 +731,6 @@ export const prerender = false;
 	.member-email {
 		color: var(--muted);
 		font-size: 0.82rem;
-	}
-
-	.switch {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.6rem;
-		font-weight: 600;
-		font-size: 0.85rem;
-	}
-
-	.switch input {
-		display: none;
-	}
-
-	.switch .slider {
-		position: relative;
-		width: 38px;
-		height: 20px;
-		background: rgba(33, 51, 70, 0.18);
-		border-radius: 999px;
-		transition: background 0.2s ease;
-	}
-
-	.switch .slider::before {
-		content: "";
-		position: absolute;
-		top: 2px;
-		left: 2px;
-		width: 16px;
-		height: 16px;
-		background: #fff;
-		border-radius: 50%;
-		transition: transform 0.2s ease;
-		box-shadow: 0 4px 8px rgba(31, 41, 51, 0.25);
-	}
-
-	.switch input:checked + .slider {
-		background: rgba(59, 110, 165, 0.7);
-	}
-
-	.switch input:checked + .slider::before {
-		transform: translateX(18px);
-	}
-
-	.switch-label {
-		color: var(--ink-soft);
-	}
-
-	.status {
-		display: inline-flex;
-		align-items: center;
-		padding: 0.2rem 0.6rem;
-		border-radius: 999px;
-		font-size: 0.75rem;
-		background: rgba(255, 255, 255, 0.6);
-		border: 1px solid var(--border);
-	}
-
-	.status-active {
-		color: #1b6346;
-		background: rgba(43, 177, 120, 0.15);
-		border-color: rgba(43, 177, 120, 0.4);
-	}
-
-	.status-disabled {
-		color: #7a4c4c;
-		background: rgba(200, 90, 90, 0.12);
-		border-color: rgba(200, 90, 90, 0.4);
-	}
-
-	.actions {
-		display: flex;
-		gap: 0.5rem;
-		flex-wrap: wrap;
 	}
 
 	.small-button {
@@ -567,32 +743,8 @@ export const prerender = false;
 		color: #8a2f2f;
 	}
 
-	.actions {
-		display: flex;
-		gap: 0.6rem;
-		flex-wrap: wrap;
-	}
-
-	.chip {
-		border-radius: 999px;
-		padding: 0.4rem 0.85rem;
-		font-size: 0.75rem;
-		background: var(--tan);
-		font-weight: 500;
-	}
-
-		.invite-cta {
-			width: fit-content;
-		}
-
-	.toggle-row {
-		display: grid;
-		gap: 0.8rem;
-	}
-
-	.switch input:disabled + .slider {
-		opacity: 0.5;
-		cursor: not-allowed;
+	.invite-cta {
+		width: fit-content;
 	}
 
 	@media (max-width: 900px) {
@@ -609,4 +761,5 @@ export const prerender = false;
 	.is-hidden {
 		display: none;
 	}
+
 </style>
