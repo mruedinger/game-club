@@ -159,6 +159,50 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
 	return new Response(null, { status: 204 });
 };
 
+export const DELETE: APIRoute = async ({ request, locals }) => {
+	const { session, db, error } = await requireAdmin(request, locals);
+	if (!session || !db) return error!;
+
+	const body = await readJson(request);
+	const id = normalizeId(body?.id);
+	if (!id) {
+		return new Response("Game id is required.", { status: 400 });
+	}
+
+	const existing = await db
+		.prepare(
+			"select id, title, submitted_by_email, status, tags_json, time_to_beat_minutes, played_month from games where id = ?1"
+		)
+		.bind(id)
+		.first<GameRow>();
+	if (!existing) {
+		return new Response("Game not found.", { status: 404 });
+	}
+
+	await db
+		.prepare("delete from poll_votes where choice_1 = ?1 or choice_2 = ?1 or choice_3 = ?1")
+		.bind(id)
+		.run();
+	await db.prepare("delete from poll_games where game_id = ?1").bind(id).run();
+	await db.prepare("delete from games where id = ?1").bind(id).run();
+
+	await db
+		.prepare(
+			"insert into audit_logs (actor_email, action, entity_type, entity_id, before_json, after_json) values (?1, ?2, ?3, ?4, ?5, ?6)"
+		)
+		.bind(
+			session.email.toLowerCase(),
+			"game_delete",
+			"game",
+			id,
+			JSON.stringify(existing),
+			null
+		)
+		.run();
+
+	return new Response(null, { status: 204 });
+};
+
 async function requireAdmin(request: Request, locals: App.Locals) {
 	const env = getRuntimeEnv(locals.runtime?.env);
 	const session = await readSession(request, env);

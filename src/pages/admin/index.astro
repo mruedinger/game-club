@@ -200,6 +200,9 @@ export const prerender = false;
 					<label for="edit-game-played">Played month</label>
 					<input id="edit-game-played" name="played_month" type="month" />
 				</div>
+				<div class="actions">
+					<button class="ghost danger small-button" data-action="delete-game" type="button">Delete game</button>
+				</div>
 				<p class="form-error hidden" id="game-modal-error" role="alert"></p>
 				<footer>
 					<button class="ghost" type="button" data-action="close-game">Cancel</button>
@@ -490,6 +493,24 @@ export const prerender = false;
 					if (!(target instanceof HTMLElement)) return;
 					if (target.closest("[data-action='close-game']")) {
 						gameModal.close();
+					}
+					if (target.closest("[data-action='delete-game']")) {
+						if (!activeGameId) return;
+						const confirmed = window.confirm("Delete this game? This cannot be undone.");
+						if (!confirmed) return;
+						fetch("/api/admin/games", {
+							method: "DELETE",
+							headers: { "Content-Type": "application/json" },
+							body: JSON.stringify({ id: activeGameId })
+						}).then((response) => {
+							if (response.ok) {
+								gameModal.close();
+								loadGames();
+							} else {
+								gameModalError.textContent = "Unable to delete game.";
+								gameModalError.classList.remove("hidden");
+							}
+						});
 					}
 				});
 				gameModal.addEventListener("submit", async (event) => {
