@@ -2,6 +2,7 @@ import type { APIRoute } from "astro";
 import { getRuntimeEnv, readSession } from "../../lib/auth";
 import { writeAudit } from "../../lib/audit";
 import { fetchItadGame, fetchItadPrices } from "../../lib/itad";
+import { fetchHltbTimeMinutes } from "../../lib/hltb";
 
 type GameRow = {
 	id: number;
@@ -120,13 +121,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
 		steamData?.genres && steamData.genres.length > 0
 			? JSON.stringify(steamData.genres.map((genre) => genre.description))
 			: null;
+	const ttbMinutes = await fetchHltbTimeMinutes(title);
 	const currentPriceCents = itadPrices?.currentPriceCents ?? null;
 	const bestPriceCents = itadPrices?.bestPriceCents ?? null;
 	const priceCheckedAt = itadPrices ? new Date().toISOString() : null;
 
 	const inserted = await db
 		.prepare(
-			"insert into games (title, submitted_by_email, status, cover_art_url, tags_json, description, steam_app_id, itad_game_id, itad_slug, itad_boxart_url, current_price_cents, best_price_cents, price_checked_at) values (?1, ?2, 'backlog', ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12) returning id"
+			"insert into games (title, submitted_by_email, status, cover_art_url, tags_json, description, steam_app_id, itad_game_id, itad_slug, itad_boxart_url, current_price_cents, best_price_cents, price_checked_at, time_to_beat_minutes) values (?1, ?2, 'backlog', ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13) returning id"
 		)
 		.bind(
 			title,
@@ -140,7 +142,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 			itadGame?.boxart ?? null,
 			currentPriceCents,
 			bestPriceCents,
-			priceCheckedAt
+			priceCheckedAt,
+			ttbMinutes
 		)
 		.first<{ id: number }>();
 
