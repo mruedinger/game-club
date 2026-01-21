@@ -29,5 +29,8 @@ screenshots/
 # playwright results
 test-results/
 
+# wrangler logs
+.wrangler-logs/
+
 # jetbrains setting folder
 .idea/
