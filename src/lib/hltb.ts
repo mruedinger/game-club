@@ -1,10 +1,17 @@
 const HLTB_SEARCH_URL = "https://howlongtobeat.com/search_results";
 const HLTB_BASE_URL = "https://howlongtobeat.com";
+const HLTB_HEADERS = {
+	"User-Agent": "Mozilla/5.0 (compatible; GameClubBot/1.0)",
+	"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+	"Accept-Language": "en-US,en;q=0.9",
+	"Referer": "https://howlongtobeat.com/",
+	"Origin": "https://howlongtobeat.com"
+};
 
 export async function fetchHltbTimeMinutes(title: string, timeoutMs = 4000): Promise<number | null> {
 	if (!title) return null;
 	console.log(`[HLTB] search: "${title}"`);
-	const searchHtml = await fetchWithTimeout(buildSearchRequest(title), timeoutMs);
+	const searchHtml = await fetchWithTimeout(buildSearchRequest(title), timeoutMs, "search");
 	if (!searchHtml) {
 		console.warn("[HLTB] search failed");
 		return null;
@@ -16,7 +23,11 @@ export async function fetchHltbTimeMinutes(title: string, timeoutMs = 4000): Pro
 	}
 
 	console.log(`[HLTB] match: ${gamePath}`);
-	const gameHtml = await fetchWithTimeout(new Request(`${HLTB_BASE_URL}${gamePath}`), timeoutMs);
+	const gameHtml = await fetchWithTimeout(
+		new Request(`${HLTB_BASE_URL}${gamePath}`, { headers: HLTB_HEADERS }),
+		timeoutMs,
+		"detail"
+	);
 	if (!gameHtml) {
 		console.warn("[HLTB] game page fetch failed");
 		return null;
@@ -44,18 +55,22 @@ function buildSearchRequest(title: string) {
 	return new Request(HLTB_SEARCH_URL, {
 		method: "POST",
 		headers: {
-			"Content-Type": "application/x-www-form-urlencoded"
+			"Content-Type": "application/x-www-form-urlencoded",
+			...HLTB_HEADERS
 		},
 		body: body.toString()
 	});
 }
 
-async function fetchWithTimeout(request: Request, timeoutMs: number) {
+async function fetchWithTimeout(request: Request, timeoutMs: number, label: string) {
 	const controller = new AbortController();
 	const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 	try {
 		const response = await fetch(request, { signal: controller.signal });
-		if (!response.ok) return null;
+		if (!response.ok) {
+			console.warn(`[HLTB] ${label} status ${response.status}`);
+			return null;
+		}
 		return await response.text();
 	} catch {
 		return null;
