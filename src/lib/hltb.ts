@@ -1,4 +1,4 @@
-const HLTB_SEARCH_URL = "https://howlongtobeat.com/search_results";
+const HLTB_SEARCH_URL = "https://howlongtobeat.com/api/search";
 const HLTB_BASE_URL = "https://howlongtobeat.com";
 const HLTB_HEADERS = {
 	"User-Agent": "Mozilla/5.0 (compatible; GameClubBot/1.0)",
@@ -11,12 +11,12 @@ const HLTB_HEADERS = {
 export async function fetchHltbTimeMinutes(title: string, timeoutMs = 4000): Promise<number | null> {
 	if (!title) return null;
 	console.log(`[HLTB] search: "${title}"`);
-	const searchHtml = await fetchWithTimeout(buildSearchRequest(title), timeoutMs, "search");
-	if (!searchHtml) {
+	const searchJson = await fetchJsonWithTimeout(buildSearchRequest(title), timeoutMs, "search");
+	if (!searchJson) {
 		console.warn("[HLTB] search failed");
 		return null;
 	}
-	const gamePath = extractGamePath(searchHtml, title);
+	const gamePath = extractGamePath(searchJson, title);
 	if (!gamePath) {
 		console.warn("[HLTB] no match found");
 		return null;
@@ -48,17 +48,36 @@ export async function fetchHltbTimeMinutes(title: string, timeoutMs = 4000): Pro
 }
 
 function buildSearchRequest(title: string) {
-	const body = new URLSearchParams({
-		query: title,
-		page: "1"
-	});
+	const body = {
+		searchType: "games",
+		searchTerms: title.split(" "),
+		searchPage: 1,
+		size: 20,
+		searchOptions: {
+			games: {
+				userId: 0,
+				platform: "",
+				sortCategory: "popular",
+				rangeCategory: "main",
+				rangeTime: { min: 0, max: 0 },
+				gameplay: { perspective: "", flow: "", genre: "" },
+				rangeYear: { min: 0, max: 0 },
+				modifier: ""
+			},
+			users: { sortCategory: "postcount" },
+			lists: { sortCategory: "follows" },
+			filter: "",
+			sort: 0,
+			randomizer: 0
+		}
+	};
 	return new Request(HLTB_SEARCH_URL, {
 		method: "POST",
 		headers: {
-			"Content-Type": "application/x-www-form-urlencoded",
+			"Content-Type": "application/json",
 			...HLTB_HEADERS
 		},
-		body: body.toString()
+		body: JSON.stringify(body)
 	});
 }
 
@@ -79,29 +98,33 @@ async function fetchWithTimeout(request: Request, timeoutMs: number, label: stri
 	}
 }
 
-function extractGamePath(html: string, title: string) {
-	const normalizedTitle = normalizeTitle(title);
-	const results = extractSearchResults(html);
-	if (results.length === 0) return null;
-
-	const exactMatch = results.find((result) => normalizeTitle(result.title) === normalizedTitle);
-	if (exactMatch) return exactMatch.path;
-
-	return results[0].path;
+async function fetchJsonWithTimeout(request: Request, timeoutMs: number, label: string) {
+	const controller = new AbortController();
+	const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+	try {
+		const response = await fetch(request, { signal: controller.signal });
+		if (!response.ok) {
+			console.warn(`[HLTB] ${label} status ${response.status}`);
+			return null;
+		}
+		return await response.json();
+	} catch {
+		return null;
+	} finally {
+		clearTimeout(timeoutId);
+	}
 }
 
-function extractSearchResults(html: string) {
-	const results: { title: string; path: string }[] = [];
-	const blockRegex = /<a[^>]+href="(\/game\/[^"]+)"[^>]*>(.*?)<\/a>/gi;
-	let match: RegExpExecArray | null;
-	while ((match = blockRegex.exec(html))) {
-		const path = match[1];
-		const title = stripTags(match[2]);
-		if (path && title) {
-			results.push({ title, path });
-		}
-	}
-	return results;
+function extractGamePath(payload: unknown, title: string) {
+	if (!payload || typeof payload !== "object") return null;
+	const data = (payload as { data?: Array<{ game_name?: string; game_id?: number; game_slug?: string }> }).data;
+	if (!Array.isArray(data) || data.length === 0) return null;
+
+	const normalizedTitle = normalizeTitle(title);
+	const exact = data.find((entry) => normalizeTitle(entry.game_name || "") === normalizedTitle);
+	const best = exact || data[0];
+	if (!best?.game_id || !best?.game_slug) return null;
+	return `/game/${best.game_id}/${best.game_slug}`;
 }
 
 function extractHowLongToBeatTime(html: string) {
@@ -131,10 +154,6 @@ function normalizeTitle(value: string) {
 		.replace(/&amp;/g, "&")
 		.replace(/[^a-z0-9]+/g, " ")
 		.trim();
-}
-
-function stripTags(value: string) {
-	return decodeHtml(value.replace(/<[^>]*>/g, "")).trim();
 }
 
 function decodeHtml(value: string) {
