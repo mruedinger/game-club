@@ -122,6 +122,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
 			? JSON.stringify(steamData.genres.map((genre) => genre.description))
 			: null;
 	const ttbMinutes = await fetchHltbTimeMinutes(title);
+	if (!ttbMinutes) {
+		console.warn(`[HLTB] no time to beat for "${title}"`);
+	}
 	const currentPriceCents = itadPrices?.currentPriceCents ?? null;
 	const bestPriceCents = itadPrices?.bestPriceCents ?? null;
 	const priceCheckedAt = itadPrices ? new Date().toISOString() : null;

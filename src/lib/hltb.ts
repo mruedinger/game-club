@@ -3,17 +3,37 @@ const HLTB_BASE_URL = "https://howlongtobeat.com";
 
 export async function fetchHltbTimeMinutes(title: string, timeoutMs = 4000): Promise<number | null> {
 	if (!title) return null;
+	console.log(`[HLTB] search: "${title}"`);
 	const searchHtml = await fetchWithTimeout(buildSearchRequest(title), timeoutMs);
-	if (!searchHtml) return null;
+	if (!searchHtml) {
+		console.warn("[HLTB] search failed");
+		return null;
+	}
 	const gamePath = extractGamePath(searchHtml, title);
-	if (!gamePath) return null;
+	if (!gamePath) {
+		console.warn("[HLTB] no match found");
+		return null;
+	}
 
+	console.log(`[HLTB] match: ${gamePath}`);
 	const gameHtml = await fetchWithTimeout(new Request(`${HLTB_BASE_URL}${gamePath}`), timeoutMs);
-	if (!gameHtml) return null;
+	if (!gameHtml) {
+		console.warn("[HLTB] game page fetch failed");
+		return null;
+	}
 
 	const rawTime = extractHowLongToBeatTime(gameHtml);
-	if (!rawTime) return null;
-	return parseDurationToMinutes(rawTime);
+	if (!rawTime) {
+		console.warn("[HLTB] HowLongToBeat value not found");
+		return null;
+	}
+	const minutes = parseDurationToMinutes(rawTime);
+	if (!minutes) {
+		console.warn(`[HLTB] parse failed: "${rawTime}"`);
+		return null;
+	}
+	console.log(`[HLTB] parsed ${minutes} minutes`);
+	return minutes;
 }
 
 function buildSearchRequest(title: string) {
