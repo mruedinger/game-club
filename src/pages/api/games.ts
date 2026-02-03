@@ -121,7 +121,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 		steamData?.genres && steamData.genres.length > 0
 			? JSON.stringify(steamData.genres.map((genre) => genre.description))
 			: null;
-	const ttbMinutes = await fetchIgdbTimeMinutes(env, title);
+	const ttbMinutes = await fetchIgdbTimeMinutes(env, title, steamAppId);
 	const currentPriceCents = itadPrices?.currentPriceCents ?? null;
 	const bestPriceCents = itadPrices?.bestPriceCents ?? null;
 	const priceCheckedAt = itadPrices ? new Date().toISOString() : null;

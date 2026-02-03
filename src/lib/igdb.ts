@@ -4,6 +4,10 @@ type IgdbGame = {
 	slug?: string;
 };
 
+type IgdbExternalGame = {
+	game?: number;
+};
+
 type IgdbTimeToBeat = {
 	normally?: number;
 };
@@ -17,7 +21,8 @@ let cachedToken: CachedToken | null = null;
 
 export async function fetchIgdbTimeMinutes(
 	env: Record<string, unknown>,
-	title: string
+	title: string,
+	steamAppId?: number | null
 ): Promise<number | null> {
 	const clientId = getEnv(env, "IGDB_CLIENT_ID");
 	const accessToken = await getAccessToken(env);
@@ -26,7 +31,12 @@ export async function fetchIgdbTimeMinutes(
 		return null;
 	}
 
-	const game = await searchGame(title, clientId, accessToken);
+	const gameId = steamAppId
+		? await resolveGameIdBySteamId(steamAppId, clientId, accessToken)
+		: null;
+	const game = gameId
+		? { id: gameId, name: title }
+		: await searchGame(title, clientId, accessToken);
 	if (!game) {
 		console.warn(`[IGDB] no match for "${title}"`);
 		return null;
@@ -69,7 +79,6 @@ async function searchGame(
 
 	for (const query of queries) {
 		for (const where of whereClauses) {
-			console.warn(`[IGDB] search query "${query}" ${where || "(no filter)"}`);
 			const response = await fetch("https://api.igdb.com/v4/games", {
 				method: "POST",
 				headers: {
@@ -85,23 +94,12 @@ async function searchGame(
 				return null;
 			}
 			data = (await response.json()) as IgdbGame[];
-			console.warn(`[IGDB] search returned ${data.length} result(s)`);
 			if (data?.length) break;
 		}
 		if (data?.length) break;
 	}
 
 	if (!data?.length) return null;
-	console.warn(
-		`[IGDB] search results: ${data
-			.map((game) => `${game.name}#${game.id}`)
-			.join(", ")}`
-	);
-	console.warn(
-		`[IGDB] search results: ${data
-			.map((game) => `${game.name}#${game.id}`)
-			.join(", ")}`
-	);
 	const exactNameMatch = data.find(
 		(game) => normalizeTitle(game.name) === normalizedTitle
 	);
@@ -111,6 +109,34 @@ async function searchGame(
 	const match = exactNameMatch ?? exactSlugMatch ?? data[0];
 	console.log(`[IGDB] match "${match.name}" (${match.id})`);
 	return match;
+}
+
+async function resolveGameIdBySteamId(
+	steamAppId: number,
+	clientId: string,
+	accessToken: string
+): Promise<number | null> {
+	const response = await fetch("https://api.igdb.com/v4/external_games", {
+		method: "POST",
+		headers: {
+			"Client-ID": clientId,
+			Authorization: `Bearer ${accessToken}`
+		},
+		body: `fields game; where category = 1 & uid = "${steamAppId}"; limit 1;`
+	});
+	if (!response.ok) {
+		console.warn(
+			`[IGDB] external lookup status ${response.status} ${await readErrorBody(response)}`
+		);
+		return null;
+	}
+	const data = (await response.json()) as IgdbExternalGame[];
+	const gameId = data?.[0]?.game;
+	if (!gameId) {
+		console.warn(`[IGDB] no external match for steam app ${steamAppId}`);
+		return null;
+	}
+	return gameId;
 }
 
 async function fetchTimeToBeatByGameId(
