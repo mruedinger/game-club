@@ -79,13 +79,13 @@ async function fetchGameTimeToBeat(
 	clientId: string,
 	accessToken: string
 ): Promise<IgdbTimeToBeat | null> {
-	const response = await fetch("https://api.igdb.com/v4/games", {
+	const response = await fetch("https://api.igdb.com/v4/game_time_to_beats", {
 		method: "POST",
 		headers: {
 			"Client-ID": clientId,
 			Authorization: `Bearer ${accessToken}`
 		},
-		body: `fields time_to_beat.normally; where id = ${gameId}; limit 1;`
+		body: `fields normally; where game_id = ${gameId}; limit 1;`
 	});
 	if (!response.ok) {
 		console.warn(
@@ -93,8 +93,8 @@ async function fetchGameTimeToBeat(
 		);
 		return null;
 	}
-	const data = (await response.json()) as IgdbGame[];
-	const timeToBeat = data?.[0]?.time_to_beat ?? null;
+	const data = (await response.json()) as IgdbTimeToBeat[];
+	const timeToBeat = data?.[0] ?? null;
 	if (!timeToBeat?.normally) {
 		console.warn(`[IGDB] time-to-beat missing for game ${gameId}`);
 	}
