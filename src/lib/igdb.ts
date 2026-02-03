@@ -1,9 +1,3 @@
-type IgdbGame = {
-	id: number;
-	name: string;
-	slug?: string;
-};
-
 type IgdbExternalGame = {
 	game?: number;
 };
@@ -31,19 +25,23 @@ export async function fetchIgdbTimeMinutes(
 		return null;
 	}
 
-	const gameId = steamAppId
-		? await resolveGameIdBySteamId(steamAppId, clientId, accessToken)
-		: null;
-	const game = gameId
-		? { id: gameId, name: title }
-		: await searchGame(title, clientId, accessToken);
-	if (!game) {
+	if (!steamAppId) {
+		console.warn(`[IGDB] missing steam app id for "${title}"`);
+		return null;
+	}
+
+	const gameId = await resolveGameIdBySteamId(
+		steamAppId,
+		clientId,
+		accessToken
+	);
+	if (!gameId) {
 		console.warn(`[IGDB] no match for "${title}"`);
 		return null;
 	}
 
 	const timeToBeat = await fetchTimeToBeatByGameId(
-		game.id,
+		gameId,
 		clientId,
 		accessToken
 	);
@@ -59,56 +57,6 @@ export async function fetchIgdbTimeMinutes(
 	}
 
 	return minutes;
-}
-
-async function searchGame(
-	title: string,
-	clientId: string,
-	accessToken: string
-): Promise<IgdbGame | null> {
-	const normalizedTitle = normalizeTitle(title);
-	const queries = [
-		title,
-		stripDiacritics(title),
-		stripSymbols(stripDiacritics(title))
-	].filter(
-		(value, index, all) => all.indexOf(value) === index
-	);
-	const whereClauses = ["where game_type = 0;", ""];
-	let data: IgdbGame[] = [];
-
-	for (const query of queries) {
-		for (const where of whereClauses) {
-			const response = await fetch("https://api.igdb.com/v4/games", {
-				method: "POST",
-				headers: {
-					"Client-ID": clientId,
-					Authorization: `Bearer ${accessToken}`
-				},
-				body: `fields id,name,slug,game_type; search "${escapeIgdbSearch(query)}"; ${where} limit 5;`
-			});
-			if (!response.ok) {
-				console.warn(
-					`[IGDB] search status ${response.status} ${await readErrorBody(response)}`
-				);
-				return null;
-			}
-			data = (await response.json()) as IgdbGame[];
-			if (data?.length) break;
-		}
-		if (data?.length) break;
-	}
-
-	if (!data?.length) return null;
-	const exactNameMatch = data.find(
-		(game) => normalizeTitle(game.name) === normalizedTitle
-	);
-	const exactSlugMatch = data.find(
-		(game) => normalizeTitle(game.slug ?? "") === normalizedTitle
-	);
-	const match = exactNameMatch ?? exactSlugMatch ?? data[0];
-	console.log(`[IGDB] match "${match.name}" (${match.id})`);
-	return match;
 }
 
 async function resolveGameIdBySteamId(
@@ -197,26 +145,6 @@ async function getAccessToken(env: Record<string, unknown>) {
 	return cachedToken.value;
 }
 
-function escapeIgdbSearch(value: string) {
-	return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"').trim();
-}
-
-function normalizeTitle(value: string) {
-	return value
-		.toLowerCase()
-		.normalize("NFD")
-		.replace(/\p{Diacritic}/gu, "")
-		.replace(/[^a-z0-9]+/g, " ")
-		.trim();
-}
-
-function stripDiacritics(value: string) {
-	return value.normalize("NFD").replace(/\p{Diacritic}/gu, "");
-}
-
-function stripSymbols(value: string) {
-	return value.replace(/[™®©]/g, "").replace(/[^\p{L}\p{N}\s]/gu, " ").trim();
-}
 
 async function readErrorBody(response: Response) {
 	try {
