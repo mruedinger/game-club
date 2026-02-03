@@ -80,7 +80,7 @@ async function fetchTimeToBeat(
 			"Client-ID": clientId,
 			Authorization: `Bearer ${accessToken}`
 		},
-		body: `fields normally; where game = ${gameId}; limit 1;`
+		body: `fields normally; where game_id = ${gameId}; limit 1;`
 	});
 	if (!response.ok) {
 		console.warn(
