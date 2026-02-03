@@ -1,7 +1,8 @@
 type IgdbGame = {
 	id: number;
 	name: string;
-	time_to_beat?: number | null;
+	slug?: string;
+	game_type?: number;
 };
 
 type IgdbTimeToBeat = {
@@ -58,7 +59,7 @@ async function searchGame(
 			"Client-ID": clientId,
 			Authorization: `Bearer ${accessToken}`
 		},
-		body: `fields id,name; search "${escapeIgdbSearch(title)}"; limit 1;`
+		body: `fields id,name,slug,game_type; search "${escapeIgdbSearch(title)}"; where game_type = 0; limit 5;`
 	});
 	if (!response.ok) {
 		console.warn(
@@ -67,10 +68,16 @@ async function searchGame(
 		return null;
 	}
 	const data = (await response.json()) as IgdbGame[];
-	const match = data?.[0] ?? null;
-	if (match) {
-		console.log(`[IGDB] match "${match.name}" (${match.id})`);
-	}
+	if (!data?.length) return null;
+	const normalizedTitle = normalizeTitle(title);
+	const exactNameMatch = data.find(
+		(game) => normalizeTitle(game.name) === normalizedTitle
+	);
+	const exactSlugMatch = data.find(
+		(game) => normalizeTitle(game.slug ?? "") === normalizedTitle
+	);
+	const match = exactNameMatch ?? exactSlugMatch ?? data[0];
+	console.log(`[IGDB] match "${match.name}" (${match.id})`);
 	return match;
 }
 
@@ -142,6 +149,13 @@ async function getAccessToken(env: Record<string, unknown>) {
 
 function escapeIgdbSearch(value: string) {
 	return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"').trim();
+}
+
+function normalizeTitle(value: string) {
+	return value
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, " ")
+		.trim();
 }
 
 async function readErrorBody(response: Response) {
