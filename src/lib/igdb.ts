@@ -90,6 +90,16 @@ async function searchGame(
 	}
 
 	if (!data?.length) return null;
+	console.warn(
+		`[IGDB] search results: ${data
+			.map((game) => `${game.name}#${game.id}`)
+			.join(", ")}`
+	);
+	console.warn(
+		`[IGDB] search results: ${data
+			.map((game) => `${game.name}#${game.id}`)
+			.join(", ")}`
+	);
 	const exactNameMatch = data.find(
 		(game) => normalizeTitle(game.name) === normalizedTitle
 	);
