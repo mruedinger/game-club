@@ -56,23 +56,32 @@ async function searchGame(
 	clientId: string,
 	accessToken: string
 ): Promise<IgdbGame | null> {
-	const response = await fetch("https://api.igdb.com/v4/games", {
-		method: "POST",
-		headers: {
-			"Client-ID": clientId,
-			Authorization: `Bearer ${accessToken}`
-		},
-		body: `fields id,name,slug,game_type; search "${escapeIgdbSearch(title)}"; where game_type = 0; limit 5;`
-	});
-	if (!response.ok) {
-		console.warn(
-			`[IGDB] search status ${response.status} ${await readErrorBody(response)}`
-		);
-		return null;
-	}
-	const data = (await response.json()) as IgdbGame[];
-	if (!data?.length) return null;
 	const normalizedTitle = normalizeTitle(title);
+	const queries = [title, stripDiacritics(title)].filter(
+		(value, index, all) => all.indexOf(value) === index
+	);
+	let data: IgdbGame[] = [];
+
+	for (const query of queries) {
+		const response = await fetch("https://api.igdb.com/v4/games", {
+			method: "POST",
+			headers: {
+				"Client-ID": clientId,
+				Authorization: `Bearer ${accessToken}`
+			},
+			body: `fields id,name,slug,game_type; search "${escapeIgdbSearch(query)}"; where game_type = 0; limit 5;`
+		});
+		if (!response.ok) {
+			console.warn(
+				`[IGDB] search status ${response.status} ${await readErrorBody(response)}`
+			);
+			return null;
+		}
+		data = (await response.json()) as IgdbGame[];
+		if (data?.length) break;
+	}
+
+	if (!data?.length) return null;
 	const exactNameMatch = data.find(
 		(game) => normalizeTitle(game.name) === normalizedTitle
 	);
@@ -149,8 +158,14 @@ function escapeIgdbSearch(value: string) {
 function normalizeTitle(value: string) {
 	return value
 		.toLowerCase()
+		.normalize("NFD")
+		.replace(/\p{Diacritic}/gu, "")
 		.replace(/[^a-z0-9]+/g, " ")
 		.trim();
+}
+
+function stripDiacritics(value: string) {
+	return value.normalize("NFD").replace(/\p{Diacritic}/gu, "");
 }
 
 async function readErrorBody(response: Response) {
