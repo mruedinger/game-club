@@ -1,8 +1,8 @@
 import type { APIRoute } from "astro";
 import { getRuntimeEnv, readSession } from "../../lib/auth";
 import { writeAudit } from "../../lib/audit";
+import { fetchIgdbTimeMinutes } from "../../lib/igdb";
 import { fetchItadGame, fetchItadPrices } from "../../lib/itad";
-import { fetchHltbTimeMinutes } from "../../lib/hltb";
 
 type GameRow = {
 	id: number;
@@ -121,10 +121,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 		steamData?.genres && steamData.genres.length > 0
 			? JSON.stringify(steamData.genres.map((genre) => genre.description))
 			: null;
-	const ttbMinutes = await fetchHltbTimeMinutes(title);
-	if (!ttbMinutes) {
-		console.warn(`[HLTB] no time to beat for "${title}"`);
-	}
+	const ttbMinutes = await fetchIgdbTimeMinutes(env, title);
 	const currentPriceCents = itadPrices?.currentPriceCents ?? null;
 	const bestPriceCents = itadPrices?.bestPriceCents ?? null;
 	const priceCheckedAt = itadPrices ? new Date().toISOString() : null;
