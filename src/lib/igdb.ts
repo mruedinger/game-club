@@ -1,6 +1,7 @@
 type IgdbGame = {
 	id: number;
 	name: string;
+	time_to_beat?: IgdbTimeToBeat | null;
 };
 
 type IgdbTimeToBeat = {
@@ -31,7 +32,7 @@ export async function fetchIgdbTimeMinutes(
 		return null;
 	}
 
-	const timeToBeat = await fetchTimeToBeat(game.id, clientId, accessToken);
+	const timeToBeat = await fetchGameTimeToBeat(game.id, clientId, accessToken);
 	if (!timeToBeat?.normally) {
 		console.warn(`[IGDB] no time to beat for "${title}"`);
 		return null;
@@ -66,21 +67,25 @@ async function searchGame(
 		return null;
 	}
 	const data = (await response.json()) as IgdbGame[];
-	return data?.[0] ?? null;
+	const match = data?.[0] ?? null;
+	if (match) {
+		console.log(`[IGDB] match "${match.name}" (${match.id})`);
+	}
+	return match;
 }
 
-async function fetchTimeToBeat(
+async function fetchGameTimeToBeat(
 	gameId: number,
 	clientId: string,
 	accessToken: string
 ): Promise<IgdbTimeToBeat | null> {
-	const response = await fetch("https://api.igdb.com/v4/game_time_to_beats", {
+	const response = await fetch("https://api.igdb.com/v4/games", {
 		method: "POST",
 		headers: {
 			"Client-ID": clientId,
 			Authorization: `Bearer ${accessToken}`
 		},
-		body: `fields normally; where game_id = ${gameId}; limit 1;`
+		body: `fields time_to_beat.normally; where id = ${gameId}; limit 1;`
 	});
 	if (!response.ok) {
 		console.warn(
@@ -88,8 +93,12 @@ async function fetchTimeToBeat(
 		);
 		return null;
 	}
-	const data = (await response.json()) as IgdbTimeToBeat[];
-	return data?.[0] ?? null;
+	const data = (await response.json()) as IgdbGame[];
+	const timeToBeat = data?.[0]?.time_to_beat ?? null;
+	if (!timeToBeat?.normally) {
+		console.warn(`[IGDB] time-to-beat missing for game ${gameId}`);
+	}
+	return timeToBeat;
 }
 
 async function getAccessToken(env: Record<string, unknown>) {
