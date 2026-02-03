@@ -2,7 +2,6 @@ type IgdbGame = {
 	id: number;
 	name: string;
 	slug?: string;
-	game_type?: number;
 };
 
 type IgdbTimeToBeat = {
@@ -33,7 +32,11 @@ export async function fetchIgdbTimeMinutes(
 		return null;
 	}
 
-	const timeToBeat = await fetchGameTimeToBeat(game, clientId, accessToken);
+	const timeToBeat = await fetchTimeToBeatByGameId(
+		game.id,
+		clientId,
+		accessToken
+	);
 	if (!timeToBeat?.normally) {
 		console.warn(`[IGDB] no time to beat for "${title}"`);
 		return null;
@@ -79,14 +82,6 @@ async function searchGame(
 	const match = exactNameMatch ?? exactSlugMatch ?? data[0];
 	console.log(`[IGDB] match "${match.name}" (${match.id})`);
 	return match;
-}
-
-async function fetchGameTimeToBeat(
-	game: IgdbGame,
-	clientId: string,
-	accessToken: string
-): Promise<IgdbTimeToBeat | null> {
-	return fetchTimeToBeatByGameId(game.id, clientId, accessToken);
 }
 
 async function fetchTimeToBeatByGameId(
