@@ -69,6 +69,7 @@ async function searchGame(
 
 	for (const query of queries) {
 		for (const where of whereClauses) {
+			console.warn(`[IGDB] search query "${query}" ${where || "(no filter)"}`);
 			const response = await fetch("https://api.igdb.com/v4/games", {
 				method: "POST",
 				headers: {
@@ -84,6 +85,7 @@ async function searchGame(
 				return null;
 			}
 			data = (await response.json()) as IgdbGame[];
+			console.warn(`[IGDB] search returned ${data.length} result(s)`);
 			if (data?.length) break;
 		}
 		if (data?.length) break;
