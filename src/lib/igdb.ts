@@ -58,7 +58,7 @@ async function searchGame(
 			"Client-ID": clientId,
 			Authorization: `Bearer ${accessToken}`
 		},
-		body: `fields id,name,time_to_beat; search "${escapeIgdbSearch(title)}"; limit 1;`
+		body: `fields id,name; search "${escapeIgdbSearch(title)}"; limit 1;`
 	});
 	if (!response.ok) {
 		console.warn(
@@ -79,34 +79,7 @@ async function fetchGameTimeToBeat(
 	clientId: string,
 	accessToken: string
 ): Promise<IgdbTimeToBeat | null> {
-	if (typeof game.time_to_beat === "number") {
-		return fetchTimeToBeatById(game.time_to_beat, clientId, accessToken);
-	}
-	console.warn(`[IGDB] game ${game.id} missing time_to_beat id`);
 	return fetchTimeToBeatByGameId(game.id, clientId, accessToken);
-}
-
-async function fetchTimeToBeatById(
-	timeToBeatId: number,
-	clientId: string,
-	accessToken: string
-): Promise<IgdbTimeToBeat | null> {
-	const response = await fetch("https://api.igdb.com/v4/game_time_to_beats", {
-		method: "POST",
-		headers: {
-			"Client-ID": clientId,
-			Authorization: `Bearer ${accessToken}`
-		},
-		body: `fields normally; where id = ${timeToBeatId}; limit 1;`
-	});
-	if (!response.ok) {
-		console.warn(
-			`[IGDB] time-to-beat(id) status ${response.status} ${await readErrorBody(response)}`
-		);
-		return null;
-	}
-	const data = (await response.json()) as IgdbTimeToBeat[];
-	return data?.[0] ?? null;
 }
 
 async function fetchTimeToBeatByGameId(
