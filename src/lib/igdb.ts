@@ -70,7 +70,7 @@ async function resolveGameIdBySteamId(
 			"Client-ID": clientId,
 			Authorization: `Bearer ${accessToken}`
 		},
-		body: `fields game; where category = 1 & uid = "${steamAppId}"; limit 1;`
+		body: `fields game; where external_game_source = 1 & uid = "${steamAppId}"; limit 1;`
 	});
 	if (!response.ok) {
 		console.warn(
