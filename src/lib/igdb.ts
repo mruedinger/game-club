@@ -60,7 +60,9 @@ async function searchGame(
 		body: `fields id,name; search "${escapeIgdbSearch(title)}"; limit 1;`
 	});
 	if (!response.ok) {
-		console.warn(`[IGDB] search status ${response.status}`);
+		console.warn(
+			`[IGDB] search status ${response.status} ${await readErrorBody(response)}`
+		);
 		return null;
 	}
 	const data = (await response.json()) as IgdbGame[];
@@ -81,7 +83,9 @@ async function fetchTimeToBeat(
 		body: `fields normally; where game = ${gameId}; limit 1;`
 	});
 	if (!response.ok) {
-		console.warn(`[IGDB] time-to-beat status ${response.status}`);
+		console.warn(
+			`[IGDB] time-to-beat status ${response.status} ${await readErrorBody(response)}`
+		);
 		return null;
 	}
 	const data = (await response.json()) as IgdbTimeToBeat[];
@@ -125,6 +129,15 @@ async function getAccessToken(env: Record<string, unknown>) {
 
 function escapeIgdbSearch(value: string) {
 	return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"').trim();
+}
+
+async function readErrorBody(response: Response) {
+	try {
+		const text = await response.text();
+		return text ? `- ${text}` : "";
+	} catch {
+		return "";
+	}
 }
 
 function getEnv(env: Record<string, unknown>, key: string) {
