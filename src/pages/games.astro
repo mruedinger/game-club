@@ -149,6 +149,10 @@ function getSubmitter(game: Game) {
 							</tbody>
 						</table>
 					</div>
+					<div class="row-tooltip" role="tooltip" aria-hidden="true">
+						<div class="tooltip-description"></div>
+						<div class="tooltip-tags"></div>
+					</div>
 				</section>
 
 				<section class="section">
@@ -383,6 +387,9 @@ function getSubmitter(game: Game) {
 			const tableRows = tableBody
 				? Array.from(tableBody.querySelectorAll(".game-row"))
 				: [];
+			const rowTooltip = document.querySelector(".row-tooltip");
+			const tooltipDescription = rowTooltip?.querySelector(".tooltip-description");
+			const tooltipTags = rowTooltip?.querySelector(".tooltip-tags");
 
 			function getRowValue(row, key) {
 				if (key === "title") return row.dataset.titleSort || "";
@@ -425,6 +432,71 @@ function getSubmitter(game: Game) {
 			});
 
 			applySort("title", "asc");
+
+			if (rowTooltip && tooltipDescription && tooltipTags && tableRows.length > 0) {
+				let activeRow = null;
+
+				function parseTags(value) {
+					if (!value) return [];
+					try {
+						const parsed = JSON.parse(value);
+						return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+					} catch {
+						return [];
+					}
+				}
+
+				function setTooltipContent(row) {
+					const description = row.dataset.description?.trim() || "";
+					const tags = parseTags(row.dataset.tags || "");
+					if (!description && tags.length === 0) {
+						rowTooltip.classList.remove("visible");
+						rowTooltip.setAttribute("aria-hidden", "true");
+						return false;
+					}
+					tooltipDescription.textContent = description || "No description available.";
+					tooltipDescription.classList.toggle("muted", !description);
+					tooltipDescription.classList.toggle("small", !description);
+					tooltipTags.textContent = tags.length ? tags.join(" • ") : "";
+					rowTooltip.classList.add("visible");
+					rowTooltip.setAttribute("aria-hidden", "false");
+					return true;
+				}
+
+				function positionTooltip(event) {
+					const offset = 16;
+					const width = rowTooltip.offsetWidth;
+					const height = rowTooltip.offsetHeight;
+					let x = event.clientX + offset;
+					let y = event.clientY + offset;
+					if (x + width > window.innerWidth - 12) {
+						x = event.clientX - width - offset;
+					}
+					if (y + height > window.innerHeight - 12) {
+						y = event.clientY - height - offset;
+					}
+					rowTooltip.style.left = `${Math.max(12, x)}px`;
+					rowTooltip.style.top = `${Math.max(12, y)}px`;
+				}
+
+				tableRows.forEach((row) => {
+					row.addEventListener("mouseenter", (event) => {
+						activeRow = row;
+						const shouldShow = setTooltipContent(row);
+						if (shouldShow) positionTooltip(event);
+					});
+					row.addEventListener("mousemove", (event) => {
+						if (activeRow !== row || !rowTooltip.classList.contains("visible")) return;
+						positionTooltip(event);
+					});
+					row.addEventListener("mouseleave", () => {
+						if (activeRow !== row) return;
+						activeRow = null;
+						rowTooltip.classList.remove("visible");
+						rowTooltip.setAttribute("aria-hidden", "true");
+					});
+				});
+			}
 
 			if (detailDelete) {
 				detailDelete.addEventListener("click", async () => {
