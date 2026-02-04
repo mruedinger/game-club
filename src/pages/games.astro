@@ -436,7 +436,7 @@ function getSubmitter(game: Game) {
 			if (rowTooltip && tooltipDescription && tooltipTags && tableRows.length > 0) {
 				let activeRow = null;
 
-				function parseTags(value) {
+				function parseTagList(value) {
 					if (!value) return [];
 					try {
 						const parsed = JSON.parse(value);
@@ -448,7 +448,7 @@ function getSubmitter(game: Game) {
 
 				function setTooltipContent(row) {
 					const description = row.dataset.description?.trim() || "";
-					const tags = parseTags(row.dataset.tags || "");
+					const tags = parseTagList(row.dataset.tags || "");
 					if (!description && tags.length === 0) {
 						rowTooltip.classList.remove("visible");
 						rowTooltip.setAttribute("aria-hidden", "true");
