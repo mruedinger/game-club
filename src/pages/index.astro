@@ -10,6 +10,7 @@ type Game = {
 	tags_json?: string;
 	played_month?: string;
 	cover_art_url?: string;
+	itad_boxart_url?: string;
 	description?: string;
 	submitted_by_email?: string;
 	submitted_by_name?: string;
@@ -21,7 +22,7 @@ type Game = {
 	time_to_beat_minutes?: number;
 };
 
-const [currentResponse, pollResponse, settingsResponse] = await Promise.all([
+const [currentResponse, pollResponse, settingsResponse, gamesResponse] = await Promise.all([
 	fetch(new URL("/api/games/current", Astro.url), {
 		headers: Astro.request.headers
 	}),
@@ -29,6 +30,9 @@ const [currentResponse, pollResponse, settingsResponse] = await Promise.all([
 		headers: Astro.request.headers
 	}),
 	fetch(new URL("/api/site-settings", Astro.url), {
+		headers: Astro.request.headers
+	}),
+	fetch(new URL("/api/games", Astro.url), {
 		headers: Astro.request.headers
 	})
 ]);
@@ -38,6 +42,11 @@ const currentGame = (currentPayload.current as Game | null) ?? null;
 const pollState = pollResponse.ok ? await pollResponse.json() : null;
 const settingsPayload = settingsResponse.ok ? await settingsResponse.json() : { next_meeting: null };
 const nextMeeting = typeof settingsPayload.next_meeting === "string" ? settingsPayload.next_meeting : null;
+const gamesPayload = gamesResponse.ok
+	? await gamesResponse.json()
+	: { backlog: [], current: null, played: [] };
+const backlogGames = gamesPayload.backlog as Game[];
+const playedGames = gamesPayload.played as Game[];
 
 function formatUsd(value?: number) {
 	if (typeof value !== "number") return "TBD";
@@ -60,6 +69,17 @@ function formatTtbHours(minutes?: number) {
 	const rounded = Math.round(hours * 10) / 10;
 	const text = rounded % 1 === 0 ? String(Math.trunc(rounded)) : String(rounded);
 	return `${text} Hours`;
+}
+
+function formatTimeToBeat(minutes?: number | null) {
+	if (!minutes && minutes !== 0) return "-";
+	const hours = Math.floor(minutes / 60);
+	const mins = Math.round(minutes % 60);
+	return `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
+}
+
+function getSubmitter(game: Game) {
+	return game.submitted_by_alias || game.submitted_by_name || game.submitted_by_email || "-";
 }
 
 const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: TBD";
@@ -92,7 +112,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 				</div>
 			</section>
 
-			<section class="section current-game two-column-grid">
+				<section class="section current-game two-column-grid">
 				<div>
 					{currentGame ? (
 						<div class="card current-game-card">
@@ -209,14 +229,150 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 							Close poll
 						</button>
 					</div>
+					</div>
+				</section>
+
+				<section class="section">
+					<div class="section-head">
+						<h2>Backlog</h2>
+						<button class="cta add-game hidden" type="button">Add a game</button>
+					</div>
+					<div class="table-wrapper">
+						<table class="games-table">
+							<thead>
+								<tr>
+									<th data-sort="title" class="sortable">Title</th>
+									<th data-sort="submitter" class="sortable">Submitter</th>
+									<th data-sort="ttb" class="sortable">Time to beat</th>
+									<th data-sort="current" class="sortable">Current low</th>
+								</tr>
+							</thead>
+							<tbody>
+								{backlogGames.map((game) => (
+									<tr
+										class="game-row clickable-row"
+										data-id={game.id}
+										data-title={game.title}
+										data-title-sort={game.title.toLowerCase()}
+										data-submitter={getSubmitter(game)}
+										data-submitter-sort={getSubmitter(game).toLowerCase()}
+										data-ttb={
+											typeof game.time_to_beat_minutes === "number"
+												? String(game.time_to_beat_minutes)
+												: ""
+										}
+										data-ttb-minutes={
+											typeof game.time_to_beat_minutes === "number"
+												? String(game.time_to_beat_minutes)
+												: ""
+										}
+										data-current-price={
+											typeof game.current_price_cents === "number"
+												? String(game.current_price_cents)
+												: ""
+										}
+										data-best-price={
+											typeof game.best_price_cents === "number"
+												? String(game.best_price_cents)
+												: ""
+										}
+										data-tags={game.tags_json || ""}
+										data-description={game.description || ""}
+										data-cover={game.cover_art_url || ""}
+										data-submitted={game.submitted_by_email || ""}
+										data-submitted-name={game.submitted_by_name || ""}
+										data-submitted-alias={game.submitted_by_alias || ""}
+										data-steam-app-id={game.steam_app_id ? String(game.steam_app_id) : ""}
+										data-itad-slug={game.itad_slug || ""}
+										data-status={game.status}
+									>
+										<td>
+											<div class="game-title-cell">
+												<div class="game-icon">
+													{game.itad_boxart_url || game.cover_art_url ? (
+														<img src={game.itad_boxart_url || game.cover_art_url} alt="" loading="lazy" />
+													) : (
+														<span class="cover-placeholder">-</span>
+													)}
+												</div>
+												<span class="game-title">{game.title}</span>
+											</div>
+										</td>
+										<td class="muted">{getSubmitter(game)}</td>
+										<td class="muted">{formatTimeToBeat(game.time_to_beat_minutes)}</td>
+										<td class="muted">{formatUsd(game.current_price_cents)}</td>
+									</tr>
+								))}
+							</tbody>
+						</table>
+					</div>
+					<div class="row-tooltip" role="tooltip" aria-hidden="true">
+						<div class="tooltip-description"></div>
+						<div class="tooltip-tags"></div>
+					</div>
+				</section>
+
+				<section class="section">
+					<div class="section-head">
+						<h2>Played</h2>
+					</div>
+					<div class="games-grid">
+						{playedGames.map((game, index) => (
+							<article
+								class="game-card"
+								style={`animation-delay: ${index * 70}ms`}
+								data-id={game.id}
+								data-title={game.title}
+								data-tags={game.tags_json || ""}
+								data-description={game.description || ""}
+								data-cover={game.cover_art_url || ""}
+								data-submitted={game.submitted_by_email || ""}
+								data-submitted-name={game.submitted_by_name || ""}
+								data-submitted-alias={game.submitted_by_alias || ""}
+								data-steam-app-id={game.steam_app_id ? String(game.steam_app_id) : ""}
+								data-itad-slug={game.itad_slug || ""}
+								data-current-price={
+									typeof game.current_price_cents === "number"
+										? String(game.current_price_cents)
+										: ""
+								}
+								data-ttb-minutes={
+									typeof game.time_to_beat_minutes === "number"
+										? String(game.time_to_beat_minutes)
+										: ""
+								}
+								data-best-price={
+									typeof game.best_price_cents === "number"
+										? String(game.best_price_cents)
+										: ""
+								}
+								data-status={game.status}
+							>
+								<h3>{game.title}</h3>
+								<div class="game-cover">
+									{game.cover_art_url ? (
+										<img
+											src={game.cover_art_url}
+											alt={`${game.title} cover art`}
+											loading="lazy"
+										/>
+									) : (
+										<div class="cover-placeholder">Cover coming soon</div>
+									)}
+								</div>
+								<p class="muted">
+									{game.tags_json ? JSON.parse(game.tags_json).join(" · ") : "Tags coming soon"}
+								</p>
+							</article>
+						))}
+					</div>
+				</section>
 				</div>
-			</section>
-			</div>
-		</main>
+			</main>
 
 		<AppFooter />
-		<dialog class="modal" id="meeting-modal">
-			<form class="modal-card meeting-form" novalidate>
+			<dialog class="modal" id="meeting-modal">
+				<form class="modal-card meeting-form" novalidate>
 				<header>
 					<h3>Set next meeting</h3>
 					<button class="ghost icon-button" type="button" data-action="close-meeting" aria-label="Close">
@@ -237,9 +393,69 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 					<button class="ghost" type="button" data-action="close-meeting">Cancel</button>
 					<button class="cta" type="submit">Save</button>
 				</footer>
-			</form>
-		</dialog>
-		<script define:vars={{ initialPollState: pollState ?? null }}>
+				</form>
+			</dialog>
+			<dialog class="modal" id="add-game-modal">
+				<form class="modal-card add-game-form" novalidate>
+					<header>
+						<h3>Add a game</h3>
+						<button class="ghost icon-button" type="button" data-action="close-add-game" aria-label="Close">
+							×
+						</button>
+					</header>
+					<div class="field">
+						<label for="game-title">Game title</label>
+						<input id="game-title" name="title" type="text" placeholder="Search for a game" autocomplete="off" required />
+					</div>
+					<ul class="suggestions" aria-live="polite" role="listbox"></ul>
+					<p class="muted small">Start typing to see suggestions.</p>
+					<p class="form-error hidden" id="add-game-error" role="alert"></p>
+					<footer>
+						<button class="ghost" type="button" data-action="close-add-game">Cancel</button>
+						<button class="cta" type="submit">Submit</button>
+					</footer>
+				</form>
+			</dialog>
+			<dialog class="modal" id="game-detail-modal">
+				<form class="modal-card game-detail-card" method="dialog">
+					<header>
+						<h3 class="game-detail-title">Game title</h3>
+						<button class="ghost icon-button" type="button" data-action="close-game-detail" aria-label="Close">
+							×
+						</button>
+					</header>
+					<div class="game-detail-body">
+						<img class="game-detail-cover" alt="" />
+						<div class="game-detail-info">
+							<p class="meta-line tight game-detail-tags"></p>
+							<p class="game-detail-description"></p>
+							<div class="game-detail-links">
+								<a class="ghost small-pill game-detail-steam" target="_blank" rel="noreferrer" title="View on Steam">Steam</a>
+								<a class="ghost small-pill game-detail-hltb" target="_blank" rel="noreferrer" title="View on HowLongToBeat">HLTB</a>
+								<a class="ghost small-pill game-detail-itad" target="_blank" rel="noreferrer" title="View on IsThereAnyDeal">ITAD</a>
+							</div>
+							<div class="game-detail-ttb-edit hidden">
+								<div class="field">
+									<label for="game-detail-ttb">Time to beat (hours)</label>
+									<div class="game-detail-ttb-row">
+										<input id="game-detail-ttb" type="number" min="0" step="0.5" />
+										<button class="ghost small-pill game-detail-ttb-save" type="button">Save TTB</button>
+									</div>
+								</div>
+								<p class="form-error hidden game-detail-ttb-error" role="alert"></p>
+							</div>
+							<p class="meta-line tight game-detail-prices">Current low: TBD · Historical low: TBD</p>
+							<p class="muted small game-detail-submitted"></p>
+						</div>
+					</div>
+					<footer class="game-detail-footer">
+						<button class="ghost" type="button" data-action="close-game-detail">Close</button>
+						<button class="ghost game-detail-set-current hidden" type="button">Set current</button>
+						<button class="ghost danger game-detail-delete hidden" type="button">Delete</button>
+					</footer>
+				</form>
+			</dialog>
+			<script define:vars={{ initialPollState: pollState ?? null }}>
 			const pollChip = document.querySelector("#poll-chip");
 			const pollStatus = document.querySelector("#poll-status");
 			const pollResults = document.querySelector("#poll-results");
@@ -593,15 +809,15 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 				return { date: `${year}-${month}-${day}`, time: `${pad(hour24)}:${minute}` };
 			}
 
-			if (meetingModal) {
-				meetingModal.addEventListener("click", (event) => {
-					const target = event.target;
-					if (!(target instanceof HTMLElement)) return;
-					if (target.closest("[data-action='close-meeting']")) {
-						meetingModal.close();
-					}
-				});
-				meetingModal.addEventListener("submit", async (event) => {
+				if (meetingModal) {
+					meetingModal.addEventListener("click", (event) => {
+						const target = event.target;
+						if (!(target instanceof HTMLElement)) return;
+						if (target.closest("[data-action='close-meeting']")) {
+							meetingModal.close();
+						}
+					});
+					meetingModal.addEventListener("submit", async (event) => {
 					event.preventDefault();
 					if (!meetingDate || !meetingTime) return;
 					const dateValue = meetingDate.value;
@@ -619,14 +835,493 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 						headers: { "Content-Type": "application/json" },
 						body: JSON.stringify({ next_meeting: localDate.toISOString() })
 					});
-					if (response.ok) {
-						window.location.reload();
+						if (response.ok) {
+							window.location.reload();
+						}
+					});
+				}
+
+				const addButton = document.querySelector(".add-game");
+				const addModal = document.querySelector("#add-game-modal");
+				const addForm = document.querySelector(".add-game-form");
+				const addError = document.querySelector("#add-game-error");
+				const titleInput = document.querySelector("#game-title");
+				const suggestionList = document.querySelector(".suggestions");
+				const detailModal = document.querySelector("#game-detail-modal");
+				const detailTitle = document.querySelector(".game-detail-title");
+				const detailTags = document.querySelector(".game-detail-tags");
+				const detailDescription = document.querySelector(".game-detail-description");
+				const detailSubmitted = document.querySelector(".game-detail-submitted");
+				const detailCover = document.querySelector(".game-detail-cover");
+				const detailDelete = document.querySelector(".game-detail-delete");
+				const detailSetCurrent = document.querySelector(".game-detail-set-current");
+				const detailSteam = document.querySelector(".game-detail-steam");
+				const detailHltb = document.querySelector(".game-detail-hltb");
+				const detailItad = document.querySelector(".game-detail-itad");
+				const detailPrices = document.querySelector(".game-detail-prices");
+				const detailTtbEdit = document.querySelector(".game-detail-ttb-edit");
+				const detailTtbInput = document.querySelector("#game-detail-ttb");
+				const detailTtbSave = document.querySelector(".game-detail-ttb-save");
+				const detailTtbError = document.querySelector(".game-detail-ttb-error");
+				const tableBody = document.querySelector(".games-table tbody");
+				const sortHeaders = document.querySelectorAll(".games-table th[data-sort]");
+				const rowTooltip = document.querySelector(".row-tooltip");
+				const tooltipDescription = rowTooltip?.querySelector(".tooltip-description");
+				const tooltipTags = rowTooltip?.querySelector(".tooltip-tags");
+				const steamIdKey = "steamAppId";
+				let selectedGameId = null;
+				let currentUserEmail = "";
+				let currentUserRole = "";
+				let isSignedIn = false;
+
+				fetch("/api/me")
+					.then((response) => {
+						if (!response.ok) throw new Error("Not authenticated");
+						if (addButton) addButton.classList.remove("hidden");
+						isSignedIn = true;
+						return response.json();
+					})
+					.then((data) => {
+						if (data?.email) currentUserEmail = String(data.email).toLowerCase();
+						if (data?.role) currentUserRole = String(data.role);
+					})
+					.catch(() => {});
+
+				document.addEventListener("click", (event) => {
+					const target = event.target;
+					if (!(target instanceof HTMLElement)) return;
+					if (target.closest(".add-game")) {
+						if (!isSignedIn) {
+							window.location.href = "/api/auth/login";
+							return;
+						}
+						clearFormError();
+						addModal?.showModal();
+					}
+					if (target.closest("[data-action='close-add-game']")) {
+						addModal?.close();
+					}
+					if (target.closest("[data-action='close-game-detail']")) {
+						detailModal?.close();
+					}
+					const selected = target.closest(".suggestion-item");
+					if (selected && titleInput) {
+						applySuggestion(selected);
+					}
+					const card = target.closest(".game-card");
+					if (card && detailModal) {
+						openGameDetail(card);
+					}
+					const row = target.closest(".game-row");
+					if (row && detailModal) {
+						openGameDetail(row);
 					}
 				});
-			}
 
-			function formatMeetingLocal(isoValue) {
-				if (!isoValue) return "Next meeting: TBD";
+				document.addEventListener("keydown", (event) => {
+					const target = event.target;
+					if (!(target instanceof HTMLElement)) return;
+					if (!target.classList.contains("suggestion-item")) return;
+					if (event.key !== "Enter" && event.key !== " ") return;
+					event.preventDefault();
+					applySuggestion(target);
+				});
+
+				const tableRows = tableBody
+					? Array.from(tableBody.querySelectorAll(".game-row"))
+					: [];
+
+				if (addForm) {
+					addForm.addEventListener("submit", async (event) => {
+						event.preventDefault();
+						const title = titleInput?.value.trim();
+						if (!title) return;
+						const steamAppId = titleInput?.dataset[steamIdKey];
+						const response = await fetch("/api/games", {
+							method: "POST",
+							headers: { "Content-Type": "application/json" },
+							body: JSON.stringify({ title, steamAppId })
+						});
+						if (response.ok) {
+							addModal?.close();
+							window.location.reload();
+							return;
+						}
+						const message = await response.text();
+						showFormError(message || "Unable to add game.");
+					});
+				}
+
+				bindSearch(titleInput, suggestionList);
+
+				function getRowValue(row, key) {
+					if (key === "title") return row.dataset.titleSort || "";
+					if (key === "submitter") return row.dataset.submitterSort || "";
+					if (key === "ttb") return Number.parseInt(row.dataset.ttb || "0", 10);
+					if (key === "current") return Number.parseInt(row.dataset.currentPrice || "0", 10);
+					return "";
+				}
+
+				function compareRows(a, b, key, direction) {
+					const dir = direction === "desc" ? -1 : 1;
+					const aValue = getRowValue(a, key);
+					const bValue = getRowValue(b, key);
+					if (typeof aValue === "number" && typeof bValue === "number") {
+						const aScore = aValue || Number.MAX_SAFE_INTEGER;
+						const bScore = bValue || Number.MAX_SAFE_INTEGER;
+						return (aScore - bScore) * dir;
+					}
+					return String(aValue).localeCompare(String(bValue)) * dir;
+				}
+
+				function applySort(key, direction) {
+					if (!tableBody) return;
+					const sorted = [...tableRows].sort((a, b) => compareRows(a, b, key, direction));
+					sorted.forEach((row) => tableBody.appendChild(row));
+				}
+
+				sortHeaders.forEach((header) => {
+					header.addEventListener("click", () => {
+						const key = header.dataset.sort;
+						if (!key) return;
+						const current = header.dataset.direction || "asc";
+						const nextDirection = current === "asc" ? "desc" : "asc";
+						sortHeaders.forEach((th) => {
+							delete th.dataset.direction;
+						});
+						header.dataset.direction = nextDirection;
+						applySort(key, nextDirection);
+					});
+				});
+
+				applySort("title", "asc");
+
+				if (rowTooltip && tooltipDescription && tooltipTags && tableRows.length > 0) {
+					let activeRow = null;
+
+					function parseTagList(value) {
+						if (!value) return [];
+						try {
+							const parsed = JSON.parse(value);
+							return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+						} catch {
+							return [];
+						}
+					}
+
+					function setTooltipContent(row) {
+						const description = row.dataset.description?.trim() || "";
+						const tags = parseTagList(row.dataset.tags || "");
+						if (!description && tags.length === 0) {
+							rowTooltip.classList.remove("visible");
+							rowTooltip.setAttribute("aria-hidden", "true");
+							return false;
+						}
+						tooltipDescription.textContent = description || "No description available.";
+						tooltipDescription.classList.toggle("muted", !description);
+						tooltipDescription.classList.toggle("small", !description);
+						tooltipTags.textContent = tags.length ? tags.join(" • ") : "";
+						rowTooltip.classList.add("visible");
+						rowTooltip.setAttribute("aria-hidden", "false");
+						return true;
+					}
+
+					function positionTooltip(event) {
+						const offset = 16;
+						const width = rowTooltip.offsetWidth;
+						const height = rowTooltip.offsetHeight;
+						let x = event.clientX + offset;
+						let y = event.clientY + offset;
+						if (x + width > window.innerWidth - 12) {
+							x = event.clientX - width - offset;
+						}
+						if (y + height > window.innerHeight - 12) {
+							y = event.clientY - height - offset;
+						}
+						rowTooltip.style.left = `${Math.max(12, x)}px`;
+						rowTooltip.style.top = `${Math.max(12, y)}px`;
+					}
+
+					tableRows.forEach((row) => {
+						row.addEventListener("mouseenter", (event) => {
+							activeRow = row;
+							const shouldShow = setTooltipContent(row);
+							if (shouldShow) positionTooltip(event);
+						});
+						row.addEventListener("mousemove", (event) => {
+							if (activeRow !== row || !rowTooltip.classList.contains("visible")) return;
+							positionTooltip(event);
+						});
+						row.addEventListener("mouseleave", () => {
+							if (activeRow !== row) return;
+							activeRow = null;
+							rowTooltip.classList.remove("visible");
+							rowTooltip.setAttribute("aria-hidden", "true");
+						});
+					});
+				}
+
+				if (detailDelete) {
+					detailDelete.addEventListener("click", async () => {
+						if (!selectedGameId) return;
+						const confirmed = window.confirm("Delete this game? This cannot be undone.");
+						if (!confirmed) return;
+						const response = await fetch("/api/games", {
+							method: "DELETE",
+							headers: { "Content-Type": "application/json" },
+							body: JSON.stringify({ id: selectedGameId })
+						});
+						if (response.ok) {
+							detailModal?.close();
+							window.location.reload();
+						}
+					});
+				}
+
+				if (detailTtbSave) {
+					detailTtbSave.addEventListener("click", async () => {
+						if (!selectedGameId || !detailTtbInput) return;
+						const hoursValue = detailTtbInput.value.trim();
+						const parsed = Number.parseFloat(hoursValue);
+						if (!hoursValue || Number.isNaN(parsed) || parsed < 0) {
+							if (detailTtbError) {
+								detailTtbError.textContent = "Enter a valid number of hours.";
+								detailTtbError.classList.remove("hidden");
+							}
+							return;
+						}
+						const response = await fetch("/api/games/ttb", {
+							method: "POST",
+							headers: { "Content-Type": "application/json" },
+							body: JSON.stringify({
+								id: Number.parseInt(String(selectedGameId), 10),
+								time_to_beat_hours: parsed
+							})
+						});
+						if (response.ok) {
+							detailModal?.close();
+							window.location.reload();
+						} else if (detailTtbError) {
+							detailTtbError.textContent = "Unable to save time to beat.";
+							detailTtbError.classList.remove("hidden");
+						}
+					});
+				}
+
+				if (detailSetCurrent) {
+					detailSetCurrent.addEventListener("click", async () => {
+						if (!selectedGameId) return;
+						const response = await fetch("/api/games", {
+							method: "PATCH",
+							headers: { "Content-Type": "application/json" },
+							body: JSON.stringify({ id: selectedGameId, action: "set-current" })
+						});
+						if (response.ok) {
+							detailModal?.close();
+							window.location.reload();
+						}
+					});
+				}
+
+				function bindSearch(input, list) {
+					if (!input || !list) return;
+					let searchTimer;
+					input.addEventListener("input", () => {
+						clearFormError();
+						if (input === titleInput) {
+							input.dataset[steamIdKey] = "";
+						}
+						const value = input.value.trim();
+						if (searchTimer) clearTimeout(searchTimer);
+						if (!value) {
+							clearSuggestions(list);
+							return;
+						}
+						searchTimer = setTimeout(async () => {
+							const response = await fetch(`/api/games/search?term=${encodeURIComponent(value)}`);
+							if (!response.ok) {
+								renderSuggestions(list, []);
+								return;
+							}
+							const data = await response.json();
+							renderSuggestions(list, data.results || []);
+						}, 300);
+					});
+				}
+
+				function showFormError(message) {
+					if (!addError) return;
+					addError.textContent = message;
+					addError.classList.remove("hidden");
+				}
+
+				function clearFormError() {
+					if (!addError) return;
+					addError.textContent = "";
+					addError.classList.add("hidden");
+				}
+
+				function renderSuggestions(list, items) {
+					if (!list) return;
+					list.innerHTML = "";
+					if (items.length === 0) {
+						const empty = document.createElement("li");
+						empty.className = "muted small";
+						empty.textContent = "No matches yet.";
+						list.appendChild(empty);
+						return;
+					}
+					items.forEach((item) => {
+						const entry = document.createElement("li");
+						entry.className = "suggestion-item";
+						entry.textContent = item.name;
+						entry.dataset.name = item.name;
+						if (item.steamId) {
+							entry.dataset.steamId = String(item.steamId);
+						}
+						entry.setAttribute("role", "option");
+						entry.tabIndex = 0;
+						list.appendChild(entry);
+					});
+				}
+
+				function clearSuggestions(list) {
+					if (!list) return;
+					list.innerHTML = "";
+				}
+
+				function applySuggestion(selected) {
+					if (!titleInput) return;
+					titleInput.value = selected?.dataset.name || selected?.textContent || "";
+					titleInput.dataset[steamIdKey] = selected?.dataset.steamId || "";
+					clearSuggestions(suggestionList);
+					titleInput.focus();
+				}
+
+				function openGameDetail(card) {
+					if (!detailModal) return;
+					const title = card.dataset.title || "Untitled game";
+					const description = card.dataset.description || "Description coming soon.";
+					const tags = card.dataset.tags ? parseTags(card.dataset.tags) : "Tags coming soon";
+					const submitted = card.dataset.submitted || "";
+					const submittedName = card.dataset.submittedName || "";
+					const submittedAlias = card.dataset.submittedAlias || "";
+					const cover = card.dataset.cover || "";
+					const steamAppId = card.dataset.steamAppId || "";
+					const itadSlug = card.dataset.itadSlug || "";
+					const currentPrice = card.dataset.currentPrice || "";
+					const bestPrice = card.dataset.bestPrice || "";
+					const status = card.dataset.status || "";
+					const ttbMinutes = card.dataset.ttbMinutes || "";
+					selectedGameId = card.dataset.id || null;
+
+					if (detailTitle) detailTitle.textContent = title;
+					if (detailDescription) detailDescription.textContent = description;
+					if (detailSubmitted) {
+						const submitter =
+							submittedAlias || submittedName || submitted || "a member";
+						detailSubmitted.textContent = `Submitted by ${submitter}`;
+					}
+					if (detailCover) {
+						if (cover) {
+							detailCover.src = cover;
+							detailCover.alt = title;
+							detailCover.classList.remove("hidden");
+						} else {
+							detailCover.removeAttribute("src");
+							detailCover.alt = "";
+							detailCover.classList.add("hidden");
+						}
+					}
+					if (detailSteam) {
+						const steamUrl = steamAppId
+							? `https://store.steampowered.com/app/${steamAppId}`
+							: "";
+						detailSteam.href = steamUrl;
+						detailSteam.classList.toggle("hidden", !steamUrl);
+					}
+					if (detailHltb) {
+						const hltbUrl = `https://howlongtobeat.com/?q=${encodeURIComponent(title)}`;
+						detailHltb.href = hltbUrl;
+						detailHltb.classList.toggle("hidden", !title);
+					}
+					if (detailItad) {
+						const itadUrl = itadSlug
+							? `https://isthereanydeal.com/game/${itadSlug}/info/`
+							: "";
+						detailItad.href = itadUrl;
+						detailItad.classList.toggle("hidden", !itadUrl);
+					}
+					if (detailPrices) {
+						detailPrices.textContent = `Current low: ${formatPriceForDetail(currentPrice)} · Historical low: ${formatPriceForDetail(bestPrice)}`;
+					}
+					if (detailTtbEdit) {
+						const hasTtb = Boolean(ttbMinutes);
+						detailTtbEdit.classList.toggle("hidden", hasTtb || !isSignedIn);
+						if (detailTtbInput) detailTtbInput.value = "";
+						if (detailTtbError) {
+							detailTtbError.classList.add("hidden");
+							detailTtbError.textContent = "";
+						}
+					}
+					if (detailTags) {
+						const tagLine = tags || "Tags coming soon";
+						if (ttbMinutes) {
+							detailTags.textContent = `${formatTtbHoursForDetail(ttbMinutes)} | ${tagLine}`;
+						} else {
+							detailTags.textContent = tagLine;
+						}
+					}
+					if (detailDelete) {
+						detailDelete.classList.toggle("hidden", !isSignedIn);
+						if (isSignedIn) {
+							const isOwner =
+								submitted && currentUserEmail && submitted.toLowerCase() === currentUserEmail;
+							const currentUserIsAdmin = currentUserRole === "admin";
+							const canDelete = isOwner || currentUserIsAdmin;
+							detailDelete.disabled = !canDelete;
+						}
+					}
+					if (detailSetCurrent) {
+						const currentUserIsAdmin = currentUserRole === "admin";
+						detailSetCurrent.classList.toggle("hidden", !currentUserIsAdmin);
+						detailSetCurrent.disabled = status === "current";
+					}
+
+					detailModal.showModal();
+				}
+
+				function parseTags(value) {
+					try {
+						const parsed = JSON.parse(value);
+						if (Array.isArray(parsed)) {
+							return parsed.join(" · ");
+						}
+					} catch {}
+					return value;
+				}
+
+				function formatTtbHoursForDetail(value) {
+					const minutes = Number.parseFloat(String(value));
+					if (!Number.isFinite(minutes) || minutes <= 0) return "0 Hours";
+					const hours = minutes / 60;
+					const rounded = Math.round(hours * 10) / 10;
+					const text = rounded % 1 === 0 ? String(Math.trunc(rounded)) : String(rounded);
+					return `${text} Hours`;
+				}
+
+				function formatPriceForDetail(value) {
+					if (value === null || value === undefined || value === "") return "TBD";
+					const cents = Number.parseInt(value, 10);
+					if (Number.isNaN(cents)) return "TBD";
+					return new Intl.NumberFormat("en-US", {
+						style: "currency",
+						currency: "USD"
+					}).format(cents / 100);
+				}
+
+				function formatMeetingLocal(isoValue) {
+					if (!isoValue) return "Next meeting: TBD";
 				const date = new Date(isoValue);
 				if (Number.isNaN(date.getTime())) return "Next meeting: TBD";
 				const month = date.toLocaleString("en-US", { month: "long" });
@@ -652,6 +1347,6 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 						return `${day}th`;
 				}
 			}
-		</script>
-	</body>
-</html>
+			</script>
+		</body>
+	</html>

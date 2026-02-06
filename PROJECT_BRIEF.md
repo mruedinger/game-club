@@ -47,7 +47,12 @@ This project maintains a website that is a companion tool for a video game club 
 
 ## Operational Notes for AI Agents
 - Always develop on `dev` branch. Do not add/commit/push/merge to `main` or any other branch unless explicitly told to do so.
-- After changes: validate correct branch (`dev` unless otherwise instructed), `git add .`, commit, push
+- Mandatory default workflow after making file changes (unless user explicitly says not to commit yet):
+  - Validate current branch is `dev` (or user-specified branch).
+  - Stage all intended changes with `git add .`.
+  - Create a commit with a clear message.
+  - Push that commit to the remote `dev` branch.
+  - Do not leave local modifications unstaged or uncommitted at handoff.
 - Changes to the dev branch will be automatically deployed to cloudflare pages dev deployment
 - Changes to the main branch will be automatically deployed to cloudflare pages production deployment
 - When troubleshooting problems involving external apis, provide the user with curl commands to test & troubleshoot locally
