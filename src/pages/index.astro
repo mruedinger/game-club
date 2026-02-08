@@ -12,7 +12,6 @@ type Game = {
 	cover_art_url?: string;
 	itad_boxart_url?: string;
 	description?: string;
-	submitted_by_email?: string;
 	submitted_by_name?: string;
 	submitted_by_alias?: string;
 	steam_app_id?: number;
@@ -56,10 +55,14 @@ function formatUsd(value?: number) {
 	}).format(value / 100);
 }
 
+function firstName(value?: string) {
+	if (!value) return "";
+	return value.trim().split(/\s+/)[0] || "";
+}
+
 function getSubmitterLabel(game?: Game | null) {
 	if (!game) return "Submitted by a member";
-	const submitter =
-		game.submitted_by_alias || game.submitted_by_name || game.submitted_by_email;
+	const submitter = getSubmitter(game);
 	return submitter ? `Submitted by ${submitter}` : "Submitted by a member";
 }
 
@@ -79,7 +82,7 @@ function formatTimeToBeat(minutes?: number | null) {
 }
 
 function getSubmitter(game: Game) {
-	return game.submitted_by_alias || game.submitted_by_name || game.submitted_by_email || "-";
+	return game.submitted_by_alias || firstName(game.submitted_by_name) || "Member";
 }
 
 const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: TBD";
@@ -249,43 +252,42 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 							</thead>
 							<tbody>
 								{backlogGames.map((game) => (
-									<tr
-										class="game-row clickable-row"
-										data-id={game.id}
-										data-title={game.title}
-										data-title-sort={game.title.toLowerCase()}
-										data-submitter={getSubmitter(game)}
-										data-submitter-sort={getSubmitter(game).toLowerCase()}
-										data-ttb={
-											typeof game.time_to_beat_minutes === "number"
-												? String(game.time_to_beat_minutes)
-												: ""
-										}
-										data-ttb-minutes={
-											typeof game.time_to_beat_minutes === "number"
-												? String(game.time_to_beat_minutes)
-												: ""
-										}
-										data-current-price={
-											typeof game.current_price_cents === "number"
-												? String(game.current_price_cents)
-												: ""
-										}
-										data-best-price={
-											typeof game.best_price_cents === "number"
-												? String(game.best_price_cents)
-												: ""
-										}
-										data-tags={game.tags_json || ""}
-										data-description={game.description || ""}
-										data-cover={game.cover_art_url || ""}
-										data-submitted={game.submitted_by_email || ""}
-										data-submitted-name={game.submitted_by_name || ""}
-										data-submitted-alias={game.submitted_by_alias || ""}
-										data-steam-app-id={game.steam_app_id ? String(game.steam_app_id) : ""}
-										data-itad-slug={game.itad_slug || ""}
-										data-status={game.status}
-									>
+										<tr
+											class="game-row clickable-row"
+											data-id={game.id}
+											data-title={game.title}
+											data-title-sort={game.title.toLowerCase()}
+											data-submitter={getSubmitter(game)}
+											data-submitter-sort={getSubmitter(game).toLowerCase()}
+											data-ttb={
+												typeof game.time_to_beat_minutes === "number"
+													? String(game.time_to_beat_minutes)
+													: ""
+											}
+											data-ttb-minutes={
+												typeof game.time_to_beat_minutes === "number"
+													? String(game.time_to_beat_minutes)
+													: ""
+											}
+											data-current-price={
+												typeof game.current_price_cents === "number"
+													? String(game.current_price_cents)
+													: ""
+											}
+											data-best-price={
+												typeof game.best_price_cents === "number"
+													? String(game.best_price_cents)
+													: ""
+											}
+											data-tags={game.tags_json || ""}
+											data-description={game.description || ""}
+											data-cover={game.cover_art_url || ""}
+											data-submitted-name={game.submitted_by_name || ""}
+											data-submitted-alias={game.submitted_by_alias || ""}
+											data-steam-app-id={game.steam_app_id ? String(game.steam_app_id) : ""}
+											data-itad-slug={game.itad_slug || ""}
+											data-status={game.status}
+										>
 										<td>
 											<div class="game-title-cell">
 												<div class="game-icon">
@@ -317,23 +319,22 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 						<h2>Played</h2>
 					</div>
 					<div class="games-grid">
-						{playedGames.map((game, index) => (
-							<article
-								class="game-card"
-								style={`animation-delay: ${index * 70}ms`}
-								data-id={game.id}
-								data-title={game.title}
-								data-tags={game.tags_json || ""}
-								data-description={game.description || ""}
-								data-cover={game.cover_art_url || ""}
-								data-submitted={game.submitted_by_email || ""}
-								data-submitted-name={game.submitted_by_name || ""}
-								data-submitted-alias={game.submitted_by_alias || ""}
-								data-steam-app-id={game.steam_app_id ? String(game.steam_app_id) : ""}
-								data-itad-slug={game.itad_slug || ""}
-								data-current-price={
-									typeof game.current_price_cents === "number"
-										? String(game.current_price_cents)
+							{playedGames.map((game, index) => (
+								<article
+									class="game-card"
+									style={`animation-delay: ${index * 70}ms`}
+									data-id={game.id}
+									data-title={game.title}
+									data-tags={game.tags_json || ""}
+									data-description={game.description || ""}
+									data-cover={game.cover_art_url || ""}
+									data-submitted-name={game.submitted_by_name || ""}
+									data-submitted-alias={game.submitted_by_alias || ""}
+									data-steam-app-id={game.steam_app_id ? String(game.steam_app_id) : ""}
+									data-itad-slug={game.itad_slug || ""}
+									data-current-price={
+										typeof game.current_price_cents === "number"
+											? String(game.current_price_cents)
 										: ""
 								}
 								data-ttb-minutes={
@@ -424,9 +425,9 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 							×
 						</button>
 					</header>
-					<div class="game-detail-body">
-						<img class="game-detail-cover" alt="" />
-						<div class="game-detail-info">
+						<div class="game-detail-body">
+							<img class="game-detail-cover" alt="" />
+							<div class="game-detail-info">
 							<p class="meta-line tight game-detail-tags"></p>
 							<p class="game-detail-description"></p>
 							<div class="game-detail-links">
@@ -444,12 +445,13 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 								</div>
 								<p class="form-error hidden game-detail-ttb-error" role="alert"></p>
 							</div>
-							<p class="meta-line tight game-detail-prices">Current low: TBD · Historical low: TBD</p>
-							<p class="muted small game-detail-submitted"></p>
+								<p class="meta-line tight game-detail-prices">Current low: TBD · Historical low: TBD</p>
+								<p class="muted small game-detail-submitted"></p>
+							</div>
 						</div>
-					</div>
-					<footer class="game-detail-footer">
-						<button class="ghost" type="button" data-action="close-game-detail">Close</button>
+						<p class="form-error hidden game-detail-action-error" role="alert"></p>
+						<footer class="game-detail-footer">
+							<button class="ghost" type="button" data-action="close-game-detail">Close</button>
 						<button class="ghost game-detail-set-current hidden" type="button">Set current</button>
 						<button class="ghost danger game-detail-delete hidden" type="button">Delete</button>
 					</footer>
@@ -863,6 +865,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 				const detailTtbInput = document.querySelector("#game-detail-ttb");
 				const detailTtbSave = document.querySelector(".game-detail-ttb-save");
 				const detailTtbError = document.querySelector(".game-detail-ttb-error");
+				const detailActionError = document.querySelector(".game-detail-action-error");
 				const tableBody = document.querySelector(".games-table tbody");
 				const sortHeaders = document.querySelectorAll(".games-table th[data-sort]");
 				const rowTooltip = document.querySelector(".row-tooltip");
@@ -870,9 +873,13 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 				const tooltipTags = rowTooltip?.querySelector(".tooltip-tags");
 				const steamIdKey = "steamAppId";
 				let selectedGameId = null;
-				let currentUserEmail = "";
 				let currentUserRole = "";
 				let isSignedIn = false;
+
+				function getFirstName(value) {
+					if (!value) return "";
+					return String(value).trim().split(/\s+/)[0] || "";
+				}
 
 				fetch("/api/me")
 					.then((response) => {
@@ -882,7 +889,6 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 						return response.json();
 					})
 					.then((data) => {
-						if (data?.email) currentUserEmail = String(data.email).toLowerCase();
 						if (data?.role) currentUserRole = String(data.role);
 					})
 					.catch(() => {});
@@ -1074,6 +1080,10 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 						if (response.ok) {
 							detailModal?.close();
 							window.location.reload();
+						} else if (detailActionError) {
+							const message = await response.text();
+							detailActionError.textContent = message || "Unable to delete game.";
+							detailActionError.classList.remove("hidden");
 						}
 					});
 				}
@@ -1203,7 +1213,6 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 					const title = card.dataset.title || "Untitled game";
 					const description = card.dataset.description || "Description coming soon.";
 					const tags = card.dataset.tags ? parseTags(card.dataset.tags) : "Tags coming soon";
-					const submitted = card.dataset.submitted || "";
 					const submittedName = card.dataset.submittedName || "";
 					const submittedAlias = card.dataset.submittedAlias || "";
 					const cover = card.dataset.cover || "";
@@ -1218,9 +1227,12 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 					if (detailTitle) detailTitle.textContent = title;
 					if (detailDescription) detailDescription.textContent = description;
 					if (detailSubmitted) {
-						const submitter =
-							submittedAlias || submittedName || submitted || "a member";
+						const submitter = submittedAlias || getFirstName(submittedName) || "Member";
 						detailSubmitted.textContent = `Submitted by ${submitter}`;
+					}
+					if (detailActionError) {
+						detailActionError.classList.add("hidden");
+						detailActionError.textContent = "";
 					}
 					if (detailCover) {
 						if (cover) {
@@ -1275,11 +1287,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 					if (detailDelete) {
 						detailDelete.classList.toggle("hidden", !isSignedIn);
 						if (isSignedIn) {
-							const isOwner =
-								submitted && currentUserEmail && submitted.toLowerCase() === currentUserEmail;
-							const currentUserIsAdmin = currentUserRole === "admin";
-							const canDelete = isOwner || currentUserIsAdmin;
-							detailDelete.disabled = !canDelete;
+							detailDelete.disabled = false;
 						}
 					}
 					if (detailSetCurrent) {

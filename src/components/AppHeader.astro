@@ -52,6 +52,15 @@
 	const userAlias = document.querySelector("#user-alias");
 	let currentUser = null;
 
+	function firstName(value) {
+		if (!value) return "";
+		return String(value).trim().split(/\s+/)[0] || "";
+	}
+
+	function displayName(user) {
+		return user.alias || firstName(user.name) || "Member";
+	}
+
 	if (adminLink) adminLink.style.display = "none";
 	if (userButton) userButton.style.display = "none";
 	if (signOut) signOut.style.display = "none";
@@ -71,14 +80,14 @@
 			if (placeholder) placeholder.style.display = "none";
 			if (adminLink && data.role === "admin") adminLink.style.display = "inline-flex";
 
-			if (userName) userName.textContent = data.name || data.alias || data.email;
-			if (userEmail) userEmail.textContent = data.email;
-			if (userRole) userRole.textContent = data.role === "admin" ? "Admin" : "Member";
-			if (userAlias) userAlias.value = data.alias || "";
-			if (userButton) {
-				const displayName = data.alias || data.name || data.email;
-				userButton.title = `${data.role === "admin" ? "Admin" : "Member"}\n${displayName}\n${data.email}`;
-			}
+				if (userName) userName.textContent = displayName(data);
+				if (userEmail) userEmail.textContent = data.email;
+				if (userRole) userRole.textContent = data.role === "admin" ? "Admin" : "Member";
+				if (userAlias) userAlias.value = data.alias || "";
+				if (userButton) {
+					const name = displayName(data);
+					userButton.title = `${data.role === "admin" ? "Admin" : "Member"}\n${name}\n${data.email}`;
+				}
 
 			if (userButton) {
 				userButton.textContent = "";
@@ -90,13 +99,13 @@
 					img.referrerPolicy = "no-referrer";
 					img.decoding = "async";
 					userButton.appendChild(img);
-				} else {
-					const fallback = document.createElement("span");
-					fallback.className = "avatar-fallback";
-					fallback.textContent = (data.name || data.email).charAt(0).toUpperCase();
-					userButton.appendChild(fallback);
+					} else {
+						const fallback = document.createElement("span");
+						fallback.className = "avatar-fallback";
+						fallback.textContent = displayName(data).charAt(0).toUpperCase();
+						userButton.appendChild(fallback);
+					}
 				}
-			}
 		})
 		.catch(() => {});
 
