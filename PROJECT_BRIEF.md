@@ -26,6 +26,7 @@ This project maintains a website that is a companion tool for a video game club 
 - Design for desktop first while remaining functional on mobile.
 - Prefer latest stable apps/tools/libraries/frameworks/etc. i.e., avoid version locking to an older library or software release.
 - Strongly prefer simple and efficient solutions when implementing features.
+- When tradeoffs exist, prioritize long-term correct architecture over short-term quick fixes.
 - Strongly prefer free services and solutions when implementing features.
 - Centralized UI styles: All colors/themes/spacing/typography/etc MUST be consistent across the site, and maintained in `src/styles/base.css`.
 - User display priority: When displaying a user's name on the site, prefer this order: Alias > First Name > "Member".

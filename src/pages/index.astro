@@ -1,6 +1,7 @@
 ---
 import AppHeader from "../components/AppHeader.astro";
 import AppFooter from "../components/AppFooter.astro";
+import { getRuntimeEnv, readSession } from "../lib/auth";
 import "../styles/base.css";
 
 type Game = {
@@ -21,10 +22,19 @@ type Game = {
 	time_to_beat_minutes?: number;
 };
 
-const [currentResponse, pollResponse, settingsResponse, gamesResponse] = await Promise.all([
-	fetch(new URL("/api/games/current", Astro.url), {
-		headers: Astro.request.headers
-	}),
+const env = getRuntimeEnv(Astro.locals.runtime?.env);
+const session = await readSession(Astro.request, env);
+const initialUser = session
+	? {
+			email: session.email,
+			name: session.name,
+			alias: session.alias,
+			picture: session.picture,
+			role: session.role
+		}
+	: null;
+
+const [pollResponse, settingsResponse, gamesResponse] = await Promise.all([
 	fetch(new URL("/api/polls", Astro.url), {
 		headers: Astro.request.headers
 	}),
@@ -36,8 +46,6 @@ const [currentResponse, pollResponse, settingsResponse, gamesResponse] = await P
 	})
 ]);
 
-const currentPayload = currentResponse.ok ? await currentResponse.json() : { current: null };
-const currentGame = (currentPayload.current as Game | null) ?? null;
 const pollState = pollResponse.ok ? await pollResponse.json() : null;
 const settingsPayload = settingsResponse.ok ? await settingsResponse.json() : { next_meeting: null };
 const nextMeeting = typeof settingsPayload.next_meeting === "string" ? settingsPayload.next_meeting : null;
@@ -46,6 +54,7 @@ const gamesPayload = gamesResponse.ok
 	: { backlog: [], current: null, played: [] };
 const backlogGames = gamesPayload.backlog as Game[];
 const playedGames = gamesPayload.played as Game[];
+const currentGame = Array.isArray(gamesPayload.current) ? ((gamesPayload.current[0] as Game | undefined) ?? null) : null;
 
 function formatUsd(value?: number) {
 	if (typeof value !== "number") return "TBD";
@@ -99,9 +108,9 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 			content="Video game club."
 		/>
 		<title>Game Club</title>
-	</head>
-	<body>
-		<AppHeader />
+		</head>
+		<body>
+			<AppHeader initialUser={initialUser} />
 
 		<main>
 			<div class="container">
@@ -459,7 +468,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 					</footer>
 				</form>
 			</dialog>
-			<script define:vars={{ initialPollState: pollState ?? null }}>
+			<script define:vars={{ initialPollState: pollState ?? null, initialUser }}>
 			const pollChip = document.querySelector("#poll-chip");
 			const pollStatus = document.querySelector("#poll-status");
 			const pollResults = document.querySelector("#poll-results");
@@ -476,8 +485,8 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 			const meetingDate = document.querySelector("#meeting-date");
 			const meetingTime = document.querySelector("#meeting-time");
 			const meetingError = document.querySelector("#meeting-error");
-			let isAuthenticated = false;
-			let isAdmin = false;
+			let isAuthenticated = Boolean(initialUser?.email);
+			let isAdmin = initialUser?.role === "admin";
 			let currentPollState = initialPollState;
 
 			function formatPollDate(value) {
@@ -745,24 +754,10 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 			}
 			renderPoll(initialPollState);
 
-			fetch("/api/me")
-				.then((response) => {
-					if (response.ok) {
-						return response.json();
-					}
-				})
-				.then((data) => {
-					if (!data) return;
-					isAuthenticated = true;
-					isAdmin = data.role === "admin";
-					if (meetingNode && isAdmin) {
-						meetingNode.classList.add("editable");
-						meetingNode.title = "Click to edit next meeting";
-					}
-				})
-				.finally(() => {
-					renderPoll(currentPollState);
-				});
+			if (meetingNode && isAdmin) {
+				meetingNode.classList.add("editable");
+				meetingNode.title = "Click to edit next meeting";
+			}
 
 			if (meetingNode) {
 				meetingNode.textContent = formatMeetingLocal(meetingNode.dataset.iso || "");
@@ -893,25 +888,17 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 				const tooltipTags = rowTooltip?.querySelector(".tooltip-tags");
 				const steamIdKey = "steamAppId";
 				let selectedGameId = null;
-				let currentUserRole = "";
-				let isSignedIn = false;
+				let currentUserRole = initialUser?.role || "";
+				let isSignedIn = Boolean(initialUser?.email);
 
 				function getFirstName(value) {
 					if (!value) return "";
 					return String(value).trim().split(/\s+/)[0] || "";
 				}
 
-				fetch("/api/me")
-					.then((response) => {
-						if (!response.ok) throw new Error("Not authenticated");
-						if (addButton) addButton.classList.remove("hidden");
-						isSignedIn = true;
-						return response.json();
-					})
-					.then((data) => {
-						if (data?.role) currentUserRole = String(data.role);
-					})
-					.catch(() => {});
+				if (addButton && isSignedIn) {
+					addButton.classList.remove("hidden");
+				}
 
 				document.addEventListener("click", (event) => {
 					const target = event.target;

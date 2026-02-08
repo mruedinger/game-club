@@ -1,3 +1,15 @@
+---
+type HeaderUser = {
+	email: string;
+	name?: string;
+	alias?: string;
+	picture?: string;
+	role: "admin" | "member";
+};
+
+const initialUser = (Astro.props.initialUser ?? null) as HeaderUser | null;
+---
+
 <header class="site-header">
 	<a class="brand" href="/">
 		<span class="brand-mark">GC</span>
@@ -41,7 +53,7 @@
 	</form>
 </dialog>
 
-<script>
+<script define:vars={{ initialUser }}>
 	const signIn = document.querySelector(".auth-signin");
 	const signOut = document.querySelector(".auth-signout");
 	const adminLink = document.querySelector(".admin-link");
@@ -52,7 +64,8 @@
 	const userRole = document.querySelector("#user-role");
 	const userAlias = document.querySelector("#user-alias");
 	const userModalError = document.querySelector("#user-modal-error");
-	let currentUser = null;
+	let currentUser = initialUser || null;
+	const placeholder = document.querySelector(".user-placeholder");
 
 	function firstName(value) {
 		if (!value) return "";
@@ -63,53 +76,65 @@
 		return user.alias || firstName(user.name) || "Member";
 	}
 
-	if (adminLink) adminLink.style.display = "none";
-	if (userButton) userButton.style.display = "none";
-	if (signOut) signOut.style.display = "none";
-	const placeholder = document.querySelector(".user-placeholder");
-	if (placeholder) placeholder.style.display = "inline-flex";
+	function applySignedOutState() {
+		currentUser = null;
+		if (adminLink) adminLink.style.display = "none";
+		if (userButton) userButton.style.display = "none";
+		if (signOut) signOut.style.display = "none";
+		if (signIn) signIn.style.display = "inline-flex";
+		if (placeholder) placeholder.style.display = "inline-flex";
+	}
 
-	fetch("/api/me")
-		.then((response) => {
-			if (!response.ok) throw new Error("Not authenticated");
-			return response.json();
-		})
-		.then((data) => {
-			currentUser = data;
-			if (signIn) signIn.style.display = "none";
-			if (userButton) userButton.style.display = "inline-flex";
-			if (signOut) signOut.style.display = "inline-flex";
-			if (placeholder) placeholder.style.display = "none";
-			if (adminLink && data.role === "admin") adminLink.style.display = "inline-flex";
+	function applySignedInState(data) {
+		currentUser = data;
+		if (signIn) signIn.style.display = "none";
+		if (userButton) userButton.style.display = "inline-flex";
+		if (signOut) signOut.style.display = "inline-flex";
+		if (placeholder) placeholder.style.display = "none";
+		if (adminLink) {
+			adminLink.style.display = data.role === "admin" ? "inline-flex" : "none";
+		}
+		if (userName) userName.textContent = displayName(data);
+		if (userEmail) userEmail.textContent = data.email;
+		if (userRole) userRole.textContent = data.role === "admin" ? "Admin" : "Member";
+		if (userAlias) userAlias.value = data.alias || "";
+		if (userButton) {
+			const name = displayName(data);
+			userButton.title = `${data.role === "admin" ? "Admin" : "Member"}\n${name}\n${data.email}`;
+			userButton.textContent = "";
+			if (data.picture) {
+				const img = document.createElement("img");
+				img.className = "avatar-img";
+				img.src = data.picture;
+				img.alt = "";
+				img.referrerPolicy = "no-referrer";
+				img.decoding = "async";
+				userButton.appendChild(img);
+			} else {
+				const fallback = document.createElement("span");
+				fallback.className = "avatar-fallback";
+				fallback.textContent = displayName(data).charAt(0).toUpperCase();
+				userButton.appendChild(fallback);
+			}
+		}
+	}
 
-				if (userName) userName.textContent = displayName(data);
-				if (userEmail) userEmail.textContent = data.email;
-				if (userRole) userRole.textContent = data.role === "admin" ? "Admin" : "Member";
-				if (userAlias) userAlias.value = data.alias || "";
-				if (userButton) {
-					const name = displayName(data);
-					userButton.title = `${data.role === "admin" ? "Admin" : "Member"}\n${name}\n${data.email}`;
-				}
-
-			if (userButton) {
-				userButton.textContent = "";
-				if (data.picture) {
-					const img = document.createElement("img");
-					img.className = "avatar-img";
-					img.src = data.picture;
-					img.alt = "";
-					img.referrerPolicy = "no-referrer";
-					img.decoding = "async";
-					userButton.appendChild(img);
-					} else {
-						const fallback = document.createElement("span");
-						fallback.className = "avatar-fallback";
-						fallback.textContent = displayName(data).charAt(0).toUpperCase();
-						userButton.appendChild(fallback);
-					}
-				}
-		})
-		.catch(() => {});
+	applySignedOutState();
+	if (currentUser) {
+		applySignedInState(currentUser);
+	} else {
+		fetch("/api/me")
+			.then((response) => {
+				if (!response.ok) throw new Error("Not authenticated");
+				return response.json();
+			})
+			.then((data) => {
+				applySignedInState(data);
+			})
+			.catch(() => {
+				applySignedOutState();
+			});
+	}
 
 	document.addEventListener("click", (event) => {
 		const target = event.target;
