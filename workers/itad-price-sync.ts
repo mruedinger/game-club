@@ -33,7 +33,7 @@ async function runPriceSync(env: Env) {
 	const { results } = await db
 		.prepare(
 			"select id, steam_app_id, itad_game_id, itad_slug, price_checked_at from games " +
-				"where steam_app_id is not null and (price_checked_at is null or price_checked_at < datetime('now', '-1 day'))"
+				"where steam_app_id is not null and (price_checked_at is null or datetime(price_checked_at) < datetime('now', '-1 day'))"
 		)
 		.bind()
 		.all<GameRow>();

@@ -130,30 +130,50 @@ export const POST: APIRoute = async ({ request, locals }) => {
 	const ttbMinutes = await fetchIgdbTimeMinutes(env, title, steamAppId);
 	const currentPriceCents = itadPrices?.currentPriceCents ?? null;
 	const bestPriceCents = itadPrices?.bestPriceCents ?? null;
-	const priceCheckedAt = itadPrices ? new Date().toISOString() : null;
 
 	let inserted: { id: number } | null = null;
 	try {
-		inserted = await db
-			.prepare(
-				"insert into games (title, submitted_by_email, status, cover_art_url, tags_json, description, steam_app_id, itad_game_id, itad_slug, itad_boxart_url, current_price_cents, best_price_cents, price_checked_at, time_to_beat_minutes) values (?1, ?2, 'backlog', ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13) returning id"
-			)
-			.bind(
-				title,
-				session.email.toLowerCase(),
-				coverArtUrl,
-				tagsJson,
-				description,
-				steamAppId,
-				itadGame?.id ?? null,
-				itadGame?.slug ?? null,
-				itadGame?.boxart ?? null,
-				currentPriceCents,
-				bestPriceCents,
-				priceCheckedAt,
-				ttbMinutes
-			)
-			.first<{ id: number }>();
+		if (itadPrices) {
+			inserted = await db
+				.prepare(
+					"insert into games (title, submitted_by_email, status, cover_art_url, tags_json, description, steam_app_id, itad_game_id, itad_slug, itad_boxart_url, current_price_cents, best_price_cents, price_checked_at, time_to_beat_minutes) values (?1, ?2, 'backlog', ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, datetime('now'), ?12) returning id"
+				)
+				.bind(
+					title,
+					session.email.toLowerCase(),
+					coverArtUrl,
+					tagsJson,
+					description,
+					steamAppId,
+					itadGame?.id ?? null,
+					itadGame?.slug ?? null,
+					itadGame?.boxart ?? null,
+					currentPriceCents,
+					bestPriceCents,
+					ttbMinutes
+				)
+				.first<{ id: number }>();
+		} else {
+			inserted = await db
+				.prepare(
+					"insert into games (title, submitted_by_email, status, cover_art_url, tags_json, description, steam_app_id, itad_game_id, itad_slug, itad_boxart_url, current_price_cents, best_price_cents, price_checked_at, time_to_beat_minutes) values (?1, ?2, 'backlog', ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, null, ?12) returning id"
+				)
+				.bind(
+					title,
+					session.email.toLowerCase(),
+					coverArtUrl,
+					tagsJson,
+					description,
+					steamAppId,
+					itadGame?.id ?? null,
+					itadGame?.slug ?? null,
+					itadGame?.boxart ?? null,
+					currentPriceCents,
+					bestPriceCents,
+					ttbMinutes
+				)
+				.first<{ id: number }>();
+		}
 	} catch (error) {
 		const mapped = mapGameConstraintError(error);
 		if (mapped) {
