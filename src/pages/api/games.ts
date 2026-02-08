@@ -310,12 +310,15 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
 		.prepare("select id, title, status, played_month from games where id = ?1")
 		.bind(id)
 		.first<{ id: number; title: string; status: string; played_month?: string }>();
+	if (!existing) {
+		return new Response("Game not found.", { status: 404 });
+	}
 
 	try {
 		await db.batch([
 			db
 				.prepare(
-					"update games set status = 'played', played_month = coalesce(played_month, ?1) where status = 'current' and id != ?2"
+					"update games set status = 'played', played_month = coalesce(played_month, ?1) where status = 'current' and id != ?2 and exists(select 1 from games where id = ?2)"
 				)
 				.bind(playedMonth, id),
 			db.prepare("update games set status = 'current', played_month = ?1 where id = ?2").bind(

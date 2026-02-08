@@ -116,17 +116,17 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
 	values.push(id);
 	const updateStatement = db.prepare(sql).bind(...values);
 
-	try {
-		if (newStatus === "current") {
-			const playedMonth = getCurrentMonth();
-			await db.batch([
-				db
-					.prepare(
-						"update games set status = 'played', played_month = coalesce(played_month, ?1) where status = 'current' and id != ?2"
-					)
-					.bind(playedMonth, id),
-				updateStatement
-			]);
+		try {
+			if (newStatus === "current") {
+				const playedMonth = getCurrentMonth();
+				await db.batch([
+					db
+						.prepare(
+							"update games set status = 'played', played_month = coalesce(played_month, ?1) where status = 'current' and id != ?2 and exists(select 1 from games where id = ?2)"
+						)
+						.bind(playedMonth, id),
+					updateStatement
+				]);
 		} else {
 			await updateStatement.run();
 		}
