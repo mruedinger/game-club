@@ -30,6 +30,8 @@ This project maintains a website that is a companion tool for a video game club 
 - Centralized UI styles: All colors/themes/spacing/typography/etc MUST be consistent across the site, and maintained in `src/styles/base.css`.
 - User display priority: When displaying a user's name on the site, prefer this order: Alias > First Name > "Member".
 - Privacy: Never expose member email addresses to unauthenticated/public users.
+- Auth sessions: Sliding session with 45-day idle timeout, 180-day absolute lifetime, and 60-minute membership/role revalidation window.
+- DB invariants: Enforce single current game, single active poll, and unique game identity (normalized title + Steam app id when present) at schema level.
 - Metadata - Time to Beat: HowLongToBeat (HLTB) is the preferred data source, but IGDB can be used if HLTB is not possible.
 - Metadata - Boxart: Pull from IsThereAnyDeal (ITAD)
 - Metadata - Pricing: Pull from IsThereAnyDeal (ITAD)

@@ -30,9 +30,16 @@ type D1Database = {
 		bind: (...args: unknown[]) => {
 			all: <T>() => Promise<{ results: T[] }>;
 			first: <T>() => Promise<T | null>;
-			run: () => Promise<{ success: boolean }>;
+			run: () => Promise<{ success: boolean; meta?: { changes?: number } }>;
 		};
 	};
+	batch: (
+		statements: Array<{
+			all: <T>() => Promise<{ results: T[] }>;
+			first: <T>() => Promise<T | null>;
+			run: () => Promise<{ success: boolean; meta?: { changes?: number } }>;
+		}>
+	) => Promise<unknown>;
 };
 
 export const prerender = false;
@@ -125,26 +132,35 @@ export const POST: APIRoute = async ({ request, locals }) => {
 	const bestPriceCents = itadPrices?.bestPriceCents ?? null;
 	const priceCheckedAt = itadPrices ? new Date().toISOString() : null;
 
-	const inserted = await db
-		.prepare(
-			"insert into games (title, submitted_by_email, status, cover_art_url, tags_json, description, steam_app_id, itad_game_id, itad_slug, itad_boxart_url, current_price_cents, best_price_cents, price_checked_at, time_to_beat_minutes) values (?1, ?2, 'backlog', ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13) returning id"
-		)
-		.bind(
-			title,
-			session.email.toLowerCase(),
-			coverArtUrl,
-			tagsJson,
-			description,
-			steamAppId,
-			itadGame?.id ?? null,
-			itadGame?.slug ?? null,
-			itadGame?.boxart ?? null,
-			currentPriceCents,
-			bestPriceCents,
-			priceCheckedAt,
-			ttbMinutes
-		)
-		.first<{ id: number }>();
+	let inserted: { id: number } | null = null;
+	try {
+		inserted = await db
+			.prepare(
+				"insert into games (title, submitted_by_email, status, cover_art_url, tags_json, description, steam_app_id, itad_game_id, itad_slug, itad_boxart_url, current_price_cents, best_price_cents, price_checked_at, time_to_beat_minutes) values (?1, ?2, 'backlog', ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13) returning id"
+			)
+			.bind(
+				title,
+				session.email.toLowerCase(),
+				coverArtUrl,
+				tagsJson,
+				description,
+				steamAppId,
+				itadGame?.id ?? null,
+				itadGame?.slug ?? null,
+				itadGame?.boxart ?? null,
+				currentPriceCents,
+				bestPriceCents,
+				priceCheckedAt,
+				ttbMinutes
+			)
+			.first<{ id: number }>();
+	} catch (error) {
+		const mapped = mapGameConstraintError(error);
+		if (mapped) {
+			return mapped;
+		}
+		throw error;
+	}
 
 	if (inserted?.id) {
 		await writeAudit(
@@ -195,14 +211,13 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
 		return new Response("Not authorized.", { status: 403 });
 	}
 
-	await db
-		.prepare(
-			"delete from poll_votes where choice_1 = ?1 or choice_2 = ?1 or choice_3 = ?1"
-		)
-		.bind(id)
-		.run();
-	await db.prepare("delete from poll_games where game_id = ?1").bind(id).run();
-	await db.prepare("delete from games where id = ?1").bind(id).run();
+	await db.batch([
+		db
+			.prepare("delete from poll_votes where choice_1 = ?1 or choice_2 = ?1 or choice_3 = ?1")
+			.bind(id),
+		db.prepare("delete from poll_games where game_id = ?1").bind(id),
+		db.prepare("delete from games where id = ?1").bind(id)
+	]);
 
 	await writeAudit(
 		env,
@@ -296,17 +311,25 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
 		.bind(id)
 		.first<{ id: number; title: string; status: string; played_month?: string }>();
 
-	await db
-		.prepare(
-			"update games set status = 'played', played_month = coalesce(played_month, ?1) where status = 'current' and id != ?2"
-		)
-		.bind(playedMonth, id)
-		.run();
-
-	await db
-		.prepare("update games set status = 'current', played_month = ?1 where id = ?2")
-		.bind(playedMonth, id)
-		.run();
+	try {
+		await db.batch([
+			db
+				.prepare(
+					"update games set status = 'played', played_month = coalesce(played_month, ?1) where status = 'current' and id != ?2"
+				)
+				.bind(playedMonth, id),
+			db.prepare("update games set status = 'current', played_month = ?1 where id = ?2").bind(
+				playedMonth,
+				id
+			)
+		]);
+	} catch (error) {
+		const mapped = mapGameConstraintError(error);
+		if (mapped) {
+			return mapped;
+		}
+		throw error;
+	}
 
 	await writeAudit(
 		env,
@@ -350,4 +373,37 @@ async function fetchSteamDetails(
 	const entry = payload[String(appId)];
 	if (!entry || !entry.success || !entry.data) return null;
 	return entry.data;
+}
+
+function mapGameConstraintError(error: unknown): Response | null {
+	const message = getErrorMessage(error).toLowerCase();
+	if (!message.includes("constraint")) {
+		return null;
+	}
+
+	if (
+		message.includes("idx_games_title_normalized_unique") ||
+		message.includes("games.title") ||
+		message.includes("lower(title)")
+	) {
+		return new Response("Game already exists in the backlog.", { status: 409 });
+	}
+	if (
+		message.includes("idx_games_steam_app_id_unique") ||
+		message.includes("games.steam_app_id")
+	) {
+		return new Response("Game already exists in the backlog.", { status: 409 });
+	}
+	if (message.includes("idx_games_single_current") || message.includes("games.status")) {
+		return new Response("Another game is already set as current.", { status: 409 });
+	}
+
+	return null;
+}
+
+function getErrorMessage(error: unknown) {
+	if (error instanceof Error) {
+		return error.message;
+	}
+	return String(error ?? "");
 }
