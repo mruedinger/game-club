@@ -1136,7 +1136,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 							detailModal?.close();
 							if (response.status === 404) {
 								showBacklogFeedback("That game no longer exists. Refreshing list...");
-								setTimeout(() => window.location.reload(), 900);
+								setTimeout(() => window.location.reload(), 1800);
 								return;
 							}
 							showBacklogFeedback(message);
