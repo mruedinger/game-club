@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { getRuntimeEnv, readSession } from "../../lib/auth";
 import { writeAudit } from "../../lib/audit";
+import { fetchWithTimeoutRetry } from "../../lib/http";
 import { fetchIgdbTimeMinutes } from "../../lib/igdb";
 import { fetchItadGame, fetchItadPrices } from "../../lib/itad";
 
@@ -385,9 +386,16 @@ type SteamAppDetails = {
 async function fetchSteamDetails(
 	appId: number
 ): Promise<SteamAppDetails | null> {
-	const response = await fetch(
-		`https://store.steampowered.com/api/appdetails?appids=${appId}&cc=us&l=en`
-	);
+	let response: Response;
+	try {
+		response = await fetchWithTimeoutRetry(
+			`https://store.steampowered.com/api/appdetails?appids=${appId}&cc=us&l=en`,
+			{},
+			{ timeoutMs: 2000, retries: 1 }
+		);
+	} catch {
+		return null;
+	}
 	if (!response.ok) return null;
 	const payload = (await response.json()) as Record<
 		string,

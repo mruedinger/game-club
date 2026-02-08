@@ -1,3 +1,5 @@
+import { fetchWithTimeoutRetry } from "./http";
+
 type ItadLookupResponse = {
 	found: boolean;
 	game?: {
@@ -33,7 +35,12 @@ export async function fetchItadGame(
 	const url = new URL("https://api.isthereanydeal.com/games/lookup/v1");
 	url.searchParams.set("key", apiKey);
 	url.searchParams.set("appid", String(appId));
-	const response = await fetch(url.toString());
+	let response: Response;
+	try {
+		response = await fetchWithTimeoutRetry(url.toString(), {}, { timeoutMs: 2000, retries: 1 });
+	} catch {
+		return null;
+	}
 	if (!response.ok) return null;
 	const data = (await response.json()) as ItadLookupResponse;
 	if (!data.found || !data.game?.id) return null;
@@ -49,11 +56,20 @@ export async function fetchItadPrices(
 	const url = new URL("https://api.isthereanydeal.com/games/prices/v3");
 	url.searchParams.set("key", apiKey);
 	url.searchParams.set("country", "US");
-	const response = await fetch(url.toString(), {
-		method: "POST",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify([gameId])
-	});
+	let response: Response;
+	try {
+		response = await fetchWithTimeoutRetry(
+			url.toString(),
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify([gameId])
+			},
+			{ timeoutMs: 2000, retries: 1 }
+		);
+	} catch {
+		return null;
+	}
 	if (!response.ok) return null;
 	const data = (await response.json()) as ItadPricesResponseItem[];
 	const entry = data?.[0];

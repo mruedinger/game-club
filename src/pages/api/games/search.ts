@@ -1,4 +1,5 @@
 import type { APIRoute } from "astro";
+import { fetchWithTimeoutRetry } from "../../../lib/http";
 
 export const prerender = false;
 
@@ -11,9 +12,19 @@ export const GET: APIRoute = async ({ url }) => {
 		});
 	}
 
-	const response = await fetch(
-		`https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(term)}&l=en&cc=us`
-	);
+	let response: Response;
+	try {
+		response = await fetchWithTimeoutRetry(
+			`https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(term)}&l=en&cc=us`,
+			{},
+			{ timeoutMs: 1200, retries: 0 }
+		);
+	} catch {
+		return new Response(JSON.stringify({ results: [] }), {
+			status: 200,
+			headers: { "Content-Type": "application/json" }
+		});
+	}
 
 	if (!response.ok) {
 		return new Response(JSON.stringify({ results: [] }), {
