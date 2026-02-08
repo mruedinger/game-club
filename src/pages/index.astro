@@ -391,6 +391,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 						<input id="meeting-time" name="time" type="time" step="300" required />
 					</div>
 				</div>
+				<p class="form-error hidden" id="meeting-error" role="alert"></p>
 				<footer>
 					<button class="ghost" type="button" data-action="close-meeting">Cancel</button>
 					<button class="cta" type="submit">Save</button>
@@ -474,6 +475,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 			const meetingModal = document.querySelector("#meeting-modal");
 			const meetingDate = document.querySelector("#meeting-date");
 			const meetingTime = document.querySelector("#meeting-time");
+			const meetingError = document.querySelector("#meeting-error");
 			let isAuthenticated = false;
 			let isAdmin = false;
 			let currentPollState = initialPollState;
@@ -770,6 +772,10 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 				meetingNode.addEventListener("click", async () => {
 					if (!isAdmin) return;
 					populateMeetingForm(meetingNode.dataset.iso || "");
+					if (meetingError) {
+						meetingError.textContent = "";
+						meetingError.classList.add("hidden");
+					}
 					meetingModal?.showModal();
 				});
 			}
@@ -812,16 +818,24 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 				return { date: `${year}-${month}-${day}`, time: `${pad(hour24)}:${minute}` };
 			}
 
-				if (meetingModal) {
-					meetingModal.addEventListener("click", (event) => {
-						const target = event.target;
-						if (!(target instanceof HTMLElement)) return;
-						if (target.closest("[data-action='close-meeting']")) {
-							meetingModal.close();
+			if (meetingModal) {
+				meetingModal.addEventListener("click", (event) => {
+					const target = event.target;
+					if (!(target instanceof HTMLElement)) return;
+					if (target.closest("[data-action='close-meeting']")) {
+						if (meetingError) {
+							meetingError.textContent = "";
+							meetingError.classList.add("hidden");
 						}
-					});
-					meetingModal.addEventListener("submit", async (event) => {
+						meetingModal.close();
+					}
+				});
+				meetingModal.addEventListener("submit", async (event) => {
 					event.preventDefault();
+					if (meetingError) {
+						meetingError.textContent = "";
+						meetingError.classList.add("hidden");
+					}
 					if (!meetingDate || !meetingTime) return;
 					const dateValue = meetingDate.value;
 					const timeValue = meetingTime.value;
@@ -838,11 +852,15 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 						headers: { "Content-Type": "application/json" },
 						body: JSON.stringify({ next_meeting: localDate.toISOString() })
 					});
-						if (response.ok) {
-							window.location.reload();
-						}
-					});
-				}
+					if (response.ok) {
+						window.location.reload();
+					} else if (meetingError) {
+						const message = await response.text();
+						meetingError.textContent = message || "Unable to update next meeting.";
+						meetingError.classList.remove("hidden");
+					}
+				});
+			}
 
 				const addButton = document.querySelector(".add-game");
 				const addModal = document.querySelector("#add-game-modal");

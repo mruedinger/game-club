@@ -33,6 +33,7 @@
 			<label for="user-alias">Alias</label>
 			<input id="user-alias" name="alias" type="text" placeholder="Optional" />
 		</div>
+		<p class="form-error hidden" id="user-modal-error" role="alert"></p>
 		<footer>
 			<button class="ghost" type="button" data-action="close-user">Cancel</button>
 			<button class="cta" type="submit">Save</button>
@@ -50,6 +51,7 @@
 	const userEmail = document.querySelector("#user-email");
 	const userRole = document.querySelector("#user-role");
 	const userAlias = document.querySelector("#user-alias");
+	const userModalError = document.querySelector("#user-modal-error");
 	let currentUser = null;
 
 	function firstName(value) {
@@ -116,6 +118,10 @@
 			userModal.showModal();
 		}
 		if (target.closest("[data-action='close-user']") && userModal) {
+			if (userModalError) {
+				userModalError.textContent = "";
+				userModalError.classList.add("hidden");
+			}
 			userModal.close();
 		}
 		if (target.closest(".auth-signout")) {
@@ -129,6 +135,10 @@
 		userModal.addEventListener("submit", async (event) => {
 			event.preventDefault();
 			if (!currentUser) return;
+			if (userModalError) {
+				userModalError.textContent = "";
+				userModalError.classList.add("hidden");
+			}
 			const response = await fetch("/api/me", {
 				method: "PATCH",
 				headers: { "Content-Type": "application/json" },
@@ -137,6 +147,10 @@
 			if (response.ok) {
 				if (userModal) userModal.close();
 				window.location.reload();
+			} else if (userModalError) {
+				const message = await response.text();
+				userModalError.textContent = message || "Unable to save profile updates.";
+				userModalError.classList.remove("hidden");
 			}
 		});
 	}

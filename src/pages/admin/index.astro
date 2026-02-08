@@ -126,6 +126,7 @@ export const prerender = false;
 						<option value="admin">Admin</option>
 					</select>
 				</div>
+				<p class="form-error hidden" id="invite-error" role="alert"></p>
 				<footer>
 					<button class="ghost" value="cancel" type="button" data-action="close-invite">Cancel</button>
 					<button class="cta" type="submit">Submit</button>
@@ -158,6 +159,7 @@ export const prerender = false;
 				<div class="actions">
 					<button class="ghost danger small-button" data-action="delete" type="button">Delete member</button>
 				</div>
+				<p class="form-error hidden" id="member-modal-error" role="alert"></p>
 				<footer>
 					<button class="ghost" type="button" data-action="close-member">Cancel</button>
 					<button class="cta" type="submit">Submit</button>
@@ -229,6 +231,8 @@ export const prerender = false;
 			const gameSortHeaders = document.querySelectorAll(".games-editor-table th[data-sort]");
 			const inviteModal = document.querySelector("#invite-modal");
 			const memberModal = document.querySelector("#member-modal");
+			const inviteError = document.querySelector("#invite-error");
+			const memberModalError = document.querySelector("#member-modal-error");
 			const memberName = document.querySelector("#member-name");
 			const memberEmail = document.querySelector("#member-email");
 			const editRole = document.querySelector("#edit-role");
@@ -602,14 +606,26 @@ export const prerender = false;
 				if (!(target instanceof HTMLElement)) return;
 				const openInvite = target.closest("[data-action='open-invite']");
 				if (openInvite && inviteModal) {
+					if (inviteError) {
+						inviteError.textContent = "";
+						inviteError.classList.add("hidden");
+					}
 					inviteModal.showModal();
 				}
 				const closeInvite = target.closest("[data-action='close-invite']");
 				if (closeInvite && inviteModal) {
+					if (inviteError) {
+						inviteError.textContent = "";
+						inviteError.classList.add("hidden");
+					}
 					inviteModal.close();
 				}
 				const closeMember = target.closest("[data-action='close-member']");
 				if (closeMember && memberModal) {
+					if (memberModalError) {
+						memberModalError.textContent = "";
+						memberModalError.classList.add("hidden");
+					}
 					memberModal.close();
 				}
 				const row = target.closest("tr[data-email]");
@@ -623,6 +639,10 @@ export const prerender = false;
 			if (inviteForm) {
 				inviteForm.addEventListener("submit", async (event) => {
 					event.preventDefault();
+					if (inviteError) {
+						inviteError.textContent = "";
+						inviteError.classList.add("hidden");
+					}
 					const formData = new FormData(inviteForm);
 					const email = formData.get("email");
 					const role = formData.get("role");
@@ -635,6 +655,10 @@ export const prerender = false;
 						inviteForm.reset();
 						if (inviteModal) inviteModal.close();
 						loadMembers();
+					} else if (inviteError) {
+						const message = await response.text();
+						inviteError.textContent = message || "Unable to add member.";
+						inviteError.classList.remove("hidden");
 					}
 				});
 			}
@@ -655,6 +679,10 @@ export const prerender = false;
 				activeMember = email;
 				const row = document.querySelector(`tr[data-email="${email}"]`);
 				if (!row || !memberModal) return;
+				if (memberModalError) {
+					memberModalError.textContent = "";
+					memberModalError.classList.add("hidden");
+				}
 				const name = row.querySelector(".member-name")?.textContent || "Member";
 				if (memberName) memberName.textContent = name;
 				if (memberEmail) memberEmail.textContent = email;
@@ -677,6 +705,10 @@ export const prerender = false;
 				memberModal.addEventListener("submit", async (event) => {
 					event.preventDefault();
 					if (!activeMember) return;
+					if (memberModalError) {
+						memberModalError.textContent = "";
+						memberModalError.classList.add("hidden");
+					}
 					const isSelf = currentUserEmail && activeMember === currentUserEmail;
 					const payload = {
 						email: activeMember,
@@ -693,8 +725,10 @@ export const prerender = false;
 					if (response.ok) {
 						memberModal.close();
 						loadMembers();
-					} else {
-						console.error("Unable to update member.");
+					} else if (memberModalError) {
+						const message = await response.text();
+						memberModalError.textContent = message || "Unable to update member.";
+						memberModalError.classList.remove("hidden");
 					}
 				});
 
@@ -705,13 +739,23 @@ export const prerender = false;
 					if (action === "delete" && activeMember) {
 						const confirmed = window.confirm("Delete this member? This cannot be undone.");
 						if (!confirmed) return;
-						await fetch("/api/admin/members", {
+						if (memberModalError) {
+							memberModalError.textContent = "";
+							memberModalError.classList.add("hidden");
+						}
+						const response = await fetch("/api/admin/members", {
 							method: "DELETE",
 							headers: { "Content-Type": "application/json" },
 							body: JSON.stringify({ email: activeMember })
 						});
-						memberModal.close();
-						loadMembers();
+						if (response.ok) {
+							memberModal.close();
+							loadMembers();
+						} else if (memberModalError) {
+							const message = await response.text();
+							memberModalError.textContent = message || "Unable to delete member.";
+							memberModalError.classList.remove("hidden");
+						}
 					}
 				});
 			}
