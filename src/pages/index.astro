@@ -235,12 +235,13 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 					</div>
 				</section>
 
-				<section class="section">
-					<div class="section-head">
-						<h2>Backlog</h2>
-						<button class="cta add-game hidden" type="button">Add a game</button>
-					</div>
-					<div class="table-wrapper">
+					<section class="section">
+						<div class="section-head">
+							<h2>Backlog</h2>
+							<button class="cta add-game hidden" type="button">Add a game</button>
+						</div>
+						<p class="form-error hidden" id="backlog-feedback" role="alert"></p>
+						<div class="table-wrapper">
 						<table class="games-table">
 							<thead>
 								<tr>
@@ -866,6 +867,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 				const detailTtbSave = document.querySelector(".game-detail-ttb-save");
 				const detailTtbError = document.querySelector(".game-detail-ttb-error");
 				const detailActionError = document.querySelector(".game-detail-action-error");
+				const backlogFeedback = document.querySelector("#backlog-feedback");
 				const tableBody = document.querySelector(".games-table tbody");
 				const sortHeaders = document.querySelectorAll(".games-table th[data-sort]");
 				const rowTooltip = document.querySelector(".row-tooltip");
@@ -1129,6 +1131,15 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 						if (response.ok) {
 							detailModal?.close();
 							window.location.reload();
+						} else {
+							const message = (await response.text()) || "Unable to set current game.";
+							detailModal?.close();
+							if (response.status === 404) {
+								showBacklogFeedback("That game no longer exists. Refreshing list...");
+								setTimeout(() => window.location.reload(), 900);
+								return;
+							}
+							showBacklogFeedback(message);
 						}
 					});
 				}
@@ -1169,6 +1180,12 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 					if (!addError) return;
 					addError.textContent = "";
 					addError.classList.add("hidden");
+				}
+
+				function showBacklogFeedback(message) {
+					if (!backlogFeedback) return;
+					backlogFeedback.textContent = message;
+					backlogFeedback.classList.remove("hidden");
 				}
 
 				function renderSuggestions(list, items) {
