@@ -47,6 +47,10 @@ This project maintains a website that is a companion tool for a video game club 
 - Modals styled in `base.css`
 - Tooltips must use consistent styling
 - All buttons consistent with home page theme
+- Error feedback pattern:
+  - Prefer page-level inline error banners near the action origin using shared error styling (`.form-error`) and `role="alert"`.
+  - For stale/race modal actions (e.g. target deleted in another tab), close the modal, show page-level error, and auto-refresh after 1800ms.
+  - For non-stale errors, keep message visible until the next user action.
 
 ## Operational Notes for AI Agents
 - Always develop on `dev` branch. Do not add/commit/push/merge to `main` or any other branch unless explicitly told to do so.
