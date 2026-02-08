@@ -7,7 +7,11 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "db:migrate:dev": "wrangler d1 migrations apply game-club-dev --remote --env dev",
+    "db:migrate:prod": "wrangler d1 migrations apply game-club --remote --env production",
+    "db:bootstrap:dev": "wrangler d1 execute game-club-dev --remote --file schema/bootstrap.sql --env dev",
+    "db:bootstrap:prod": "wrangler d1 execute game-club --remote --file schema/bootstrap.sql --env production"
   },
   "dependencies": {
     "@astrojs/cloudflare": "^12.6.12",
