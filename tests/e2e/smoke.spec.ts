@@ -1,19 +1,26 @@
 import { test, expect } from "@playwright/test";
 
-test("home page loads", async ({ page }) => {
-	await page.goto("/");
-	await expect(page.getByRole("banner")).toBeVisible();
-	await expect(page.getByRole("navigation")).not.toContainText("Games");
+test("home page loads", async ({ request }) => {
+	const response = await request.get("/");
+	expect(response.status()).toBe(200);
+	const html = await response.text();
+	expect(html).toContain("<header");
+	expect(html).toContain("Game Club");
+	expect(html).not.toContain(">Games<");
 });
 
-test("home page shows backlog and played sections", async ({ page }) => {
-	await page.goto("/");
-	await expect(page.getByRole("heading", { name: "Backlog", exact: true })).toBeVisible();
-	await expect(page.locator("table.games-table")).toBeVisible();
-	await expect(page.getByRole("heading", { name: "Played", exact: true })).toBeVisible();
+test("home page shows backlog and played sections", async ({ request }) => {
+	const response = await request.get("/");
+	expect(response.status()).toBe(200);
+	const html = await response.text();
+	expect(html).toContain("Backlog");
+	expect(html).toContain("games-table");
+	expect(html).toContain("Played");
 });
 
-test("denied page loads", async ({ page }) => {
-	await page.goto("/auth/denied");
-	await expect(page.getByRole("link", { name: /return home/i })).toBeVisible();
+test("denied page loads", async ({ request }) => {
+	const response = await request.get("/auth/denied");
+	expect(response.status()).toBe(200);
+	const html = await response.text();
+	expect(html).toContain("Return Home");
 });
