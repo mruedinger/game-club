@@ -92,7 +92,7 @@ create table if not exists site_settings (
 );
 
 insert or ignore into site_settings (key, value)
-values ('next_meeting', '2026-02-03T20:15:00-05:00');
+values ('next_meeting', '');
 
 create table if not exists audit_logs (
 	id integer primary key autoincrement,
