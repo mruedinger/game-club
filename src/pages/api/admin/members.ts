@@ -307,7 +307,7 @@ async function readJson(request: Request): Promise<unknown> {
 function normalizeEmail(value: unknown): string | null {
 	if (typeof value !== "string") return null;
 	const email = value.trim().toLowerCase();
-	if (!email || !email.includes("@")) return null;
+	if (!email || !isValidEmail(email)) return null;
 	return email;
 }
 
@@ -323,4 +323,8 @@ function normalizeCount(value: unknown) {
 		if (!Number.isNaN(parsed)) return Math.max(0, parsed);
 	}
 	return 0;
+}
+
+function isValidEmail(value: string) {
+	return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
