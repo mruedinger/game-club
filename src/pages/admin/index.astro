@@ -498,24 +498,32 @@ export const prerender = false;
 					if (target.closest("[data-action='close-game']")) {
 						gameModal.close();
 					}
-					if (target.closest("[data-action='delete-game']")) {
-						if (!activeGameId) return;
-						const confirmed = window.confirm("Delete this game? This cannot be undone.");
-						if (!confirmed) return;
-						fetch("/api/admin/games", {
+						if (target.closest("[data-action='delete-game']")) {
+							if (!activeGameId) return;
+							const confirmed = window.confirm("Delete this game? This cannot be undone.");
+							if (!confirmed) return;
+							fetch("/api/admin/games", {
 							method: "DELETE",
 							headers: { "Content-Type": "application/json" },
 							body: JSON.stringify({ id: activeGameId })
-						}).then((response) => {
-							if (response.ok) {
-								gameModal.close();
-								loadGames();
-							} else {
-								gameModalError.textContent = "Unable to delete game.";
-								gameModalError.classList.remove("hidden");
-							}
-						});
-					}
+							}).then((response) => {
+								if (response.ok) {
+									gameModal.close();
+									loadGames();
+								} else {
+									response
+										.text()
+										.then((message) => {
+											gameModalError.textContent = message || "Unable to delete game.";
+											gameModalError.classList.remove("hidden");
+										})
+										.catch(() => {
+											gameModalError.textContent = "Unable to delete game.";
+											gameModalError.classList.remove("hidden");
+										});
+								}
+							});
+						}
 				});
 				gameModal.addEventListener("submit", async (event) => {
 					event.preventDefault();
@@ -550,15 +558,16 @@ export const prerender = false;
 						headers: { "Content-Type": "application/json" },
 						body: JSON.stringify(payload)
 					});
-					if (response.ok) {
-						gameModal.close();
-						loadGames();
-					} else {
-						gameModalError.textContent = "Unable to update game.";
-						gameModalError.classList.remove("hidden");
-					}
-				});
-			}
+						if (response.ok) {
+							gameModal.close();
+							loadGames();
+						} else {
+							const message = await response.text();
+							gameModalError.textContent = message || "Unable to update game.";
+							gameModalError.classList.remove("hidden");
+						}
+					});
+				}
 
 			function getSortValue(row, key) {
 				if (key === "title") return row.dataset.title || "";

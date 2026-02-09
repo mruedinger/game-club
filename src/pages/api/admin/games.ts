@@ -74,7 +74,7 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
 		const email = body.submitted_by_email.trim().toLowerCase();
 		if (!email) return new Response("Submitted by email is required.", { status: 400 });
 		if (!isValidEmail(email)) {
-			return new Response("Submitted by email is invalid.", { status: 400 });
+			return new Response("User email address is malformed.", { status: 400 });
 		}
 		const member = await db
 			.prepare("select email from members where email = ?1 limit 1")
