@@ -94,6 +94,21 @@ function getSubmitter(game: Game) {
 	return game.submitted_by_alias || firstName(game.submitted_by_name) || "Member";
 }
 
+function formatTags(tagsJson?: string) {
+	if (!tagsJson) return "Tags coming soon";
+	try {
+		const parsed = JSON.parse(tagsJson);
+		if (!Array.isArray(parsed)) return "Tags coming soon";
+		const tags = parsed
+			.filter((tag): tag is string => typeof tag === "string")
+			.map((tag) => tag.trim())
+			.filter(Boolean);
+		return tags.length > 0 ? tags.join(" · ") : "Tags coming soon";
+	} catch {
+		return "Tags coming soon";
+	}
+}
+
 const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: TBD";
 ---
 
@@ -139,14 +154,12 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 									<div class="cover-placeholder">Cover coming soon</div>
 								)}
 							</div>
-							<h4 class="game-title">Current Game: {currentGame.title}</h4>
-								{(() => {
-									const tags = currentGame.tags_json
-										? JSON.parse(currentGame.tags_json).join(" · ")
-										: "Tags coming soon";
-									const ttb = formatTtbHours(currentGame.time_to_beat_minutes);
-									return (
-										<p class="meta-line tight">
+								<h4 class="game-title">Current Game: {currentGame.title}</h4>
+									{(() => {
+										const tags = formatTags(currentGame.tags_json);
+										const ttb = formatTtbHours(currentGame.time_to_beat_minutes);
+										return (
+											<p class="meta-line tight">
 											{ttb ? `${ttb} | ${tags}` : tags}
 										</p>
 									);
@@ -370,12 +383,12 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 									) : (
 										<div class="cover-placeholder">Cover coming soon</div>
 									)}
-								</div>
-								<p class="muted">
-									{game.tags_json ? JSON.parse(game.tags_json).join(" · ") : "Tags coming soon"}
-								</p>
-							</article>
-						))}
+									</div>
+									<p class="muted">
+										{formatTags(game.tags_json)}
+									</p>
+								</article>
+							))}
 					</div>
 				</section>
 				</div>
