@@ -9,7 +9,8 @@
 				{
 					"binding": "DB",
 					"database_name": "game-club-dev",
-					"database_id": "c3fbbdda-4cf8-41e0-a58a-44bc1288e71f"
+					"database_id": "c3fbbdda-4cf8-41e0-a58a-44bc1288e71f",
+					"migrations_dir": "migrations"
 				}
 			]
 		},
@@ -18,7 +19,8 @@
 				{
 					"binding": "DB",
 					"database_name": "game-club",
-					"database_id": "fcc5645d-d485-4df3-927b-d83048ed2f33"
+					"database_id": "fcc5645d-d485-4df3-927b-d83048ed2f33",
+					"migrations_dir": "migrations"
 				}
 			]
 		}

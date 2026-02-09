@@ -229,23 +229,59 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
 		.prepare("select email, name, alias, role, active from members where email = ?1")
 		.bind(email)
 		.first<MemberRow>();
+	if (!existing) {
+		return new Response("Member not found.", { status: 404 });
+	}
+
+	const assignmentCountRow = await db
+		.prepare("select count(*) as count from games where submitted_by_email = ?1")
+		.bind(email)
+		.first<{ count: number | string | null }>();
+	const assignmentCount = normalizeCount(assignmentCountRow?.count);
+
+	if (assignmentCount > 0) {
+		let updated = existing;
+		if (existing.active !== 0) {
+			await db
+				.prepare("update members set active = 0 where email = ?1")
+				.bind(email)
+				.run();
+			updated = {
+				...existing,
+				active: 0
+			};
+
+			await writeAudit(
+				env,
+				session.email,
+				"member_deactivate",
+				"member",
+				0,
+				existing,
+				updated
+			);
+		}
+
+		return new Response(
+			`Member has submitted ${assignmentCount} game(s) and was deactivated. Reassign or remove those games before deleting this member.`,
+			{ status: 409 }
+		);
+	}
 
 	await db
 		.prepare("delete from members where email = ?1")
 		.bind(email)
 		.run();
 
-	if (existing) {
-		await writeAudit(
-			env,
-			session.email,
-			"member_delete",
-			"member",
-			0,
-			existing,
-			null
-		);
-	}
+	await writeAudit(
+		env,
+		session.email,
+		"member_delete",
+		"member",
+		0,
+		existing,
+		null
+	);
 
 	return new Response(null, { status: 204 });
 };
@@ -271,11 +307,24 @@ async function readJson(request: Request): Promise<unknown> {
 function normalizeEmail(value: unknown): string | null {
 	if (typeof value !== "string") return null;
 	const email = value.trim().toLowerCase();
-	if (!email || !email.includes("@")) return null;
+	if (!email || !isValidEmail(email)) return null;
 	return email;
 }
 
 function normalizeRole(value: unknown): "admin" | "member" | null {
 	if (value === "admin" || value === "member") return value;
 	return null;
+}
+
+function normalizeCount(value: unknown) {
+	if (typeof value === "number" && Number.isFinite(value)) return Math.max(0, Math.trunc(value));
+	if (typeof value === "string") {
+		const parsed = Number.parseInt(value, 10);
+		if (!Number.isNaN(parsed)) return Math.max(0, parsed);
+	}
+	return 0;
+}
+
+function isValidEmail(value: string) {
+	return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }

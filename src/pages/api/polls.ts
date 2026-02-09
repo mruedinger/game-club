@@ -7,9 +7,16 @@ type D1Database = {
 		bind: (...args: unknown[]) => {
 			all: <T>() => Promise<{ results: T[] }>;
 			first: <T>() => Promise<T | null>;
-			run: () => Promise<{ success: boolean }>;
+			run: () => Promise<{ success: boolean; meta?: { changes?: number } }>;
 		};
 	};
+	batch: (
+		statements: Array<{
+			all: <T>() => Promise<{ results: T[] }>;
+			first: <T>() => Promise<T | null>;
+			run: () => Promise<{ success: boolean; meta?: { changes?: number } }>;
+		}>
+	) => Promise<unknown>;
 };
 
 type PollRow = {
@@ -113,20 +120,31 @@ export const POST: APIRoute = async ({ locals, request }) => {
 		return new Response("No backlog games available.", { status: 400 });
 	}
 
-	await db.prepare("insert into polls (status) values ('active')").bind().run();
+	try {
+		await db.batch([
+			db.prepare("insert into polls (status) values ('active')").bind(),
+			db
+				.prepare(
+					"insert into poll_games (poll_id, game_id) " +
+						"select polls.id, games.id from polls join games on games.status = 'backlog' " +
+						"where polls.status = 'active'"
+				)
+				.bind()
+		]);
+	} catch (error) {
+		const mapped = mapPollConstraintError(error);
+		if (mapped) {
+			return mapped;
+		}
+		throw error;
+	}
+
 	const pollRow = await db
 		.prepare("select id from polls where status = 'active' order by started_at desc limit 1")
 		.bind()
 		.first<{ id: number }>();
 	if (!pollRow) {
 		return new Response("Unable to create poll.", { status: 500 });
-	}
-
-	for (const game of backlogGames.results) {
-		await db
-			.prepare("insert into poll_games (poll_id, game_id) values (?1, ?2)")
-			.bind(pollRow.id, game.id)
-			.run();
 	}
 
 	await writeAudit(
@@ -230,4 +248,22 @@ function jsonResponse(payload: unknown, status = 200) {
 		status,
 		headers: { "Content-Type": "application/json" }
 	});
+}
+
+function mapPollConstraintError(error: unknown): Response | null {
+	const message = getErrorMessage(error).toLowerCase();
+	if (!message.includes("constraint")) {
+		return null;
+	}
+	if (message.includes("idx_polls_single_active") || message.includes("polls.status")) {
+		return new Response("Poll already active.", { status: 409 });
+	}
+	return null;
+}
+
+function getErrorMessage(error: unknown) {
+	if (error instanceof Error) {
+		return error.message;
+	}
+	return String(error ?? "");
 }

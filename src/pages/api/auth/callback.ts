@@ -66,8 +66,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 				name: member.name || name,
 				alias: member.alias,
 				picture,
-				role,
-				exp: Date.now() + 1000 * 60 * 60 * 24 * 7
+				role
 			},
 			secureCookie
 		);

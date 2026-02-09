@@ -28,6 +28,7 @@ screenshots/
 
 # playwright results
 test-results/
+.cache/
 
 # wrangler logs
 .wrangler-logs/

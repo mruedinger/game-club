@@ -25,6 +25,23 @@ type SessionData = {
 	picture?: string;
 	role: "admin" | "member";
 	exp: number;
+	issuedAt: number;
+	lastSeenAt: number;
+	membershipCheckedAt: number;
+	absoluteExp: number;
+};
+
+type SessionInput = {
+	email: string;
+	name?: string;
+	alias?: string;
+	picture?: string;
+	role: "admin" | "member";
+	exp?: number;
+	issuedAt?: number;
+	lastSeenAt?: number;
+	membershipCheckedAt?: number;
+	absoluteExp?: number;
 };
 
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
@@ -33,10 +50,15 @@ const GOOGLE_JWKS_URL = "https://www.googleapis.com/oauth2/v3/certs";
 const GOOGLE_ISSUERS = ["https://accounts.google.com", "accounts.google.com"];
 const DEFAULT_SESSION_COOKIE = "gc_session";
 const OAUTH_COOKIE = "gc_oauth";
-const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
+const LEGACY_SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
+const SESSION_IDLE_TTL_SECONDS = 60 * 60 * 24 * 45;
+const SESSION_ABSOLUTE_TTL_SECONDS = 60 * 60 * 24 * 180;
+const SESSION_MEMBERSHIP_RECHECK_SECONDS = 60 * 60;
+const SESSION_ACTIVITY_TOUCH_SECONDS = 60 * 5;
 const OAUTH_TTL_SECONDS = 60 * 10;
 
 const jwks = createRemoteJWKSet(new URL(GOOGLE_JWKS_URL));
+const pendingSessionCookies = new WeakMap<Request, string>();
 
 export function getRuntimeEnv(localsEnv?: AuthEnv): AuthEnv {
 	return (localsEnv ?? import.meta.env) as AuthEnv;
@@ -183,12 +205,17 @@ export async function updateMemberProfile(
 	await db.prepare(sql).bind(...values).run();
 }
 
-export async function createSession(env: AuthEnv, data: SessionData, secureCookie: boolean) {
+export async function createSession(env: AuthEnv, data: SessionInput, secureCookie: boolean) {
+	const now = Date.now();
+	const session = toSessionData(data, now);
+	if (!session) {
+		throw new Error("Invalid session data.");
+	}
 	return createSignedCookie(
 		env,
 		getSessionCookieName(env),
-		data,
-		SESSION_TTL_SECONDS,
+		session,
+		SESSION_IDLE_TTL_SECONDS,
 		secureCookie
 	);
 }
@@ -213,14 +240,64 @@ export async function readOAuthState(request: Request, env: AuthEnv) {
 }
 
 export async function readSession(request: Request, env: AuthEnv) {
-	const data = await readSignedCookie<SessionData>(request, env, getSessionCookieName(env));
+	const raw = await readSignedCookie<SessionInput>(request, env, getSessionCookieName(env));
+	if (!raw) {
+		return null;
+	}
+	const data = toSessionData(raw, Date.now());
 	if (!data) {
+		await queueSessionClear(request, env);
 		return null;
 	}
-	if (Date.now() > data.exp) {
+	const now = Date.now();
+	if (now > data.exp || now > data.absoluteExp || now - data.lastSeenAt > SESSION_IDLE_TTL_SECONDS * 1000) {
+		await queueSessionClear(request, env);
 		return null;
 	}
-	return data;
+
+	let next = data;
+	let shouldSetCookie = !hasSessionMetadata(raw);
+	const needsMembershipRecheck =
+		now - data.membershipCheckedAt >= SESSION_MEMBERSHIP_RECHECK_SECONDS * 1000;
+
+	if (needsMembershipRecheck) {
+		const member = await getMember(env, data.email);
+		if (!member) {
+			await queueSessionClear(request, env);
+			return null;
+		}
+		next = {
+			...next,
+			name: member.name || undefined,
+			alias: member.alias || undefined,
+			role: member.role,
+			membershipCheckedAt: now
+		};
+		shouldSetCookie = true;
+	}
+
+	if (now - next.lastSeenAt >= SESSION_ACTIVITY_TOUCH_SECONDS * 1000) {
+		next = {
+			...next,
+			lastSeenAt: now,
+			exp: Math.min(next.absoluteExp, now + SESSION_IDLE_TTL_SECONDS * 1000)
+		};
+		shouldSetCookie = true;
+	}
+
+	if (shouldSetCookie) {
+		const secureCookie = new URL(request.url).protocol === "https:";
+		const cookie = await createSession(env, next, secureCookie);
+		pendingSessionCookies.set(request, cookie);
+	}
+
+	return next;
+}
+
+export function consumePendingSessionCookie(request: Request) {
+	const cookie = pendingSessionCookies.get(request) ?? null;
+	pendingSessionCookies.delete(request);
+	return cookie;
 }
 
 export function getRedirectUri(env: AuthEnv): string {
@@ -233,6 +310,87 @@ export function getRedirectUri(env: AuthEnv): string {
 
 export function getSessionCookieName(env: AuthEnv): string {
 	return getEnv(env, "SESSION_COOKIE_NAME") || DEFAULT_SESSION_COOKIE;
+}
+
+function toSessionData(data: SessionInput, now: number): SessionData | null {
+	const email = typeof data.email === "string" ? data.email.trim().toLowerCase() : "";
+	if (!email) {
+		return null;
+	}
+	if (data.role !== "admin" && data.role !== "member") {
+		return null;
+	}
+
+	const issuedAt =
+		readTimestamp(data.issuedAt) ??
+		inferLegacyIssuedAt(readTimestamp(data.exp), now) ??
+		now;
+	const absoluteExp =
+		readTimestamp(data.absoluteExp) ?? issuedAt + SESSION_ABSOLUTE_TTL_SECONDS * 1000;
+	const lastSeenAt = clampTimestamp(
+		readTimestamp(data.lastSeenAt) ?? issuedAt,
+		issuedAt,
+		now
+	);
+	const membershipCheckedAt = clampTimestamp(
+		readTimestamp(data.membershipCheckedAt) ?? issuedAt,
+		issuedAt,
+		now
+	);
+	const exp = Math.min(
+		readTimestamp(data.exp) ?? lastSeenAt + SESSION_IDLE_TTL_SECONDS * 1000,
+		absoluteExp
+	);
+
+	return {
+		email,
+		name: typeof data.name === "string" ? data.name : undefined,
+		alias: typeof data.alias === "string" ? data.alias : undefined,
+		picture: typeof data.picture === "string" ? data.picture : undefined,
+		role: data.role,
+		exp,
+		issuedAt,
+		lastSeenAt,
+		membershipCheckedAt,
+		absoluteExp
+	};
+}
+
+function hasSessionMetadata(data: SessionInput) {
+	return (
+		typeof data.issuedAt === "number" &&
+		typeof data.lastSeenAt === "number" &&
+		typeof data.membershipCheckedAt === "number" &&
+		typeof data.absoluteExp === "number"
+	);
+}
+
+async function queueSessionClear(request: Request, env: AuthEnv) {
+	const secureCookie = new URL(request.url).protocol === "https:";
+	const cookie = await clearSession(env, secureCookie);
+	pendingSessionCookies.set(request, cookie);
+}
+
+function inferLegacyIssuedAt(exp: number | null, now: number) {
+	if (!exp) {
+		return null;
+	}
+	const inferred = exp - LEGACY_SESSION_TTL_SECONDS * 1000;
+	if (!Number.isFinite(inferred) || inferred <= 0 || inferred > now) {
+		return null;
+	}
+	return inferred;
+}
+
+function readTimestamp(value: unknown): number | null {
+	if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+		return null;
+	}
+	return value;
+}
+
+function clampTimestamp(value: number, min: number, max: number) {
+	return Math.min(Math.max(value, min), max);
 }
 
 async function createSignedCookie(
@@ -281,7 +439,11 @@ async function readSignedCookie<T>(
 		return null;
 	}
 	const decoded = base64UrlDecode(payload);
-	return JSON.parse(decoded) as T;
+	try {
+		return JSON.parse(decoded) as T;
+	} catch {
+		return null;
+	}
 }
 
 function createClearedCookie(name: string, secureCookie: boolean) {
@@ -385,9 +547,9 @@ function base64UrlDecode(value: string): string {
 	const base64 = value.replace(/-/g, "+").replace(/_/g, "/");
 	const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=");
 	const binary = atob(padded);
-	let result = "";
+	const bytes = new Uint8Array(binary.length);
 	for (let i = 0; i < binary.length; i += 1) {
-		result += String.fromCharCode(binary.charCodeAt(i));
+		bytes[i] = binary.charCodeAt(i);
 	}
-	return result;
+	return new TextDecoder().decode(bytes);
 }

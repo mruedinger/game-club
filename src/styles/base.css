@@ -441,6 +441,7 @@ main {
 	border: 1px solid var(--border);
 	background: rgba(255, 255, 255, 0.72);
 	cursor: pointer;
+	animation: rise 0.5s ease both;
 }
 
 .game-cover {
@@ -707,6 +708,79 @@ main {
 .form-error {
 	color: #8b1e24;
 	font-size: 0.85rem;
+}
+
+.suggestions {
+	list-style: none;
+	margin: 0;
+	display: grid;
+	gap: 0;
+	padding: 0;
+	border-radius: 12px;
+	border: 1px solid rgba(33, 51, 70, 0.08);
+	background: rgba(255, 255, 255, 0.95);
+	cursor: pointer;
+	max-width: 100%;
+	box-sizing: border-box;
+}
+
+.suggestions:empty {
+	display: none;
+}
+
+.suggestion-item {
+	background: transparent;
+	border: 0;
+	border-radius: 0;
+	box-shadow: none;
+	color: var(--ink-soft);
+	cursor: pointer;
+	user-select: none;
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+	font-weight: 500;
+	letter-spacing: 0.01em;
+	text-align: left;
+	padding: 0.4rem 0.75rem;
+	border-bottom: 1px solid rgba(33, 51, 70, 0.06);
+	border-left: 3px solid transparent;
+	text-transform: none;
+	transition: background-color 120ms ease;
+	width: 100%;
+	max-width: 100%;
+	box-sizing: border-box;
+}
+
+.suggestion-item * {
+	cursor: pointer;
+}
+
+.suggestion-item::before {
+	content: "";
+	width: 6px;
+	height: 6px;
+	border-radius: 999px;
+	background: var(--accent);
+	opacity: 0.35;
+}
+
+.suggestion-item:hover {
+	background-color: rgba(210, 228, 248, 0.95) !important;
+	border-left-color: rgba(59, 110, 165, 0.7);
+}
+
+.suggestion-item:hover::before {
+	opacity: 0.8;
+}
+
+.suggestion-item:focus-visible {
+	outline: 2px solid rgba(59, 110, 165, 0.35);
+	outline-offset: -1px;
+}
+
+.suggestion-item:last-child {
+	border-bottom: none;
 }
 
 .editable {

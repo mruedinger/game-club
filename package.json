@@ -7,15 +7,20 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "test:e2e": "playwright test"
+    "test:e2e": "SESSION_SECRET=e2e-session-secret PLAYWRIGHT_BROWSERS_PATH=.cache/ms-playwright playwright test",
+    "test:e2e:install": "PLAYWRIGHT_BROWSERS_PATH=.cache/ms-playwright playwright install chromium",
+    "db:migrate:dev": "wrangler d1 migrations apply game-club-dev --remote --env dev",
+    "db:migrate:prod": "wrangler d1 migrations apply game-club --remote --env production",
+    "db:bootstrap:dev": "wrangler d1 execute game-club-dev --remote --file schema/bootstrap.sql --env dev",
+    "db:bootstrap:prod": "wrangler d1 execute game-club --remote --file schema/bootstrap.sql --env production"
   },
   "dependencies": {
-    "@astrojs/cloudflare": "^12.6.12",
-    "astro": "^5.16.6",
+    "astro": "^5.17.1",
     "jose": "^6.1.3"
   },
   "devDependencies": {
-    "@playwright/test": "^1.52.0",
-    "wrangler": "^4.58.0"
+    "@astrojs/cloudflare": "^12.6.12",
+    "@playwright/test": "^1.58.2",
+    "wrangler": "^4.63.0"
   }
 }

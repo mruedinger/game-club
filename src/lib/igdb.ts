@@ -1,3 +1,5 @@
+import { fetchWithTimeoutRetry } from "./http";
+
 type IgdbExternalGame = {
 	game?: number;
 };
@@ -64,14 +66,24 @@ async function resolveGameIdBySteamId(
 	clientId: string,
 	accessToken: string
 ): Promise<number | null> {
-	const response = await fetch("https://api.igdb.com/v4/external_games", {
-		method: "POST",
-		headers: {
-			"Client-ID": clientId,
-			Authorization: `Bearer ${accessToken}`
-		},
-		body: `fields game; where external_game_source = 1 & uid = "${steamAppId}"; limit 1;`
-	});
+	let response: Response;
+	try {
+		response = await fetchWithTimeoutRetry(
+			"https://api.igdb.com/v4/external_games",
+			{
+				method: "POST",
+				headers: {
+					"Client-ID": clientId,
+					Authorization: `Bearer ${accessToken}`
+				},
+				body: `fields game; where external_game_source = 1 & uid = "${steamAppId}"; limit 1;`
+			},
+			{ timeoutMs: 2000, retries: 1 }
+		);
+	} catch {
+		console.warn(`[IGDB] external lookup request failed for steam app ${steamAppId}`);
+		return null;
+	}
 	if (!response.ok) {
 		console.warn(
 			`[IGDB] external lookup status ${response.status} ${await readErrorBody(response)}`
@@ -92,14 +104,24 @@ async function fetchTimeToBeatByGameId(
 	clientId: string,
 	accessToken: string
 ): Promise<IgdbTimeToBeat | null> {
-	const response = await fetch("https://api.igdb.com/v4/game_time_to_beats", {
-		method: "POST",
-		headers: {
-			"Client-ID": clientId,
-			Authorization: `Bearer ${accessToken}`
-		},
-		body: `fields normally; where game_id = ${gameId}; limit 1;`
-	});
+	let response: Response;
+	try {
+		response = await fetchWithTimeoutRetry(
+			"https://api.igdb.com/v4/game_time_to_beats",
+			{
+				method: "POST",
+				headers: {
+					"Client-ID": clientId,
+					Authorization: `Bearer ${accessToken}`
+				},
+				body: `fields normally; where game_id = ${gameId}; limit 1;`
+			},
+			{ timeoutMs: 2000, retries: 1 }
+		);
+	} catch {
+		console.warn(`[IGDB] time-to-beat request failed for game id ${gameId}`);
+		return null;
+	}
 	if (!response.ok) {
 		console.warn(
 			`[IGDB] time-to-beat(game) status ${response.status} ${await readErrorBody(response)}`
@@ -128,7 +150,17 @@ async function getAccessToken(env: Record<string, unknown>) {
 	url.searchParams.set("client_secret", clientSecret);
 	url.searchParams.set("grant_type", "client_credentials");
 
-	const response = await fetch(url.toString(), { method: "POST" });
+	let response: Response;
+	try {
+		response = await fetchWithTimeoutRetry(
+			url.toString(),
+			{ method: "POST" },
+			{ timeoutMs: 2000, retries: 1 }
+		);
+	} catch {
+		console.warn("[IGDB] token request failed");
+		return null;
+	}
 	if (!response.ok) {
 		console.warn(`[IGDB] token status ${response.status}`);
 		return null;

@@ -16,9 +16,16 @@ type D1Database = {
 		bind: (...args: unknown[]) => {
 			all: <T>() => Promise<{ results: T[] }>;
 			first: <T>() => Promise<T | null>;
-			run: () => Promise<{ success: boolean }>;
+			run: () => Promise<{ success: boolean; meta?: { changes?: number } }>;
 		};
 	};
+	batch: (
+		statements: Array<{
+			all: <T>() => Promise<{ results: T[] }>;
+			first: <T>() => Promise<T | null>;
+			run: () => Promise<{ success: boolean; meta?: { changes?: number } }>;
+		}>
+	) => Promise<unknown>;
 };
 
 export const prerender = false;
@@ -66,6 +73,16 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
 	if (typeof body?.submitted_by_email === "string") {
 		const email = body.submitted_by_email.trim().toLowerCase();
 		if (!email) return new Response("Submitted by email is required.", { status: 400 });
+		if (!isValidEmail(email)) {
+			return new Response("User email address is malformed.", { status: 400 });
+		}
+		const member = await db
+			.prepare("select email from members where email = ?1 limit 1")
+			.bind(email)
+			.first<{ email: string }>();
+		if (!member) {
+			return new Response("Submitted by email must belong to an existing member.", { status: 400 });
+		}
 		updates.push(`submitted_by_email = ?${values.length + 1}`);
 		values.push(email);
 	}
@@ -80,6 +97,9 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
 
 	if (typeof body?.played_month === "string") {
 		const month = body.played_month.trim();
+		if (month && !isValidPlayedMonth(month)) {
+			return new Response("Invalid played month. Use YYYY-MM.", { status: 400 });
+		}
 		updates.push(`played_month = ?${values.length + 1}`);
 		values.push(month || null);
 	}
@@ -105,19 +125,31 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
 	}
 
 	const newStatus = typeof body?.status === "string" ? body.status : null;
-	if (newStatus === "current") {
-		const playedMonth = getCurrentMonth();
-		await db
-			.prepare(
-				"update games set status = 'played', played_month = coalesce(played_month, ?1) where status = 'current' and id != ?2"
-			)
-			.bind(playedMonth, id)
-			.run();
-	}
-
 	const sql = `update games set ${updates.join(", ")} where id = ?${values.length + 1}`;
 	values.push(id);
-	await db.prepare(sql).bind(...values).run();
+	const updateStatement = db.prepare(sql).bind(...values);
+
+		try {
+			if (newStatus === "current") {
+				const playedMonth = getCurrentMonth();
+				await db.batch([
+					db
+						.prepare(
+							"update games set status = 'played', played_month = coalesce(played_month, ?1) where status = 'current' and id != ?2 and exists(select 1 from games where id = ?2)"
+						)
+						.bind(playedMonth, id),
+					updateStatement
+				]);
+		} else {
+			await updateStatement.run();
+		}
+	} catch (error) {
+		const mapped = mapAdminGameConstraintError(error);
+		if (mapped) {
+			return mapped;
+		}
+		throw error;
+	}
 
 	const updated = await db
 		.prepare(
@@ -179,12 +211,13 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
 		return new Response("Game not found.", { status: 404 });
 	}
 
-	await db
-		.prepare("delete from poll_votes where choice_1 = ?1 or choice_2 = ?1 or choice_3 = ?1")
-		.bind(id)
-		.run();
-	await db.prepare("delete from poll_games where game_id = ?1").bind(id).run();
-	await db.prepare("delete from games where id = ?1").bind(id).run();
+	await db.batch([
+		db.prepare("delete from poll_votes where choice_1 = ?1 or choice_2 = ?1 or choice_3 = ?1").bind(
+			id
+		),
+		db.prepare("delete from poll_games where game_id = ?1").bind(id),
+		db.prepare("delete from games where id = ?1").bind(id)
+	]);
 
 	await db
 		.prepare(
@@ -259,4 +292,34 @@ function getCurrentMonth() {
 	const year = now.getFullYear();
 	const month = String(now.getMonth() + 1).padStart(2, "0");
 	return `${year}-${month}`;
+}
+
+function isValidPlayedMonth(value: string) {
+	if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(value)) return false;
+	return true;
+}
+
+function isValidEmail(value: string) {
+	return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function mapAdminGameConstraintError(error: unknown): Response | null {
+	const message = getErrorMessage(error).toLowerCase();
+	if (!message.includes("constraint")) {
+		return null;
+	}
+	if (message.includes("idx_games_single_current") || message.includes("games.status")) {
+		return new Response("Another game is already set as current.", { status: 409 });
+	}
+	if (message.includes("foreign key")) {
+		return new Response("Submitted by email must belong to an existing member.", { status: 400 });
+	}
+	return null;
+}
+
+function getErrorMessage(error: unknown) {
+	if (error instanceof Error) {
+		return error.message;
+	}
+	return String(error ?? "");
 }
