@@ -54,8 +54,7 @@ npx wrangler secret put ITAD_API_KEY -c wrangler.itad-sync.toml
 - Full current schema snapshot: `schema/bootstrap.sql`.
 
 ## Project Docs
-- `ARCHITECTURE.md` for platform and data model notes
-- `DECISIONS.md` for key product and engineering decisions
+- `PROJECT_BRIEF.md` is the authoritative project context and decision record
 
 ## Repo Layout
 - `src/pages/` Astro pages (routes)
