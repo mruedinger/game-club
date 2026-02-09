@@ -31,6 +31,7 @@ This project maintains a website that is a companion tool for a video game club 
 - Centralized UI styles: All colors/themes/spacing/typography/etc MUST be consistent across the site, and maintained in `src/styles/base.css`.
 - User display priority: When displaying a user's name on the site, prefer this order: Alias > First Name > "Member".
 - Privacy: Never expose member email addresses to unauthenticated/public users.
+- Member deletion policy: Hard-delete members only when they have no submitted games; otherwise deactivate (`active=0`) and require game reassignment/removal before deletion.
 - Auth sessions: Sliding session with 45-day idle timeout, 180-day absolute lifetime, and 60-minute membership/role revalidation window.
 - DB invariants: Enforce single current game, single active poll, and unique game identity (normalized title + Steam app id when present) at schema level.
 - External API reliability: Use bounded timeouts with limited retry/backoff for third-party API calls to avoid long-hanging requests.

@@ -301,12 +301,19 @@ export const prerender = false;
 						avatar.appendChild(fallback);
 					}
 
-					const name = document.createElement("div");
-					name.className = "member-name";
-					name.textContent = member.name || "—";
-					userWrap.appendChild(avatar);
-					userWrap.appendChild(name);
-					userCell.appendChild(userWrap);
+						const name = document.createElement("div");
+						name.className = "member-name";
+						name.textContent = member.name || "—";
+						if (member.active === 0) {
+							const inactive = document.createElement("span");
+							inactive.className = "member-status member-status-inactive";
+							inactive.textContent = "Inactive";
+							name.appendChild(document.createTextNode(" "));
+							name.appendChild(inactive);
+						}
+						userWrap.appendChild(avatar);
+						userWrap.appendChild(name);
+						userCell.appendChild(userWrap);
 
 					const aliasCell = document.createElement("td");
 					aliasCell.textContent = member.alias || "—";
@@ -757,17 +764,20 @@ export const prerender = false;
 							headers: { "Content-Type": "application/json" },
 							body: JSON.stringify({ email: activeMember })
 						});
-						if (response.ok) {
-							memberModal.close();
-							loadMembers();
-						} else if (memberModalError) {
-							const message = await response.text();
-							memberModalError.textContent = message || "Unable to delete member.";
-							memberModalError.classList.remove("hidden");
+							if (response.ok) {
+								memberModal.close();
+								loadMembers();
+							} else if (memberModalError) {
+								const message = await response.text();
+								memberModalError.textContent = message || "Unable to delete member.";
+								memberModalError.classList.remove("hidden");
+								if (response.status === 409) {
+									loadMembers();
+								}
+							}
 						}
-					}
-				});
-			}
+					});
+				}
 
 		</script>
 	</body>
@@ -800,6 +810,23 @@ export const prerender = false;
 
 	.member-name {
 		font-weight: 600;
+	}
+
+	.member-status {
+		display: inline-flex;
+		align-items: center;
+		padding: 0.08rem 0.38rem;
+		border-radius: 999px;
+		font-size: 0.66rem;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+	}
+
+	.member-status-inactive {
+		background: rgba(140, 90, 90, 0.14);
+		color: #8a2f2f;
+		border: 1px solid rgba(140, 90, 90, 0.28);
 	}
 
 	.member-email {
