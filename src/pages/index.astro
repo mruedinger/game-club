@@ -1165,6 +1165,8 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 				function bindSearch(input, list) {
 					if (!input || !list) return;
 					let searchTimer;
+					let requestVersion = 0;
+					let activeController = null;
 					input.addEventListener("input", () => {
 						clearFormError();
 						if (input === titleInput) {
@@ -1172,18 +1174,44 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 						}
 						const value = input.value.trim();
 						if (searchTimer) clearTimeout(searchTimer);
+						if (activeController) {
+							activeController.abort();
+							activeController = null;
+						}
 						if (!value) {
+							requestVersion += 1;
 							clearSuggestions(list);
 							return;
 						}
+						const nextVersion = requestVersion + 1;
+						requestVersion = nextVersion;
 						searchTimer = setTimeout(async () => {
-							const response = await fetch(`/api/games/search?term=${encodeURIComponent(value)}`);
-							if (!response.ok) {
+							const controller = new AbortController();
+							activeController = controller;
+							try {
+								const response = await fetch(
+									`/api/games/search?term=${encodeURIComponent(value)}`,
+									{ signal: controller.signal }
+								);
+								if (nextVersion !== requestVersion) return;
+								if (!response.ok) {
+									renderSuggestions(list, []);
+									return;
+								}
+								const data = await response.json();
+								if (nextVersion !== requestVersion) return;
+								renderSuggestions(list, data.results || []);
+							} catch (error) {
+								if (nextVersion !== requestVersion) return;
+								if (error instanceof Error && error.name === "AbortError") {
+									return;
+								}
 								renderSuggestions(list, []);
-								return;
+							} finally {
+								if (activeController === controller) {
+									activeController = null;
+								}
 							}
-							const data = await response.json();
-							renderSuggestions(list, data.results || []);
 						}, 300);
 					});
 				}
