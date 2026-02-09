@@ -73,6 +73,16 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
 	if (typeof body?.submitted_by_email === "string") {
 		const email = body.submitted_by_email.trim().toLowerCase();
 		if (!email) return new Response("Submitted by email is required.", { status: 400 });
+		if (!isValidEmail(email)) {
+			return new Response("Submitted by email is invalid.", { status: 400 });
+		}
+		const member = await db
+			.prepare("select email from members where email = ?1 limit 1")
+			.bind(email)
+			.first<{ email: string }>();
+		if (!member) {
+			return new Response("Submitted by email must belong to an existing member.", { status: 400 });
+		}
 		updates.push(`submitted_by_email = ?${values.length + 1}`);
 		values.push(email);
 	}
@@ -87,6 +97,9 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
 
 	if (typeof body?.played_month === "string") {
 		const month = body.played_month.trim();
+		if (month && !isValidPlayedMonth(month)) {
+			return new Response("Invalid played month. Use YYYY-MM.", { status: 400 });
+		}
 		updates.push(`played_month = ?${values.length + 1}`);
 		values.push(month || null);
 	}
@@ -279,6 +292,15 @@ function getCurrentMonth() {
 	const year = now.getFullYear();
 	const month = String(now.getMonth() + 1).padStart(2, "0");
 	return `${year}-${month}`;
+}
+
+function isValidPlayedMonth(value: string) {
+	if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(value)) return false;
+	return true;
+}
+
+function isValidEmail(value: string) {
+	return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
 function mapAdminGameConstraintError(error: unknown): Response | null {
