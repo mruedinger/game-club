@@ -11,6 +11,7 @@
 8. Added ratings API (`/api/games/rating`) supporting set/update/clear and authenticated member-rating detail retrieval.
 9. Added aggregate rating display on current and played cards, plus full rating UI in game detail modal (aggregate, self-rating controls, member rating list for signed-in users).
 10. Expanded E2E coverage for ratings auth guard and payload validation paths.
+11. Refined ratings UX for compactness: removed redundant detail footer Close button, moved rating input into a dedicated Rate modal, added rate actions to current-card/detail footer, and switched individual member ratings in detail to an on-hover aggregate popover.
 
 ## 2026-02-09
 1. Moved games page content to the Home page and removed the separate Games page flow.
