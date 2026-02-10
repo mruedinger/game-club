@@ -510,10 +510,14 @@ main {
 	justify-content: space-between;
 }
 
-.game-detail-header-actions {
+.game-detail-title-row {
 	display: flex;
 	align-items: center;
 	gap: 0.5rem;
+}
+
+.game-detail-title {
+	margin: 0;
 }
 
 .game-detail-links {

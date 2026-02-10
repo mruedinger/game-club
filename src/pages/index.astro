@@ -461,8 +461,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 			<dialog class="modal" id="game-detail-modal">
 				<form class="modal-card game-detail-card" method="dialog">
 					<header>
-						<h3 class="game-detail-title">Game title</h3>
-						<div class="game-detail-header-actions">
+						<div class="game-detail-title-row">
 							<button
 								class="ghost icon-button favorite-toggle game-detail-favorite"
 								type="button"
@@ -472,10 +471,11 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 							>
 								<span class="favorite-icon" aria-hidden="true">♡</span>
 							</button>
-							<button class="ghost icon-button" type="button" data-action="close-game-detail" aria-label="Close">
-								×
-							</button>
+							<h3 class="game-detail-title">Game title</h3>
 						</div>
+						<button class="ghost icon-button" type="button" data-action="close-game-detail" aria-label="Close">
+							×
+						</button>
 					</header>
 						<div class="game-detail-body">
 							<img class="game-detail-cover" alt="" />
