@@ -22,6 +22,8 @@ type Game = {
 	current_price_cents?: number;
 	best_price_cents?: number;
 	time_to_beat_minutes?: number;
+	steam_review_score?: number;
+	steam_review_desc?: string;
 	lifetime_poll_points?: number;
 	is_favorite?: number;
 	rating_count?: number;
@@ -95,6 +97,30 @@ function formatTimeToBeat(minutes?: number | null) {
 	const hours = Math.floor(minutes / 60);
 	const mins = Math.round(minutes % 60);
 	return `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
+}
+
+function mapSteamReviewLabel(score?: number | null) {
+	if (typeof score !== "number" || !Number.isFinite(score)) return null;
+	const key = Math.trunc(score);
+	if (key === 0) return "No user reviews";
+	if (key === 1) return "Overwhelmingly Negative";
+	if (key === 2) return "Very Negative";
+	if (key === 3) return "Negative";
+	if (key === 4) return "Mostly Negative";
+	if (key === 5) return "Mixed";
+	if (key === 6) return "Mostly Positive";
+	if (key === 7) return "Positive";
+	if (key === 8) return "Very Positive";
+	if (key === 9) return "Overwhelmingly Positive";
+	return null;
+}
+
+function formatSteamReviewDesc(
+	score?: number | null,
+	desc?: string | null
+) {
+	if (typeof desc === "string" && desc.trim()) return desc.trim();
+	return mapSteamReviewLabel(score) || "-";
 }
 
 function getSubmitter(game: Game) {
@@ -183,14 +209,18 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 								) : (
 									<div class="cover-placeholder">Cover coming soon</div>
 								)}
-							</div>
+								</div>
 								<h4 class="game-title">Current Game: {currentGame.title}</h4>
-									{(() => {
-										const tags = formatTags(currentGame.tags_json);
-										const ttb = formatTtbHours(currentGame.time_to_beat_minutes);
-										return (
-											<p class="meta-line tight">
-											{ttb ? `${ttb} | ${tags}` : tags}
+								{(() => {
+									const tags = formatTags(currentGame.tags_json);
+									const ttb = formatTtbHours(currentGame.time_to_beat_minutes);
+									const steamReview = formatSteamReviewDesc(
+										currentGame.steam_review_score,
+										currentGame.steam_review_desc
+									);
+									return (
+										<p class="meta-line tight">
+											{`${tags} | ${ttb || "-"} | ${steamReview}`}
 										</p>
 									);
 								})()}
@@ -319,19 +349,20 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 						</div>
 						<p class="form-error hidden" id="backlog-feedback" role="alert"></p>
 						<div class="table-wrapper backlog-table-wrapper">
-						<table class="games-table">
-							<thead>
-								<tr>
-									<th data-sort="favorite" class="sortable favorite-header">Favorite</th>
-									<th data-sort="title" class="sortable">Title</th>
-									<th data-sort="submitter" class="sortable">Submitter</th>
-									<th data-sort="ttb" class="sortable">Time to beat</th>
-									<th data-sort="current" class="sortable">Current low</th>
-									<th data-sort="points" class="sortable">PTS</th>
-								</tr>
-							</thead>
-							<tbody>
-								{backlogGames.map((game) => (
+							<table class="games-table">
+								<thead>
+									<tr>
+										<th data-sort="favorite" class="sortable favorite-header">Favorite</th>
+										<th data-sort="title" class="sortable">Title</th>
+										<th data-sort="reviews" class="sortable">Reviews</th>
+										<th data-sort="submitter" class="sortable">Submitter</th>
+										<th data-sort="ttb" class="sortable">Time to beat</th>
+										<th data-sort="current" class="sortable">Current low</th>
+										<th data-sort="points" class="sortable">PTS</th>
+									</tr>
+								</thead>
+								<tbody>
+									{backlogGames.map((game) => (
 										<tr
 											class:list={[
 												"game-row",
@@ -343,21 +374,31 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 											data-title-sort={game.title.toLowerCase()}
 											data-submitter={getSubmitter(game)}
 											data-submitter-sort={getSubmitter(game).toLowerCase()}
-											data-ttb={
-												typeof game.time_to_beat_minutes === "number"
-													? String(game.time_to_beat_minutes)
-													: ""
-											}
-											data-ttb-minutes={
-												typeof game.time_to_beat_minutes === "number"
-													? String(game.time_to_beat_minutes)
-													: ""
-											}
-											data-current-price={
-												typeof game.current_price_cents === "number"
-													? String(game.current_price_cents)
-													: ""
-											}
+												data-ttb={
+													typeof game.time_to_beat_minutes === "number"
+														? String(game.time_to_beat_minutes)
+														: ""
+												}
+												data-ttb-minutes={
+													typeof game.time_to_beat_minutes === "number"
+														? String(game.time_to_beat_minutes)
+														: ""
+												}
+												data-review-score={
+													typeof game.steam_review_score === "number"
+														? String(game.steam_review_score)
+														: ""
+												}
+												data-review-desc={
+													typeof game.steam_review_desc === "string"
+														? game.steam_review_desc
+														: ""
+												}
+												data-current-price={
+													typeof game.current_price_cents === "number"
+														? String(game.current_price_cents)
+														: ""
+												}
 											data-best-price={
 												typeof game.best_price_cents === "number"
 													? String(game.best_price_cents)
@@ -402,25 +443,26 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 										</td>
 										<td>
 											<div class="game-title-cell">
-												<div class="game-icon">
-													{game.itad_boxart_url || game.cover_art_url ? (
-														<img src={game.itad_boxart_url || game.cover_art_url} alt="" loading="lazy" />
-													) : (
-														<span class="cover-placeholder">-</span>
-													)}
+													<div class="game-icon">
+														{game.itad_boxart_url || game.cover_art_url ? (
+															<img src={game.itad_boxart_url || game.cover_art_url} alt="" loading="lazy" />
+														) : (
+															<span class="cover-placeholder">-</span>
+														)}
+													</div>
+													<span class="game-title">{game.title}</span>
 												</div>
-												<span class="game-title">{game.title}</span>
-											</div>
-										</td>
-										<td class="muted">{getSubmitter(game)}</td>
-										<td class="muted">{formatTimeToBeat(game.time_to_beat_minutes)}</td>
-										<td class="muted">{formatUsd(game.current_price_cents)}</td>
-										<td class="muted">{typeof game.lifetime_poll_points === "number" ? game.lifetime_poll_points : 0}</td>
-									</tr>
-								))}
-							</tbody>
-						</table>
-					</div>
+											</td>
+											<td class="muted">{formatSteamReviewDesc(game.steam_review_score, game.steam_review_desc)}</td>
+											<td class="muted">{getSubmitter(game)}</td>
+											<td class="muted">{formatTimeToBeat(game.time_to_beat_minutes)}</td>
+											<td class="muted">{formatUsd(game.current_price_cents)}</td>
+											<td class="muted">{typeof game.lifetime_poll_points === "number" ? game.lifetime_poll_points : 0}</td>
+										</tr>
+									))}
+								</tbody>
+							</table>
+						</div>
 					<div class="row-tooltip" role="tooltip" aria-hidden="true">
 						<div class="tooltip-description"></div>
 						<div class="tooltip-tags"></div>
@@ -431,7 +473,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 					<div class="section-head">
 						<h2>Played</h2>
 					</div>
-					<div class="games-grid">
+						<div class="games-grid">
 							{playedGames.map((game, index) => (
 								<article
 									class="game-card"
@@ -448,39 +490,49 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 									data-current-price={
 										typeof game.current_price_cents === "number"
 											? String(game.current_price_cents)
-										: ""
-								}
-								data-ttb-minutes={
-									typeof game.time_to_beat_minutes === "number"
-										? String(game.time_to_beat_minutes)
-										: ""
-								}
-								data-best-price={
-									typeof game.best_price_cents === "number"
-										? String(game.best_price_cents)
-										: ""
-								}
-								data-status={game.status}
-								data-favorite={game.is_favorite ? "1" : "0"}
-								data-rating-count={typeof game.rating_count === "number" ? String(game.rating_count) : "0"}
-								data-rating-average={
-									typeof game.rating_average === "number"
-										? String(game.rating_average)
-										: ""
-								}
-								data-my-rating={typeof game.my_rating === "number" ? String(game.my_rating) : ""}
-							>
-								<h3>{game.title}</h3>
-								<div class="game-cover">
-									{game.cover_art_url ? (
-										<img
-											src={game.cover_art_url}
-											alt={`${game.title} cover art`}
-											loading="lazy"
-										/>
-									) : (
-										<div class="cover-placeholder">Cover coming soon</div>
-									)}
+											: ""
+									}
+									data-ttb-minutes={
+										typeof game.time_to_beat_minutes === "number"
+											? String(game.time_to_beat_minutes)
+											: ""
+									}
+									data-review-score={
+										typeof game.steam_review_score === "number"
+											? String(game.steam_review_score)
+											: ""
+									}
+									data-review-desc={
+										typeof game.steam_review_desc === "string"
+											? game.steam_review_desc
+											: ""
+									}
+									data-best-price={
+										typeof game.best_price_cents === "number"
+											? String(game.best_price_cents)
+											: ""
+									}
+									data-status={game.status}
+									data-favorite={game.is_favorite ? "1" : "0"}
+									data-rating-count={typeof game.rating_count === "number" ? String(game.rating_count) : "0"}
+									data-rating-average={
+										typeof game.rating_average === "number"
+											? String(game.rating_average)
+											: ""
+									}
+									data-my-rating={typeof game.my_rating === "number" ? String(game.my_rating) : ""}
+								>
+									<h3>{game.title}</h3>
+									<div class="game-cover">
+										{game.cover_art_url ? (
+											<img
+												src={game.cover_art_url}
+												alt={`${game.title} cover art`}
+												loading="lazy"
+											/>
+										) : (
+											<div class="cover-placeholder">Cover coming soon</div>
+										)}
 									</div>
 									<p class="muted">
 										{formatTags(game.tags_json)}
@@ -1504,6 +1556,10 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 					if (key === "submitter") return row.dataset.submitterSort || "";
 					if (key === "points") return Number.parseInt(row.dataset.lifetimePoints || "0", 10);
 					if (key === "favorite") return Number.parseInt(row.dataset.favorite || "0", 10);
+					if (key === "reviews") {
+						const value = Number.parseInt(row.dataset.reviewScore || "", 10);
+						return Number.isNaN(value) ? null : value;
+					}
 					if (key === "ttb") return Number.parseInt(row.dataset.ttb || "0", 10);
 					if (key === "current") return Number.parseInt(row.dataset.currentPrice || "0", 10);
 					return "";
@@ -1528,6 +1584,20 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 						const bFavorite = Number.parseInt(b.dataset.favorite || "0", 10);
 						const favoriteCompare = (aFavorite - bFavorite) * dir;
 						if (favoriteCompare !== 0) return favoriteCompare;
+						return (a.dataset.titleSort || "").localeCompare(b.dataset.titleSort || "");
+					}
+					if (key === "reviews") {
+						const aReviewScore = getRowValue(a, key);
+						const bReviewScore = getRowValue(b, key);
+						const aMissing = typeof aReviewScore !== "number";
+						const bMissing = typeof bReviewScore !== "number";
+						if (aMissing && bMissing) {
+							return (a.dataset.titleSort || "").localeCompare(b.dataset.titleSort || "");
+						}
+						if (aMissing) return 1;
+						if (bMissing) return -1;
+						const reviewsCompare = (aReviewScore - bReviewScore) * dir;
+						if (reviewsCompare !== 0) return reviewsCompare;
 						return (a.dataset.titleSort || "").localeCompare(b.dataset.titleSort || "");
 					}
 					const aValue = getRowValue(a, key);
@@ -2182,18 +2252,20 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 					const itadSlug = card.dataset.itadSlug || "";
 					const currentPrice = card.dataset.currentPrice || "";
 					const bestPrice = card.dataset.bestPrice || "";
-						const status = card.dataset.status || "";
-						const ttbMinutes = card.dataset.ttbMinutes || "";
-						const ratingCount = card.dataset.ratingCount || "0";
-						const ratingAverage = card.dataset.ratingAverage || "";
-						const myRatingValue = card.dataset.myRating || "";
-						const isMine = card.dataset.isMine === "1";
-						const isPollEligible = card.dataset.pollEligible === "1";
-						const isFavorite = card.dataset.favorite === "1";
-						selectedGameId = card.dataset.id || null;
-						selectedGameIsMine = isMine;
-						selectedGamePollEligible = isPollEligible;
-						selectedGameFavorite = isFavorite;
+					const status = card.dataset.status || "";
+					const ttbMinutes = card.dataset.ttbMinutes || "";
+					const reviewScore = card.dataset.reviewScore || "";
+					const reviewDesc = card.dataset.reviewDesc || "";
+					const ratingCount = card.dataset.ratingCount || "0";
+					const ratingAverage = card.dataset.ratingAverage || "";
+					const myRatingValue = card.dataset.myRating || "";
+					const isMine = card.dataset.isMine === "1";
+					const isPollEligible = card.dataset.pollEligible === "1";
+					const isFavorite = card.dataset.favorite === "1";
+					selectedGameId = card.dataset.id || null;
+					selectedGameIsMine = isMine;
+					selectedGamePollEligible = isPollEligible;
+					selectedGameFavorite = isFavorite;
 					selectedGameMyRating = (() => {
 						const parsed = Number.parseInt(myRatingValue, 10);
 						return Number.isNaN(parsed) ? null : parsed;
@@ -2264,11 +2336,9 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 					}
 					if (detailTags) {
 						const tagLine = tags || "Tags coming soon";
-						if (ttbMinutes) {
-							detailTags.textContent = `${formatTtbHoursForDetail(ttbMinutes)} | ${tagLine}`;
-						} else {
-							detailTags.textContent = tagLine;
-						}
+						const ttbLine = ttbMinutes ? formatTtbHoursForDetail(ttbMinutes) : "-";
+						const reviewLine = formatSteamReviewForDetail(reviewScore, reviewDesc);
+						detailTags.textContent = `${tagLine} | ${ttbLine} | ${reviewLine}`;
 					}
 					if (detailDelete) {
 						detailDelete.classList.toggle("hidden", !isSignedIn);
@@ -2316,6 +2386,24 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 					const rounded = Math.round(hours * 10) / 10;
 					const text = rounded % 1 === 0 ? String(Math.trunc(rounded)) : String(rounded);
 					return `${text} Hours`;
+				}
+
+				function formatSteamReviewForDetail(scoreValue, descValue) {
+					const desc = String(descValue || "").trim();
+					if (desc) return desc;
+					const score = Number.parseInt(String(scoreValue), 10);
+					if (Number.isNaN(score)) return "-";
+					if (score === 0) return "No user reviews";
+					if (score === 1) return "Overwhelmingly Negative";
+					if (score === 2) return "Very Negative";
+					if (score === 3) return "Negative";
+					if (score === 4) return "Mostly Negative";
+					if (score === 5) return "Mixed";
+					if (score === 6) return "Mostly Positive";
+					if (score === 7) return "Positive";
+					if (score === 8) return "Very Positive";
+					if (score === 9) return "Overwhelmingly Positive";
+					return "-";
 				}
 
 				function formatPriceForDetail(value) {

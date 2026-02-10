@@ -19,6 +19,8 @@ type GameRow = {
 	tags_json?: string;
 	description?: string;
 	time_to_beat_minutes?: number;
+	steam_review_score?: number;
+	steam_review_desc?: string;
 	lifetime_poll_points?: number;
 	current_price_cents?: number;
 	best_price_cents?: number;
@@ -63,7 +65,7 @@ export const GET: APIRoute = async ({ locals, request }) => {
 
 	const { results } = await db
 		.prepare(
-			"select games.id, games.title, members.name as submitted_by_name, members.alias as submitted_by_alias, games.status, games.created_at, games.cover_art_url, games.itad_boxart_url, games.tags_json, games.description, games.time_to_beat_minutes, games.current_price_cents, games.best_price_cents, games.played_month, games.steam_app_id, games.itad_game_id, games.itad_slug, " +
+			"select games.id, games.title, members.name as submitted_by_name, members.alias as submitted_by_alias, games.status, games.created_at, games.cover_art_url, games.itad_boxart_url, games.tags_json, games.description, games.time_to_beat_minutes, games.steam_review_score, games.steam_review_desc, games.current_price_cents, games.best_price_cents, games.played_month, games.steam_app_id, games.itad_game_id, games.itad_slug, " +
 				"games.poll_eligible, case when ?1 != '' and games.submitted_by_email = ?1 then 1 else 0 end as is_mine, " +
 				"case when game_favorites.game_id is null then 0 else 1 end as is_favorite " +
 				", coalesce(game_poll_history_points.lifetime_poll_points, 0) as lifetime_poll_points " +
@@ -157,6 +159,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
 			? JSON.stringify(steamData.genres.map((genre) => genre.description))
 			: null;
 	const ttbMinutes = await fetchIgdbTimeMinutes(env, title, steamAppId);
+	const steamReviews = steamAppId
+		? await fetchSteamReviewSummary(steamAppId)
+		: { score: null, desc: null };
 	const currentPriceCents = itadPrices?.currentPriceCents ?? null;
 	const bestPriceCents = itadPrices?.bestPriceCents ?? null;
 
@@ -165,7 +170,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 		if (itadPrices) {
 			inserted = await db
 				.prepare(
-					"insert into games (title, submitted_by_email, status, poll_eligible, cover_art_url, tags_json, description, steam_app_id, itad_game_id, itad_slug, itad_boxart_url, current_price_cents, best_price_cents, price_checked_at, time_to_beat_minutes) values (?1, ?2, 'backlog', 0, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, datetime('now'), ?12) returning id"
+					"insert into games (title, submitted_by_email, status, poll_eligible, cover_art_url, tags_json, description, steam_app_id, itad_game_id, itad_slug, itad_boxart_url, current_price_cents, best_price_cents, price_checked_at, time_to_beat_minutes, steam_review_score, steam_review_desc) values (?1, ?2, 'backlog', 0, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, datetime('now'), ?12, ?13, ?14) returning id"
 				)
 				.bind(
 					title,
@@ -179,13 +184,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
 					itadGame?.boxart ?? null,
 					currentPriceCents,
 					bestPriceCents,
-					ttbMinutes
+					ttbMinutes,
+					steamReviews.score,
+					steamReviews.desc
 				)
 				.first<{ id: number }>();
 		} else {
 			inserted = await db
 				.prepare(
-					"insert into games (title, submitted_by_email, status, poll_eligible, cover_art_url, tags_json, description, steam_app_id, itad_game_id, itad_slug, itad_boxart_url, current_price_cents, best_price_cents, price_checked_at, time_to_beat_minutes) values (?1, ?2, 'backlog', 0, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, null, ?12) returning id"
+					"insert into games (title, submitted_by_email, status, poll_eligible, cover_art_url, tags_json, description, steam_app_id, itad_game_id, itad_slug, itad_boxart_url, current_price_cents, best_price_cents, price_checked_at, time_to_beat_minutes, steam_review_score, steam_review_desc) values (?1, ?2, 'backlog', 0, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, null, ?12, ?13, ?14) returning id"
 				)
 				.bind(
 					title,
@@ -199,7 +206,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
 					itadGame?.boxart ?? null,
 					currentPriceCents,
 					bestPriceCents,
-					ttbMinutes
+					ttbMinutes,
+					steamReviews.score,
+					steamReviews.desc
 				)
 				.first<{ id: number }>();
 		}
@@ -330,6 +339,24 @@ function normalizeSteamAppId(value: unknown): number | null {
 	return null;
 }
 
+function normalizeSteamReviewScore(value: unknown): number | null {
+	const parsed =
+		typeof value === "number"
+			? Math.trunc(value)
+			: typeof value === "string"
+				? Number.parseInt(value, 10)
+				: Number.NaN;
+	if (!Number.isFinite(parsed) || Number.isNaN(parsed)) return null;
+	if (parsed < 0 || parsed > 9) return null;
+	return parsed;
+}
+
+function normalizeSteamReviewDesc(value: unknown): string | null {
+	if (typeof value !== "string") return null;
+	const text = value.trim();
+	return text ? text : null;
+}
+
 export const PATCH: APIRoute = async ({ request, locals }) => {
 	const env = getRuntimeEnv(locals.runtime?.env);
 	const session = await readSession(request, env);
@@ -434,6 +461,34 @@ async function fetchSteamDetails(
 	const entry = payload[String(appId)];
 	if (!entry || !entry.success || !entry.data) return null;
 	return entry.data;
+}
+
+type SteamReviewsResponse = {
+	query_summary?: {
+		review_score?: number | string;
+		review_score_desc?: string;
+	};
+};
+
+async function fetchSteamReviewSummary(
+	appId: number
+): Promise<{ score: number | null; desc: string | null }> {
+	let response: Response;
+	try {
+		response = await fetchWithTimeoutRetry(
+			`https://store.steampowered.com/appreviews/${appId}?json=1&language=english&purchase_type=steam&num_per_page=0`,
+			{},
+			{ timeoutMs: 2000, retries: 1 }
+		);
+	} catch {
+		return { score: null, desc: null };
+	}
+	if (!response.ok) return { score: null, desc: null };
+	const payload = (await response.json()) as SteamReviewsResponse;
+	return {
+		score: normalizeSteamReviewScore(payload?.query_summary?.review_score),
+		desc: normalizeSteamReviewDesc(payload?.query_summary?.review_score_desc)
+	};
 }
 
 function mapGameConstraintError(error: unknown): Response | null {

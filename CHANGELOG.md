@@ -26,6 +26,11 @@
 23. Added Admin page Poll History section and detail modal for inspecting winners/results/voter count and managing validity/deletion.
 24. Expanded E2E coverage for unauthenticated/admin-forbidden access to the new poll history admin endpoint.
 25. Refined Admin Poll History modal UX: removed redundant footer Close/Save buttons and switched validity updates to autosave when toggled.
+26. Added Steam review persistence fields (`steam_review_score`, `steam_review_desc`) to bootstrap schema + migration and ingested them from Steam `appreviews` at game creation time.
+27. Updated home-game payloads (`/api/games`, `/api/games/current`) to include Steam review score/description.
+28. Replaced backlog `MC Score` with `Reviews`, sorting by numeric Steam review score while displaying the familiar Steam review description.
+29. Updated current card and game detail metadata line order to `tags | ttb | review description` using Steam review labels.
+30. Updated smoke/manual test coverage to validate the `Reviews` column and Steam review metadata behavior.
 
 ## 2026-02-09
 1. Moved games page content to the Home page and removed the separate Games page flow.
