@@ -466,18 +466,24 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 									<p class="muted">
 										{formatTags(game.tags_json)}
 									</p>
-									<p
-										class="muted small game-rating-summary"
-										data-game-id={game.id}
-										data-rating-count={typeof game.rating_count === "number" ? String(game.rating_count) : "0"}
-										data-rating-average={
-											typeof game.rating_average === "number"
-												? String(game.rating_average)
-												: ""
-										}
-									>
-										Rating: {formatRatingSummaryText(game.rating_average, game.rating_count)}
-									</p>
+									<div class="game-rating-wrap" data-game-id={game.id}>
+										<p
+											class="muted small game-rating-summary"
+											data-game-id={game.id}
+											data-rating-count={typeof game.rating_count === "number" ? String(game.rating_count) : "0"}
+											data-rating-average={
+												typeof game.rating_average === "number"
+													? String(game.rating_average)
+													: ""
+											}
+											tabindex="0"
+										>
+											Rating: {formatRatingSummaryText(game.rating_average, game.rating_count)}
+										</p>
+										<div class="game-rating-hover">
+											<ul class="game-rating-hover-list" data-game-id={game.id}></ul>
+										</div>
+									</div>
 								</article>
 							))}
 					</div>
@@ -1036,8 +1042,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 				const detailTtbError = document.querySelector(".game-detail-ttb-error");
 				const detailActionError = document.querySelector(".game-detail-action-error");
 				const currentGameRateButton = document.querySelector(".rate-current-game");
-				const currentGameRatingWrap = document.querySelector(".current-game-rating-wrap");
-				const currentGameRatingHoverList = document.querySelector(".game-rating-hover-list");
+				const cardRatingWraps = Array.from(document.querySelectorAll(".game-rating-wrap"));
 				const rateGameModal = document.querySelector("#rate-game-modal");
 				const rateGameTitle = document.querySelector(".rate-game-title");
 				const rateGameError = document.querySelector(".rate-game-error");
@@ -1069,18 +1074,19 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 				if (currentGameRateButton && isSignedIn) {
 					currentGameRateButton.classList.remove("hidden");
 				}
-				if (currentGameRatingWrap) {
-					currentGameRatingWrap.classList.toggle("has-hover", isSignedIn);
-					const gameId = currentGameRatingWrap.dataset.gameId;
-					currentGameRatingWrap.addEventListener("mouseenter", () => {
+				cardRatingWraps.forEach((wrap) => {
+					if (!(wrap instanceof HTMLElement)) return;
+					wrap.classList.toggle("has-hover", isSignedIn);
+					const gameId = wrap.dataset.gameId;
+					wrap.addEventListener("mouseenter", () => {
 						if (!gameId || !isSignedIn) return;
 						ensureGameRatingsLoaded(gameId);
 					});
-					currentGameRatingWrap.addEventListener("focusin", () => {
+					wrap.addEventListener("focusin", () => {
 						if (!gameId || !isSignedIn) return;
 						ensureGameRatingsLoaded(gameId);
 					});
-				}
+				});
 
 				document.addEventListener("click", async (event) => {
 					const target = event.target;
@@ -1394,26 +1400,31 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 					});
 				}
 
-				function renderCurrentGameRatingHover(rows) {
-					if (!currentGameRatingHoverList || !currentGameRatingWrap) return;
-					currentGameRatingHoverList.innerHTML = "";
-					if (!isSignedIn) {
-						currentGameRatingWrap.classList.remove("has-hover");
-						return;
-					}
-					currentGameRatingWrap.classList.add("has-hover");
-					if (!Array.isArray(rows) || rows.length === 0) {
-						const empty = document.createElement("li");
-						empty.className = "muted small game-rating-hover-row";
-						empty.textContent = "No ratings yet.";
-						currentGameRatingHoverList.appendChild(empty);
-						return;
-					}
-					rows.forEach((row) => {
-						const item = document.createElement("li");
-						item.className = "game-rating-hover-row";
-						item.textContent = `${row.member_display_name || "Member"}: ${formatRatingStars(row.rating)}`;
-						currentGameRatingHoverList.appendChild(item);
+				function renderCardRatingHover(gameId, rows) {
+					const wraps = document.querySelectorAll(`.game-rating-wrap[data-game-id='${gameId}']`);
+					wraps.forEach((wrap) => {
+						if (!(wrap instanceof HTMLElement)) return;
+						const list = wrap.querySelector(".game-rating-hover-list");
+						if (!(list instanceof HTMLElement)) return;
+						list.innerHTML = "";
+						if (!isSignedIn) {
+							wrap.classList.remove("has-hover");
+							return;
+						}
+						wrap.classList.add("has-hover");
+						if (!Array.isArray(rows) || rows.length === 0) {
+							const empty = document.createElement("li");
+							empty.className = "muted small game-rating-hover-row";
+							empty.textContent = "No ratings yet.";
+							list.appendChild(empty);
+							return;
+						}
+						rows.forEach((row) => {
+							const item = document.createElement("li");
+							item.className = "game-rating-hover-row";
+							item.textContent = `${row.member_display_name || "Member"}: ${formatRatingStars(row.rating)}`;
+							list.appendChild(item);
+						});
 					});
 				}
 
@@ -1421,12 +1432,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 					const gameId = Number.parseInt(String(gameIdText), 10);
 					if (Number.isNaN(gameId)) return;
 					if (ratingRowsByGame.has(gameId)) {
-						if (
-							currentGameRatingWrap &&
-							Number.parseInt(String(currentGameRatingWrap.dataset.gameId || ""), 10) === gameId
-						) {
-							renderCurrentGameRatingHover(ratingRowsByGame.get(gameId) || []);
-						}
+						renderCardRatingHover(gameId, ratingRowsByGame.get(gameId) || []);
 						if (selectedGameId && Number.parseInt(String(selectedGameId), 10) === gameId) {
 							renderDetailRatingHover(ratingRowsByGame.get(gameId) || []);
 						}
@@ -1508,13 +1514,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 						selectedGameMyRating = resolvedMyRating;
 						applyRateGameStarState(resolvedMyRating);
 					}
-
-					if (
-						currentGameRatingWrap &&
-						Number.parseInt(String(currentGameRatingWrap.dataset.gameId || ""), 10) === gameId
-					) {
-						renderCurrentGameRatingHover(ratingRowsByGame.get(gameId) || []);
-					}
+					renderCardRatingHover(gameId, ratingRowsByGame.get(gameId) || []);
 				}
 
 				async function loadGameRatings(gameIdText) {
@@ -1540,12 +1540,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 					if (selectedGameId && Number.parseInt(String(selectedGameId), 10) === gameId) {
 						renderDetailRatingHover(ratingRows);
 					}
-					if (
-						currentGameRatingWrap &&
-						Number.parseInt(String(currentGameRatingWrap.dataset.gameId || ""), 10) === gameId
-					) {
-						renderCurrentGameRatingHover(ratingRows);
-					}
+					renderCardRatingHover(gameId, ratingRows);
 				}
 
 				async function submitGameRating(gameIdText, ratingValue) {
