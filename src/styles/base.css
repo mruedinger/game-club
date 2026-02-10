@@ -319,6 +319,10 @@ main {
 	overflow-x: auto;
 }
 
+.backlog-table-wrapper {
+	margin-top: 0.95rem;
+}
+
 .table-wrapper.scroll-rows {
 	max-height: 360px;
 	overflow-y: auto;
