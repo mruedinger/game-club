@@ -452,6 +452,13 @@ main {
 	background: rgba(255, 255, 255, 0.72);
 	cursor: pointer;
 	animation: rise 0.5s ease both;
+	position: relative;
+	z-index: 1;
+}
+
+.games-grid .game-card:hover,
+.games-grid .game-card:focus-within {
+	z-index: 30;
 }
 
 .game-cover {
