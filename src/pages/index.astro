@@ -324,10 +324,10 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 								<tr>
 									<th data-sort="favorite" class="sortable favorite-header">Favorite</th>
 									<th data-sort="title" class="sortable">Title</th>
-									<th data-sort="points" class="sortable">Points</th>
 									<th data-sort="submitter" class="sortable">Submitter</th>
 									<th data-sort="ttb" class="sortable">Time to beat</th>
 									<th data-sort="current" class="sortable">Current low</th>
+									<th data-sort="points" class="sortable">PTS</th>
 								</tr>
 							</thead>
 							<tbody>
@@ -412,10 +412,10 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 												<span class="game-title">{game.title}</span>
 											</div>
 										</td>
-										<td class="muted">{typeof game.lifetime_poll_points === "number" ? game.lifetime_poll_points : 0}</td>
 										<td class="muted">{getSubmitter(game)}</td>
 										<td class="muted">{formatTimeToBeat(game.time_to_beat_minutes)}</td>
 										<td class="muted">{formatUsd(game.current_price_cents)}</td>
+										<td class="muted">{typeof game.lifetime_poll_points === "number" ? game.lifetime_poll_points : 0}</td>
 									</tr>
 								))}
 							</tbody>
