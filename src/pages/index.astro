@@ -597,17 +597,18 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 							×
 						</button>
 					</header>
-					<p class="meta-line tight rate-game-overall">Overall: No ratings yet</p>
-					<div class="rate-game-stars">
-						<button class="ghost rate-star-button" type="button" data-rating-value="1" aria-label="Rate 1 star">☆</button>
-						<button class="ghost rate-star-button" type="button" data-rating-value="2" aria-label="Rate 2 stars">☆</button>
-						<button class="ghost rate-star-button" type="button" data-rating-value="3" aria-label="Rate 3 stars">☆</button>
-						<button class="ghost rate-star-button" type="button" data-rating-value="4" aria-label="Rate 4 stars">☆</button>
-						<button class="ghost rate-star-button" type="button" data-rating-value="5" aria-label="Rate 5 stars">☆</button>
+					<div class="rate-game-controls">
+						<div class="rate-game-stars">
+							<button class="rate-star-button" type="button" data-rating-value="1" aria-label="Rate 1 star">☆</button>
+							<button class="rate-star-button" type="button" data-rating-value="2" aria-label="Rate 2 stars">☆</button>
+							<button class="rate-star-button" type="button" data-rating-value="3" aria-label="Rate 3 stars">☆</button>
+							<button class="rate-star-button" type="button" data-rating-value="4" aria-label="Rate 4 stars">☆</button>
+							<button class="rate-star-button" type="button" data-rating-value="5" aria-label="Rate 5 stars">☆</button>
+						</div>
+						<button class="rate-clear-button" type="button" data-action="clear-rate-game">Clear</button>
 					</div>
 					<p class="form-error hidden rate-game-error" role="alert"></p>
 					<footer>
-						<button class="ghost small-pill" type="button" data-action="clear-rate-game">Clear rating</button>
 						<button class="ghost" type="button" data-action="close-rate-game">Done</button>
 					</footer>
 				</form>
@@ -1039,7 +1040,6 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 				const currentGameRatingHoverList = document.querySelector(".game-rating-hover-list");
 				const rateGameModal = document.querySelector("#rate-game-modal");
 				const rateGameTitle = document.querySelector(".rate-game-title");
-				const rateGameOverall = document.querySelector(".rate-game-overall");
 				const rateGameError = document.querySelector(".rate-game-error");
 				const rateGameStars = Array.from(document.querySelectorAll(".rate-star-button"));
 				const backlogFeedback = document.querySelector("#backlog-feedback");
@@ -1445,17 +1445,12 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 					activeRateGameId = String(gameId);
 					activeRateGameTitle = gameTitle || "Game";
 					const gameNode = document.querySelector(`[data-id='${gameId}']`);
-					const ratingAverage = gameNode instanceof HTMLElement ? gameNode.dataset.ratingAverage : "";
-					const ratingCount = gameNode instanceof HTMLElement ? gameNode.dataset.ratingCount : "0";
 					const myRating = gameNode instanceof HTMLElement
 						? Number.parseInt(gameNode.dataset.myRating || "", 10)
 						: Number.NaN;
 					selectedGameMyRating = Number.isNaN(myRating) ? null : myRating;
 					if (rateGameTitle) {
 						rateGameTitle.textContent = `Rate ${activeRateGameTitle}`;
-					}
-					if (rateGameOverall) {
-						rateGameOverall.textContent = `Overall: ${formatRatingSummary(ratingAverage, ratingCount)}`;
 					}
 					applyRateGameStarState(selectedGameMyRating);
 					clearRateGameError();
@@ -1508,12 +1503,6 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 						activeRateGameId &&
 						Number.parseInt(String(activeRateGameId), 10) === gameId
 					) {
-						if (rateGameOverall) {
-							rateGameOverall.textContent = `Overall: ${formatRatingSummary(
-								ratingAverage,
-								normalizedCount
-							)}`;
-						}
 						const resolvedMyRating =
 							typeof myRating === "number" ? myRating : myRating === null ? null : selectedGameMyRating;
 						selectedGameMyRating = resolvedMyRating;

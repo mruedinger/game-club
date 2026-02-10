@@ -588,32 +588,53 @@ main {
 	justify-self: start;
 }
 
+.rate-game-controls {
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+	flex-wrap: wrap;
+}
+
 .rate-game-stars {
 	display: flex;
 	align-items: center;
-	gap: 0.2rem;
+	gap: 0.05rem;
 	flex-wrap: wrap;
 }
 
 .rate-star-button {
-	padding: 0.22rem 0.35rem;
-	border-radius: 8px;
-	border: 1px solid transparent;
+	padding: 0.05rem 0.1rem;
+	border: none;
 	background: transparent;
 	box-shadow: none;
 	min-width: 0;
-	font-size: 1.15rem;
+	font-size: 1.3rem;
 	line-height: 1;
+	cursor: pointer;
 }
 
 .rate-star-button:hover {
 	transform: none;
-	background: rgba(210, 228, 248, 0.6);
+	background: transparent;
 	box-shadow: none;
 }
 
 .rate-star-button.is-active {
 	color: #b77900;
+}
+
+.rate-clear-button {
+	border: none;
+	background: transparent;
+	color: var(--muted);
+	font-size: 0.85rem;
+	cursor: pointer;
+	padding: 0;
+}
+
+.rate-clear-button:hover {
+	color: var(--ink);
+	text-decoration: underline;
 }
 
 .game-detail-rate {
