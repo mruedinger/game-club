@@ -30,6 +30,7 @@ create table if not exists games (
 	price_checked_at text,
 	itad_slug text,
 	itad_boxart_url text,
+	poll_eligible integer check (poll_eligible in (0, 1)),
 	foreign key (submitted_by_email) references members(email)
 );
 
@@ -37,6 +38,7 @@ create index if not exists idx_games_status on games(status);
 create index if not exists idx_games_played_month on games(played_month);
 create index if not exists idx_games_steam_app_id on games(steam_app_id);
 create index if not exists idx_games_price_checked_at on games(price_checked_at);
+create index if not exists idx_games_backlog_poll_eligible on games(status, poll_eligible);
 
 create unique index if not exists idx_games_single_current
 	on games(status)

@@ -11,6 +11,8 @@ type GameRow = {
 	submitted_by_name?: string;
 	submitted_by_alias?: string;
 	status: "backlog" | "current" | "played";
+	poll_eligible?: number | null;
+	is_mine?: number;
 	created_at: string;
 	cover_art_url?: string;
 	itad_boxart_url?: string;
@@ -61,6 +63,7 @@ export const GET: APIRoute = async ({ locals, request }) => {
 	const { results } = await db
 		.prepare(
 			"select games.id, games.title, members.name as submitted_by_name, members.alias as submitted_by_alias, games.status, games.created_at, games.cover_art_url, games.itad_boxart_url, games.tags_json, games.description, games.time_to_beat_minutes, games.current_price_cents, games.best_price_cents, games.played_month, games.steam_app_id, games.itad_game_id, games.itad_slug, " +
+				"games.poll_eligible, case when ?1 != '' and games.submitted_by_email = ?1 then 1 else 0 end as is_mine, " +
 				"case when game_favorites.game_id is null then 0 else 1 end as is_favorite " +
 				", coalesce(game_rating_totals.rating_count, 0) as rating_count, game_rating_totals.rating_average as rating_average, my_game_rating.rating as my_rating " +
 				"from games " +
@@ -150,7 +153,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 		if (itadPrices) {
 			inserted = await db
 				.prepare(
-					"insert into games (title, submitted_by_email, status, cover_art_url, tags_json, description, steam_app_id, itad_game_id, itad_slug, itad_boxart_url, current_price_cents, best_price_cents, price_checked_at, time_to_beat_minutes) values (?1, ?2, 'backlog', ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, datetime('now'), ?12) returning id"
+					"insert into games (title, submitted_by_email, status, poll_eligible, cover_art_url, tags_json, description, steam_app_id, itad_game_id, itad_slug, itad_boxart_url, current_price_cents, best_price_cents, price_checked_at, time_to_beat_minutes) values (?1, ?2, 'backlog', 0, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, datetime('now'), ?12) returning id"
 				)
 				.bind(
 					title,
@@ -170,7 +173,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 		} else {
 			inserted = await db
 				.prepare(
-					"insert into games (title, submitted_by_email, status, cover_art_url, tags_json, description, steam_app_id, itad_game_id, itad_slug, itad_boxart_url, current_price_cents, best_price_cents, price_checked_at, time_to_beat_minutes) values (?1, ?2, 'backlog', ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, null, ?12) returning id"
+					"insert into games (title, submitted_by_email, status, poll_eligible, cover_art_url, tags_json, description, steam_app_id, itad_game_id, itad_slug, itad_boxart_url, current_price_cents, best_price_cents, price_checked_at, time_to_beat_minutes) values (?1, ?2, 'backlog', 0, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, null, ?12) returning id"
 				)
 				.bind(
 					title,
@@ -354,10 +357,10 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
 		await db.batch([
 			db
 				.prepare(
-					"update games set status = 'played', played_month = coalesce(played_month, ?1) where status = 'current' and id != ?2 and exists(select 1 from games where id = ?2)"
+					"update games set status = 'played', poll_eligible = null, played_month = coalesce(played_month, ?1) where status = 'current' and id != ?2 and exists(select 1 from games where id = ?2)"
 				)
 				.bind(playedMonth, id),
-			db.prepare("update games set status = 'current', played_month = ?1 where id = ?2").bind(
+			db.prepare("update games set status = 'current', poll_eligible = null, played_month = ?1 where id = ?2").bind(
 				playedMonth,
 				id
 			)

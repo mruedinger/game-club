@@ -12,6 +12,12 @@
 9. Added aggregate rating display on current and played cards, plus full rating UI in game detail modal (aggregate, self-rating controls, member rating list for signed-in users).
 10. Expanded E2E coverage for ratings auth guard and payload validation paths.
 11. Refined ratings UX for compactness: removed redundant detail footer Close button, moved rating input into a dedicated Rate modal, added rate actions to current-card/detail footer, and switched individual member ratings in detail to an on-hover aggregate popover.
+12. Added poll eligibility controls with a per-member cap of 2 backlog games, including new `poll_eligible` schema support (bootstrap + migration) and seeding existing backlog games to ineligible.
+13. Updated poll start logic to include only poll-eligible backlog games and return a clear error when none are eligible.
+14. Added member poll-eligibility management on Home via game detail toggle and a dedicated eligibility modal, with disabled state and server errors when the 2-game cap is reached.
+15. Added admin poll-eligibility editing in the game editor modal, including cap enforcement when changing submitter/status/eligibility.
+16. Added start-poll confirmation prompt and backlog UX updates for eligibility (eligible-first sorting and ineligible row fade).
+17. Expanded E2E guard coverage for the new `/api/games/eligibility` endpoint.
 
 ## 2026-02-09
 1. Moved games page content to the Home page and removed the separate Games page flow.
