@@ -22,7 +22,8 @@ type Game = {
 	current_price_cents?: number;
 	best_price_cents?: number;
 	time_to_beat_minutes?: number;
-	metacritic_score?: number;
+	steam_review_score?: number;
+	steam_review_desc?: string;
 	lifetime_poll_points?: number;
 	is_favorite?: number;
 	rating_count?: number;
@@ -98,9 +99,28 @@ function formatTimeToBeat(minutes?: number | null) {
 	return `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
 }
 
-function formatMetacriticScore(value?: number | null) {
-	if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > 100) return "-";
-	return String(Math.trunc(value));
+function mapSteamReviewLabel(score?: number | null) {
+	if (typeof score !== "number" || !Number.isFinite(score)) return null;
+	const key = Math.trunc(score);
+	if (key === 0) return "No user reviews";
+	if (key === 1) return "Overwhelmingly Negative";
+	if (key === 2) return "Very Negative";
+	if (key === 3) return "Negative";
+	if (key === 4) return "Mostly Negative";
+	if (key === 5) return "Mixed";
+	if (key === 6) return "Mostly Positive";
+	if (key === 7) return "Positive";
+	if (key === 8) return "Very Positive";
+	if (key === 9) return "Overwhelmingly Positive";
+	return null;
+}
+
+function formatSteamReviewDesc(
+	score?: number | null,
+	desc?: string | null
+) {
+	if (typeof desc === "string" && desc.trim()) return desc.trim();
+	return mapSteamReviewLabel(score) || "-";
 }
 
 function getSubmitter(game: Game) {
@@ -194,10 +214,13 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 								{(() => {
 									const tags = formatTags(currentGame.tags_json);
 									const ttb = formatTtbHours(currentGame.time_to_beat_minutes);
-									const metacritic = formatMetacriticScore(currentGame.metacritic_score);
+									const steamReview = formatSteamReviewDesc(
+										currentGame.steam_review_score,
+										currentGame.steam_review_desc
+									);
 									return (
 										<p class="meta-line tight">
-											{`${tags} | ${ttb || "-"} | ${metacritic}`}
+											{`${tags} | ${ttb || "-"} | ${steamReview}`}
 										</p>
 									);
 								})()}
@@ -331,7 +354,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 									<tr>
 										<th data-sort="favorite" class="sortable favorite-header">Favorite</th>
 										<th data-sort="title" class="sortable">Title</th>
-										<th data-sort="metacritic" class="sortable">MC Score</th>
+										<th data-sort="reviews" class="sortable">Reviews</th>
 										<th data-sort="submitter" class="sortable">Submitter</th>
 										<th data-sort="ttb" class="sortable">Time to beat</th>
 										<th data-sort="current" class="sortable">Current low</th>
@@ -361,9 +384,14 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 														? String(game.time_to_beat_minutes)
 														: ""
 												}
-												data-metacritic={
-													typeof game.metacritic_score === "number"
-														? String(game.metacritic_score)
+												data-review-score={
+													typeof game.steam_review_score === "number"
+														? String(game.steam_review_score)
+														: ""
+												}
+												data-review-desc={
+													typeof game.steam_review_desc === "string"
+														? game.steam_review_desc
 														: ""
 												}
 												data-current-price={
@@ -425,7 +453,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 													<span class="game-title">{game.title}</span>
 												</div>
 											</td>
-											<td class="muted">{formatMetacriticScore(game.metacritic_score)}</td>
+											<td class="muted">{formatSteamReviewDesc(game.steam_review_score, game.steam_review_desc)}</td>
 											<td class="muted">{getSubmitter(game)}</td>
 											<td class="muted">{formatTimeToBeat(game.time_to_beat_minutes)}</td>
 											<td class="muted">{formatUsd(game.current_price_cents)}</td>
@@ -469,9 +497,14 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 											? String(game.time_to_beat_minutes)
 											: ""
 									}
-									data-metacritic={
-										typeof game.metacritic_score === "number"
-											? String(game.metacritic_score)
+									data-review-score={
+										typeof game.steam_review_score === "number"
+											? String(game.steam_review_score)
+											: ""
+									}
+									data-review-desc={
+										typeof game.steam_review_desc === "string"
+											? game.steam_review_desc
 											: ""
 									}
 									data-best-price={
@@ -1523,8 +1556,8 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 					if (key === "submitter") return row.dataset.submitterSort || "";
 					if (key === "points") return Number.parseInt(row.dataset.lifetimePoints || "0", 10);
 					if (key === "favorite") return Number.parseInt(row.dataset.favorite || "0", 10);
-					if (key === "metacritic") {
-						const value = Number.parseInt(row.dataset.metacritic || "", 10);
+					if (key === "reviews") {
+						const value = Number.parseInt(row.dataset.reviewScore || "", 10);
 						return Number.isNaN(value) ? null : value;
 					}
 					if (key === "ttb") return Number.parseInt(row.dataset.ttb || "0", 10);
@@ -1553,18 +1586,18 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 						if (favoriteCompare !== 0) return favoriteCompare;
 						return (a.dataset.titleSort || "").localeCompare(b.dataset.titleSort || "");
 					}
-					if (key === "metacritic") {
-						const aMetacritic = getRowValue(a, key);
-						const bMetacritic = getRowValue(b, key);
-						const aMissing = typeof aMetacritic !== "number";
-						const bMissing = typeof bMetacritic !== "number";
+					if (key === "reviews") {
+						const aReviewScore = getRowValue(a, key);
+						const bReviewScore = getRowValue(b, key);
+						const aMissing = typeof aReviewScore !== "number";
+						const bMissing = typeof bReviewScore !== "number";
 						if (aMissing && bMissing) {
 							return (a.dataset.titleSort || "").localeCompare(b.dataset.titleSort || "");
 						}
 						if (aMissing) return 1;
 						if (bMissing) return -1;
-						const metacriticCompare = (aMetacritic - bMetacritic) * dir;
-						if (metacriticCompare !== 0) return metacriticCompare;
+						const reviewsCompare = (aReviewScore - bReviewScore) * dir;
+						if (reviewsCompare !== 0) return reviewsCompare;
 						return (a.dataset.titleSort || "").localeCompare(b.dataset.titleSort || "");
 					}
 					const aValue = getRowValue(a, key);
@@ -2221,7 +2254,8 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 					const bestPrice = card.dataset.bestPrice || "";
 					const status = card.dataset.status || "";
 					const ttbMinutes = card.dataset.ttbMinutes || "";
-					const metacriticScore = card.dataset.metacritic || "";
+					const reviewScore = card.dataset.reviewScore || "";
+					const reviewDesc = card.dataset.reviewDesc || "";
 					const ratingCount = card.dataset.ratingCount || "0";
 					const ratingAverage = card.dataset.ratingAverage || "";
 					const myRatingValue = card.dataset.myRating || "";
@@ -2303,8 +2337,8 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 					if (detailTags) {
 						const tagLine = tags || "Tags coming soon";
 						const ttbLine = ttbMinutes ? formatTtbHoursForDetail(ttbMinutes) : "-";
-						const metacriticLine = formatMetacriticForDetail(metacriticScore);
-						detailTags.textContent = `${tagLine} | ${ttbLine} | ${metacriticLine}`;
+						const reviewLine = formatSteamReviewForDetail(reviewScore, reviewDesc);
+						detailTags.textContent = `${tagLine} | ${ttbLine} | ${reviewLine}`;
 					}
 					if (detailDelete) {
 						detailDelete.classList.toggle("hidden", !isSignedIn);
@@ -2354,10 +2388,22 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 					return `${text} Hours`;
 				}
 
-				function formatMetacriticForDetail(value) {
-					const score = Number.parseInt(String(value), 10);
-					if (Number.isNaN(score) || score < 0 || score > 100) return "-";
-					return String(score);
+				function formatSteamReviewForDetail(scoreValue, descValue) {
+					const desc = String(descValue || "").trim();
+					if (desc) return desc;
+					const score = Number.parseInt(String(scoreValue), 10);
+					if (Number.isNaN(score)) return "-";
+					if (score === 0) return "No user reviews";
+					if (score === 1) return "Overwhelmingly Negative";
+					if (score === 2) return "Very Negative";
+					if (score === 3) return "Negative";
+					if (score === 4) return "Mostly Negative";
+					if (score === 5) return "Mixed";
+					if (score === 6) return "Mostly Positive";
+					if (score === 7) return "Positive";
+					if (score === 8) return "Very Positive";
+					if (score === 9) return "Overwhelmingly Positive";
+					return "-";
 				}
 
 				function formatPriceForDetail(value) {
