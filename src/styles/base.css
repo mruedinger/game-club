@@ -526,6 +526,70 @@ main {
 	gap: 0.5rem;
 }
 
+.game-rating-summary {
+	line-height: 1.3;
+}
+
+.game-detail-rating-controls {
+	display: grid;
+	gap: 0.45rem;
+}
+
+.game-detail-rating-stars {
+	display: flex;
+	align-items: center;
+	gap: 0.25rem;
+	flex-wrap: wrap;
+}
+
+.rating-star-button {
+	padding: 0.25rem 0.4rem;
+	border-radius: 8px;
+	border: 1px solid transparent;
+	background: transparent;
+	box-shadow: none;
+	min-width: 0;
+}
+
+.rating-star-button:hover {
+	transform: none;
+	background: rgba(210, 228, 248, 0.6);
+	box-shadow: none;
+}
+
+.rating-star-button.is-active {
+	color: #b77900;
+}
+
+.game-detail-rating-clear {
+	margin-left: 0.35rem;
+}
+
+.game-detail-rating-list {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+	display: grid;
+	gap: 0.35rem;
+}
+
+.game-detail-rating-row {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 0.8rem;
+	font-size: 0.9rem;
+}
+
+.game-detail-rating-name {
+	color: var(--ink);
+}
+
+.game-detail-rating-value {
+	color: var(--muted);
+	white-space: nowrap;
+}
+
 .favorite-toggle {
 	padding: 0;
 	border-radius: 0;

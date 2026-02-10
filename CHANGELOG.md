@@ -7,6 +7,10 @@
 4. Added new favorites API endpoint (`POST /api/games/favorite`) with auth, validation, and audit logging.
 5. Updated games and polls payloads to include per-member favorite state and aligned `/api/games` caching to private/no-store.
 6. Expanded E2E coverage for favorite auth guard and payload validation paths.
+7. Added game ratings persistence (`game_ratings`) with migration support and per-game aggregate metrics.
+8. Added ratings API (`/api/games/rating`) supporting set/update/clear and authenticated member-rating detail retrieval.
+9. Added aggregate rating display on current and played cards, plus full rating UI in game detail modal (aggregate, self-rating controls, member rating list for signed-in users).
+10. Expanded E2E coverage for ratings auth guard and payload validation paths.
 
 ## 2026-02-09
 1. Moved games page content to the Home page and removed the separate Games page flow.

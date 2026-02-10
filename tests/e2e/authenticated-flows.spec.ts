@@ -69,6 +69,18 @@ test("favorite toggle validates payload when authenticated", async ({ request })
 	await expect(response.text()).resolves.toContain("Game id and favorite flag are required.");
 });
 
+test("rating submit validates payload when authenticated", async ({ request }) => {
+	const response = await request.post("/api/games/rating", {
+		headers: {
+			"Content-Type": "application/json",
+			Cookie: memberCookie()
+		},
+		data: { id: "bad", rating: 7 }
+	});
+	expect(response.status()).toBe(400);
+	await expect(response.text()).resolves.toContain("Game id and valid rating are required.");
+});
+
 test("admin member mutation enforces payload validation when authenticated", async ({ request }) => {
 	const response = await request.post("/api/admin/members", {
 		headers: {

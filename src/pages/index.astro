@@ -21,6 +21,9 @@ type Game = {
 	best_price_cents?: number;
 	time_to_beat_minutes?: number;
 	is_favorite?: number;
+	rating_count?: number;
+	rating_average?: number;
+	my_rating?: number;
 };
 
 const env = getRuntimeEnv(Astro.locals.runtime?.env);
@@ -110,6 +113,22 @@ function formatTags(tagsJson?: string) {
 	}
 }
 
+function formatStarRow(value?: number | null) {
+	if (typeof value !== "number" || Number.isNaN(value) || value <= 0) {
+		return "☆☆☆☆☆";
+	}
+	const clamped = Math.max(0, Math.min(5, Math.round(value)));
+	return `${"★".repeat(clamped)}${"☆".repeat(5 - clamped)}`;
+}
+
+function formatRatingSummaryText(average?: number | null, count?: number | null) {
+	const total = typeof count === "number" ? count : 0;
+	if (total <= 0 || typeof average !== "number" || Number.isNaN(average)) {
+		return "No ratings yet";
+	}
+	return `${formatStarRow(average)} ${average.toFixed(1)} (${total})`;
+}
+
 const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: TBD";
 ---
 
@@ -143,7 +162,14 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 				<section class="section current-game two-column-grid">
 				<div>
 					{currentGame ? (
-						<div class="card current-game-card">
+						<div
+							class="card current-game-card"
+							data-id={currentGame.id}
+							data-title={currentGame.title}
+							data-rating-count={typeof currentGame.rating_count === "number" ? String(currentGame.rating_count) : "0"}
+							data-rating-average={typeof currentGame.rating_average === "number" ? String(currentGame.rating_average) : ""}
+							data-my-rating={typeof currentGame.my_rating === "number" ? String(currentGame.my_rating) : ""}
+						>
 							<div class="game-cover">
 								{currentGame.cover_art_url ? (
 									<img
@@ -204,6 +230,14 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 							<p class="meta-line">
 								Current low: {formatUsd(currentGame.current_price_cents)} · Historical
 								low: {formatUsd(currentGame.best_price_cents)}
+							</p>
+							<p
+								class="muted small game-rating-summary"
+								data-game-id={currentGame.id}
+								data-rating-count={typeof currentGame.rating_count === "number" ? String(currentGame.rating_count) : "0"}
+								data-rating-average={typeof currentGame.rating_average === "number" ? String(currentGame.rating_average) : ""}
+							>
+								Rating: {formatRatingSummaryText(currentGame.rating_average, currentGame.rating_count)}
 							</p>
 							<p class="muted small">{getSubmitterLabel(currentGame)}</p>
 						</div>
@@ -313,6 +347,13 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 											data-itad-slug={game.itad_slug || ""}
 											data-status={game.status}
 											data-favorite={game.is_favorite ? "1" : "0"}
+											data-rating-count={typeof game.rating_count === "number" ? String(game.rating_count) : "0"}
+											data-rating-average={
+												typeof game.rating_average === "number"
+													? String(game.rating_average)
+													: ""
+											}
+											data-my-rating={typeof game.my_rating === "number" ? String(game.my_rating) : ""}
 										>
 										<td class="favorite-cell">
 											<button
@@ -388,6 +429,13 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 								}
 								data-status={game.status}
 								data-favorite={game.is_favorite ? "1" : "0"}
+								data-rating-count={typeof game.rating_count === "number" ? String(game.rating_count) : "0"}
+								data-rating-average={
+									typeof game.rating_average === "number"
+										? String(game.rating_average)
+										: ""
+								}
+								data-my-rating={typeof game.my_rating === "number" ? String(game.my_rating) : ""}
 							>
 								<h3>{game.title}</h3>
 								<div class="game-cover">
@@ -403,6 +451,18 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 									</div>
 									<p class="muted">
 										{formatTags(game.tags_json)}
+									</p>
+									<p
+										class="muted small game-rating-summary"
+										data-game-id={game.id}
+										data-rating-count={typeof game.rating_count === "number" ? String(game.rating_count) : "0"}
+										data-rating-average={
+											typeof game.rating_average === "number"
+												? String(game.rating_average)
+												: ""
+										}
+									>
+										Rating: {formatRatingSummaryText(game.rating_average, game.rating_count)}
 									</p>
 								</article>
 							))}
@@ -486,6 +546,24 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 								<a class="ghost small-pill game-detail-steam" target="_blank" rel="noreferrer" title="View on Steam">Steam</a>
 								<a class="ghost small-pill game-detail-hltb" target="_blank" rel="noreferrer" title="View on HowLongToBeat">HLTB</a>
 								<a class="ghost small-pill game-detail-itad" target="_blank" rel="noreferrer" title="View on IsThereAnyDeal">ITAD</a>
+							</div>
+							<p class="meta-line tight game-detail-rating-summary">Rating: No ratings yet</p>
+							<div class="game-detail-rating-controls hidden">
+								<p class="muted small game-detail-my-rating">Your rating: Not rated</p>
+								<div class="game-detail-rating-stars">
+									<button class="ghost rating-star-button" type="button" data-rating-value="1" aria-label="Rate 1 star">☆</button>
+									<button class="ghost rating-star-button" type="button" data-rating-value="2" aria-label="Rate 2 stars">☆</button>
+									<button class="ghost rating-star-button" type="button" data-rating-value="3" aria-label="Rate 3 stars">☆</button>
+									<button class="ghost rating-star-button" type="button" data-rating-value="4" aria-label="Rate 4 stars">☆</button>
+									<button class="ghost rating-star-button" type="button" data-rating-value="5" aria-label="Rate 5 stars">☆</button>
+									<button class="ghost small-pill game-detail-rating-clear" type="button">Clear</button>
+								</div>
+								<p class="form-error hidden game-detail-rating-error" role="alert"></p>
+							</div>
+							<p class="muted small hidden game-detail-rating-signin">Sign in to rate and view member ratings.</p>
+							<div class="game-detail-rating-list-wrap hidden">
+								<p class="muted small">Member ratings</p>
+								<ul class="game-detail-rating-list"></ul>
 							</div>
 							<div class="game-detail-ttb-edit hidden">
 								<div class="field">
@@ -922,6 +1000,15 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 				const detailHltb = document.querySelector(".game-detail-hltb");
 				const detailItad = document.querySelector(".game-detail-itad");
 				const detailPrices = document.querySelector(".game-detail-prices");
+				const detailRatingSummary = document.querySelector(".game-detail-rating-summary");
+				const detailMyRating = document.querySelector(".game-detail-my-rating");
+				const detailRatingControls = document.querySelector(".game-detail-rating-controls");
+				const detailRatingStars = Array.from(document.querySelectorAll(".rating-star-button"));
+				const detailRatingClear = document.querySelector(".game-detail-rating-clear");
+				const detailRatingError = document.querySelector(".game-detail-rating-error");
+				const detailRatingSignin = document.querySelector(".game-detail-rating-signin");
+				const detailRatingListWrap = document.querySelector(".game-detail-rating-list-wrap");
+				const detailRatingList = document.querySelector(".game-detail-rating-list");
 				const detailTtbEdit = document.querySelector(".game-detail-ttb-edit");
 				const detailTtbInput = document.querySelector("#game-detail-ttb");
 				const detailTtbSave = document.querySelector(".game-detail-ttb-save");
@@ -936,6 +1023,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 				const steamIdKey = "steamAppId";
 				let selectedGameId = null;
 				let selectedGameFavorite = false;
+				let selectedGameMyRating = null;
 				let currentUserRole = initialUser?.role || "";
 				let isSignedIn = Boolean(initialUser?.email);
 
@@ -1174,6 +1262,179 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 					showFavoriteError(message);
 				}
 
+				function parseRatingNumber(value) {
+					if (value === null || value === undefined || value === "") return null;
+					const parsed = Number.parseFloat(String(value));
+					if (!Number.isFinite(parsed)) return null;
+					return parsed;
+				}
+
+				function formatRatingStars(value) {
+					const parsed = parseRatingNumber(value);
+					if (parsed === null || parsed <= 0) return "☆☆☆☆☆";
+					const rounded = Math.max(0, Math.min(5, Math.round(parsed)));
+					return `${"★".repeat(rounded)}${"☆".repeat(5 - rounded)}`;
+				}
+
+				function formatRatingSummary(average, count) {
+					const total = Number.parseInt(String(count || 0), 10);
+					const parsedAverage = parseRatingNumber(average);
+					if (!total || parsedAverage === null) {
+						return "No ratings yet";
+					}
+					return `${formatRatingStars(parsedAverage)} ${parsedAverage.toFixed(1)} (${total})`;
+				}
+
+				function clearRatingError() {
+					if (!detailRatingError) return;
+					detailRatingError.textContent = "";
+					detailRatingError.classList.add("hidden");
+				}
+
+				function setRatingError(message) {
+					if (!detailRatingError) return;
+					detailRatingError.textContent = message;
+					detailRatingError.classList.remove("hidden");
+				}
+
+				function applyMyRatingState(ratingValue) {
+					selectedGameMyRating = ratingValue;
+					if (detailMyRating) {
+						detailMyRating.textContent = `Your rating: ${
+							typeof ratingValue === "number" ? `${ratingValue} / 5` : "Not rated"
+						}`;
+					}
+					detailRatingStars.forEach((button) => {
+						if (!(button instanceof HTMLElement)) return;
+						const starValue = Number.parseInt(button.dataset.ratingValue || "", 10);
+						const isActive = typeof ratingValue === "number" && starValue <= ratingValue;
+						button.classList.toggle("is-active", isActive);
+						button.textContent = isActive ? "★" : "☆";
+					});
+				}
+
+				function renderMemberRatings(rows) {
+					if (!detailRatingListWrap || !detailRatingList) return;
+					detailRatingList.innerHTML = "";
+					if (!isSignedIn) {
+						detailRatingListWrap.classList.add("hidden");
+						return;
+					}
+					detailRatingListWrap.classList.remove("hidden");
+					if (!Array.isArray(rows) || rows.length === 0) {
+						const empty = document.createElement("li");
+						empty.className = "muted small";
+						empty.textContent = "No ratings yet.";
+						detailRatingList.appendChild(empty);
+						return;
+					}
+					rows.forEach((row) => {
+						const item = document.createElement("li");
+						item.className = "game-detail-rating-row";
+
+						const name = document.createElement("span");
+						name.className = "game-detail-rating-name";
+						name.textContent = row.member_display_name || "Member";
+
+						const rating = document.createElement("span");
+						rating.className = "game-detail-rating-value";
+						rating.textContent = `${formatRatingStars(row.rating)} ${row.rating}/5`;
+
+						item.appendChild(name);
+						item.appendChild(rating);
+						detailRatingList.appendChild(item);
+					});
+				}
+
+				function updateRatingStateForGame(gameId, ratingAverage, ratingCount, myRating) {
+					const normalizedCount = Number.parseInt(String(ratingCount || 0), 10) || 0;
+					const averageText = ratingAverage === null || ratingAverage === undefined
+						? ""
+						: String(ratingAverage);
+					const myRatingText =
+						myRating === null || myRating === undefined ? "" : String(myRating);
+
+					const gameNodes = document.querySelectorAll(`[data-id='${gameId}']`);
+					gameNodes.forEach((node) => {
+						if (!(node instanceof HTMLElement)) return;
+						node.dataset.ratingCount = String(normalizedCount);
+						node.dataset.ratingAverage = averageText;
+						node.dataset.myRating = myRatingText;
+					});
+
+					const ratingSummaryNodes = document.querySelectorAll(
+						`.game-rating-summary[data-game-id='${gameId}']`
+					);
+					ratingSummaryNodes.forEach((node) => {
+						if (!(node instanceof HTMLElement)) return;
+						node.dataset.ratingCount = String(normalizedCount);
+						node.dataset.ratingAverage = averageText;
+						node.textContent = `Rating: ${formatRatingSummary(ratingAverage, normalizedCount)}`;
+					});
+
+					if (
+						selectedGameId &&
+						Number.parseInt(String(selectedGameId), 10) === gameId &&
+						detailRatingSummary
+					) {
+						detailRatingSummary.textContent = `Rating: ${formatRatingSummary(
+							ratingAverage,
+							normalizedCount
+						)}`;
+						applyMyRatingState(
+							typeof myRating === "number" ? myRating : myRating === null ? null : selectedGameMyRating
+						);
+					}
+				}
+
+				async function loadGameRatings(gameIdText) {
+					const gameId = Number.parseInt(String(gameIdText), 10);
+					if (Number.isNaN(gameId)) return;
+					const response = await fetch(`/api/games/rating?id=${gameId}`);
+					if (!response.ok) {
+						setRatingError("Unable to load ratings.");
+						return;
+					}
+					const payload = await response.json();
+					clearRatingError();
+					updateRatingStateForGame(
+						gameId,
+						payload.rating_average,
+						payload.rating_count,
+						payload.my_rating
+					);
+					applyMyRatingState(payload.my_rating);
+					renderMemberRatings(payload.ratings || []);
+				}
+
+				async function submitGameRating(gameIdText, ratingValue) {
+					const gameId = Number.parseInt(String(gameIdText), 10);
+					if (Number.isNaN(gameId)) return;
+					const response = await fetch("/api/games/rating", {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ id: gameId, rating: ratingValue })
+					});
+					if (response.ok) {
+						const payload = await response.json();
+						clearRatingError();
+						updateRatingStateForGame(
+							gameId,
+							payload.rating_average,
+							payload.rating_count,
+							payload.my_rating
+						);
+						await loadGameRatings(gameId);
+						return;
+					}
+					if (response.status === 401) {
+						window.location.href = "/api/auth/login";
+						return;
+					}
+					const message = await response.text();
+					setRatingError(message || "Unable to save rating.");
+				}
+
 				if (rowTooltip && tooltipDescription && tooltipTags && tableRows.length > 0) {
 					let activeRow = null;
 
@@ -1287,6 +1548,22 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 							detailTtbError.textContent = "Unable to save time to beat.";
 							detailTtbError.classList.remove("hidden");
 						}
+					});
+				}
+
+				detailRatingStars.forEach((button) => {
+					button.addEventListener("click", async () => {
+						if (!selectedGameId) return;
+						const ratingValue = Number.parseInt(button.dataset.ratingValue || "", 10);
+						if (Number.isNaN(ratingValue)) return;
+						await submitGameRating(selectedGameId, ratingValue);
+					});
+				});
+
+				if (detailRatingClear) {
+					detailRatingClear.addEventListener("click", async () => {
+						if (!selectedGameId) return;
+						await submitGameRating(selectedGameId, null);
 					});
 				}
 
@@ -1437,9 +1714,16 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 					const bestPrice = card.dataset.bestPrice || "";
 					const status = card.dataset.status || "";
 					const ttbMinutes = card.dataset.ttbMinutes || "";
+					const ratingCount = card.dataset.ratingCount || "0";
+					const ratingAverage = card.dataset.ratingAverage || "";
+					const myRatingValue = card.dataset.myRating || "";
 					const isFavorite = card.dataset.favorite === "1";
 					selectedGameId = card.dataset.id || null;
 					selectedGameFavorite = isFavorite;
+					selectedGameMyRating = (() => {
+						const parsed = Number.parseInt(myRatingValue, 10);
+						return Number.isNaN(parsed) ? null : parsed;
+					})();
 
 					if (detailTitle) detailTitle.textContent = title;
 					if (detailDescription) detailDescription.textContent = description;
@@ -1452,6 +1736,24 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 						detailActionError.textContent = "";
 					}
 					applyFavoriteStateToButton(detailFavorite, isFavorite);
+					if (detailRatingSummary) {
+						detailRatingSummary.textContent = `Rating: ${formatRatingSummary(
+							ratingAverage,
+							ratingCount
+						)}`;
+					}
+					applyMyRatingState(selectedGameMyRating);
+					if (detailRatingControls) {
+						detailRatingControls.classList.toggle("hidden", !isSignedIn);
+					}
+					if (detailRatingSignin) {
+						detailRatingSignin.classList.toggle("hidden", isSignedIn);
+					}
+					if (detailRatingListWrap && !isSignedIn) {
+						detailRatingListWrap.classList.add("hidden");
+					}
+					renderMemberRatings([]);
+					clearRatingError();
 					if (detailCover) {
 						if (cover) {
 							detailCover.src = cover;
@@ -1515,6 +1817,9 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 					}
 
 					detailModal.showModal();
+					if (selectedGameId) {
+						loadGameRatings(selectedGameId);
+					}
 				}
 
 				function parseTags(value) {

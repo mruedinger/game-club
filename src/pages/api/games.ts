@@ -25,6 +25,9 @@ type GameRow = {
 	itad_slug?: string;
 	price_checked_at?: string;
 	is_favorite?: number;
+	rating_count?: number;
+	rating_average?: number;
+	my_rating?: number;
 };
 
 type D1Database = {
@@ -59,9 +62,12 @@ export const GET: APIRoute = async ({ locals, request }) => {
 		.prepare(
 			"select games.id, games.title, members.name as submitted_by_name, members.alias as submitted_by_alias, games.status, games.created_at, games.cover_art_url, games.itad_boxart_url, games.tags_json, games.description, games.time_to_beat_minutes, games.current_price_cents, games.best_price_cents, games.played_month, games.steam_app_id, games.itad_game_id, games.itad_slug, " +
 				"case when game_favorites.game_id is null then 0 else 1 end as is_favorite " +
+				", coalesce(game_rating_totals.rating_count, 0) as rating_count, game_rating_totals.rating_average as rating_average, my_game_rating.rating as my_rating " +
 				"from games " +
 				"left join members on members.email = games.submitted_by_email " +
 				"left join game_favorites on game_favorites.game_id = games.id and game_favorites.member_email = ?1 " +
+				"left join (select game_id, count(*) as rating_count, avg(rating) as rating_average from game_ratings group by game_id) as game_rating_totals on game_rating_totals.game_id = games.id " +
+				"left join game_ratings as my_game_rating on my_game_rating.game_id = games.id and my_game_rating.member_email = ?1 " +
 				"order by games.status asc, games.title asc"
 		)
 		.bind(memberEmail)
@@ -245,6 +251,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
 			.bind(id),
 		db.prepare("delete from poll_games where game_id = ?1").bind(id),
 		db.prepare("delete from game_favorites where game_id = ?1").bind(id),
+		db.prepare("delete from game_ratings where game_id = ?1").bind(id),
 		db.prepare("delete from games where id = ?1").bind(id)
 	]);
 
