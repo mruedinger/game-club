@@ -66,6 +66,7 @@ export const prerender = false;
 									<th data-sort="title" class="sortable">Title</th>
 									<th data-sort="submitter" class="sortable">Submitter</th>
 									<th data-sort="status" class="sortable">Status</th>
+									<th data-sort="eligibility" class="sortable">Poll eligible</th>
 									<th data-sort="tags" class="sortable">Tags</th>
 									<th data-sort="ttb" class="sortable">Time to beat</th>
 									<th data-sort="played" class="sortable">Played month</th>
@@ -73,7 +74,7 @@ export const prerender = false;
 							</thead>
 							<tbody class="games-editor-body">
 								<tr>
-									<td class="muted small" colspan="6">Loading games…</td>
+									<td class="muted small" colspan="7">Loading games…</td>
 								</tr>
 							</tbody>
 						</table>
@@ -191,6 +192,16 @@ export const prerender = false;
 					</select>
 				</div>
 				<div class="field">
+					<label class="toggle-control" for="edit-game-eligibility">
+						<span>Poll eligible</span>
+						<span class="toggle-switch">
+							<input id="edit-game-eligibility" name="poll_eligible" type="checkbox" />
+							<span class="toggle-slider"></span>
+						</span>
+					</label>
+					<p class="muted small" id="edit-game-eligibility-help">Select up to 2 backlog games per member.</p>
+				</div>
+				<div class="field">
 					<label for="edit-game-tags">Tags</label>
 					<input id="edit-game-tags" name="tags" type="text" placeholder="Narrative, Roguelike" />
 				</div>
@@ -225,6 +236,8 @@ export const prerender = false;
 			const gameModalError = document.querySelector("#game-modal-error");
 			const gameSubmitter = document.querySelector("#edit-game-submitter");
 			const gameStatus = document.querySelector("#edit-game-status");
+			const gameEligibility = document.querySelector("#edit-game-eligibility");
+			const gameEligibilityHelp = document.querySelector("#edit-game-eligibility-help");
 			const gameTags = document.querySelector("#edit-game-tags");
 			const gameTtb = document.querySelector("#edit-game-ttb");
 			const gamePlayed = document.querySelector("#edit-game-played");
@@ -335,10 +348,10 @@ export const prerender = false;
 
 			async function loadGames() {
 				if (!gamesBody) return;
-				gamesBody.innerHTML = '<tr><td class="muted small" colspan="6">Loading games…</td></tr>';
+				gamesBody.innerHTML = '<tr><td class="muted small" colspan="7">Loading games…</td></tr>';
 				const response = await fetch("/api/admin/games");
 				if (!response.ok) {
-					gamesBody.innerHTML = '<tr><td class="muted small" colspan="6">Unable to load games.</td></tr>';
+					gamesBody.innerHTML = '<tr><td class="muted small" colspan="7">Unable to load games.</td></tr>';
 					return;
 				}
 				const games = await response.json();
@@ -393,7 +406,7 @@ export const prerender = false;
 			function renderGames(games) {
 				if (!gamesBody) return;
 				if (!games || games.length === 0) {
-					gamesBody.innerHTML = '<tr><td class="muted small" colspan="6">No games yet.</td></tr>';
+					gamesBody.innerHTML = '<tr><td class="muted small" colspan="7">No games yet.</td></tr>';
 					return;
 				}
 				gamesBody.innerHTML = "";
@@ -404,6 +417,7 @@ export const prerender = false;
 					row.dataset.title = game.title.toLowerCase();
 					row.dataset.submitter = game.submitted_by_email || "";
 					row.dataset.status = game.status || "";
+					row.dataset.eligibility = game.poll_eligible === 1 ? "eligible" : "ineligible";
 					row.dataset.tags = tags.join(", ");
 					row.dataset.ttb = typeof game.time_to_beat_minutes === "number" ? String(game.time_to_beat_minutes) : "";
 					row.dataset.played = game.played_month || "";
@@ -418,6 +432,13 @@ export const prerender = false;
 					const statusCell = document.createElement("td");
 					statusCell.textContent = game.status;
 
+					const eligibilityCell = document.createElement("td");
+					eligibilityCell.textContent = game.status === "backlog"
+						? game.poll_eligible === 1
+							? "Eligible"
+							: "Ineligible"
+						: "-";
+
 					const tagsCell = document.createElement("td");
 					tagsCell.textContent = tags.length > 0 ? tags.join(", ") : "-";
 
@@ -430,6 +451,7 @@ export const prerender = false;
 					row.appendChild(titleCell);
 					row.appendChild(submitterCell);
 					row.appendChild(statusCell);
+					row.appendChild(eligibilityCell);
 					row.appendChild(tagsCell);
 					row.appendChild(ttbCell);
 					row.appendChild(playedCell);
@@ -472,8 +494,28 @@ export const prerender = false;
 				});
 			}
 
+			function syncGameEligibilityControl() {
+				if (!gameStatus || !gameEligibility) return;
+				const isBacklog = gameStatus.value === "backlog";
+				gameEligibility.disabled = !isBacklog;
+				if (!isBacklog) {
+					gameEligibility.checked = false;
+				}
+				if (gameEligibilityHelp) {
+					gameEligibilityHelp.textContent = isBacklog
+						? "Select up to 2 backlog games per member."
+						: "Only backlog games can be poll eligible.";
+				}
+			}
+
+			if (gameStatus) {
+				gameStatus.addEventListener("change", () => {
+					syncGameEligibilityControl();
+				});
+			}
+
 			function openGameModal(game) {
-				if (!gameModal || !gameSubmitter || !gameStatus || !gameTags || !gameTtb || !gamePlayed) {
+				if (!gameModal || !gameSubmitter || !gameStatus || !gameEligibility || !gameTags || !gameTtb || !gamePlayed) {
 					return;
 				}
 				activeGameId = game.id;
@@ -488,6 +530,8 @@ export const prerender = false;
 					gameSubmitter.appendChild(option);
 				});
 				gameStatus.value = game.status;
+				gameEligibility.checked = game.status === "backlog" && game.poll_eligible === 1;
+				syncGameEligibilityControl();
 				gameTags.value = parseTags(game.tags_json).join(", ");
 				gameTtb.value = typeof game.time_to_beat_minutes === "number"
 					? String((game.time_to_beat_minutes / 60).toFixed(1))
@@ -560,6 +604,9 @@ export const prerender = false;
 						time_to_beat_hours: hoursValue,
 						played_month: gamePlayed.value
 					};
+					if (gameStatus.value === "backlog" && gameEligibility) {
+						payload.poll_eligible = gameEligibility.checked;
+					}
 					const response = await fetch("/api/admin/games", {
 						method: "PATCH",
 						headers: { "Content-Type": "application/json" },
@@ -580,6 +627,7 @@ export const prerender = false;
 				if (key === "title") return row.dataset.title || "";
 				if (key === "submitter") return row.dataset.submitter || "";
 				if (key === "status") return row.dataset.status || "";
+				if (key === "eligibility") return row.dataset.eligibility || "";
 				if (key === "tags") return row.dataset.tags || "";
 				if (key === "ttb") return Number.parseInt(row.dataset.ttb || "0", 10);
 				if (key === "played") return row.dataset.played || "";

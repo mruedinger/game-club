@@ -390,6 +390,14 @@ main {
 	background: rgba(219, 226, 234, 0.4);
 }
 
+.games-table .game-row.is-poll-ineligible {
+	opacity: 0.56;
+}
+
+.games-table .game-row.is-poll-ineligible:hover {
+	opacity: 0.72;
+}
+
 .row-tooltip {
 	position: fixed;
 	left: 0;
@@ -698,6 +706,15 @@ main {
 	gap: 0.6rem;
 }
 
+.game-detail-eligibility {
+	display: grid;
+	gap: 0.35rem;
+}
+
+.game-detail-eligibility-help {
+	margin: 0;
+}
+
 .game-detail-ttb-row {
 	display: flex;
 	align-items: center;
@@ -857,6 +874,103 @@ main {
 	display: flex;
 	justify-content: flex-end;
 	margin-top: 0.5rem;
+}
+
+.eligibility-form {
+	display: grid;
+	gap: 0.9rem;
+}
+
+.eligibility-list {
+	display: grid;
+	gap: 0.7rem;
+	max-height: 280px;
+	overflow-y: auto;
+}
+
+.eligibility-item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	padding: 0.6rem 0.8rem;
+	border: 1px solid var(--border);
+	border-radius: 12px;
+	background: rgba(255, 255, 255, 0.72);
+}
+
+.eligibility-title {
+	font-weight: 600;
+}
+
+.toggle-control {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+}
+
+.toggle-switch {
+	position: relative;
+	display: inline-flex;
+	width: 44px;
+	height: 24px;
+	flex: 0 0 44px;
+	cursor: pointer;
+}
+
+.toggle-switch input {
+	position: absolute;
+	inset: 0;
+	opacity: 0;
+	margin: 0;
+	cursor: pointer;
+}
+
+.toggle-slider {
+	position: absolute;
+	inset: 0;
+	border-radius: 999px;
+	background: rgba(33, 51, 70, 0.28);
+	transition: background-color 0.15s ease;
+}
+
+.toggle-slider::before {
+	content: "";
+	position: absolute;
+	width: 18px;
+	height: 18px;
+	left: 3px;
+	top: 3px;
+	border-radius: 50%;
+	background: #fff;
+	box-shadow: 0 2px 6px rgba(15, 35, 55, 0.3);
+	transition: transform 0.15s ease;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+	background: var(--accent);
+}
+
+.toggle-switch input:checked + .toggle-slider::before {
+	transform: translateX(20px);
+}
+
+.toggle-switch input:focus-visible + .toggle-slider {
+	outline: 2px solid rgba(59, 110, 165, 0.35);
+	outline-offset: 2px;
+}
+
+.toggle-switch input:disabled + .toggle-slider {
+	background: rgba(33, 51, 70, 0.14);
+}
+
+.toggle-switch input:disabled + .toggle-slider::before {
+	background: rgba(255, 255, 255, 0.75);
+}
+
+.toggle-switch input:disabled {
+	cursor: not-allowed;
 }
 
 .field {

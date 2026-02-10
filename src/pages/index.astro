@@ -8,6 +8,8 @@ type Game = {
 	id: number;
 	title: string;
 	status: "backlog" | "current" | "played";
+	poll_eligible?: number | null;
+	is_mine?: number;
 	tags_json?: string;
 	played_month?: string;
 	cover_art_url?: string;
@@ -266,6 +268,9 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 							<span class="poll-status-text hidden" id="poll-chip">Inactive</span>
 						</div>
 						<div class="poll-summary-actions">
+							<button class="ghost hidden" type="button" data-action="open-eligibility">
+								Set eligibility
+							</button>
 							<button class="cta" type="button" data-action="start-poll">Start a poll</button>
 						</div>
 					</div>
@@ -326,7 +331,11 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 							<tbody>
 								{backlogGames.map((game) => (
 										<tr
-											class="game-row clickable-row"
+											class:list={[
+												"game-row",
+												"clickable-row",
+												game.poll_eligible === 1 ? "" : "is-poll-ineligible"
+											]}
 											data-id={game.id}
 											data-title={game.title}
 											data-title-sort={game.title.toLowerCase()}
@@ -361,6 +370,8 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 											data-itad-slug={game.itad_slug || ""}
 											data-status={game.status}
 											data-favorite={game.is_favorite ? "1" : "0"}
+											data-poll-eligible={game.poll_eligible === 1 ? "1" : "0"}
+											data-is-mine={game.is_mine ? "1" : "0"}
 											data-rating-count={typeof game.rating_count === "number" ? String(game.rating_count) : "0"}
 											data-rating-average={
 												typeof game.rating_average === "number"
@@ -538,6 +549,23 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 					</footer>
 				</form>
 			</dialog>
+			<dialog class="modal" id="eligibility-modal">
+				<form class="modal-card eligibility-form" method="dialog">
+					<header>
+						<h3>Set poll eligibility</h3>
+						<button class="ghost icon-button" type="button" data-action="close-eligibility" aria-label="Close">
+							×
+						</button>
+					</header>
+					<p class="muted small eligibility-summary">Select up to 2 of your backlog games.</p>
+					<p class="muted small eligibility-count"></p>
+					<div class="eligibility-list" role="list"></div>
+					<p class="form-error hidden eligibility-error" role="alert"></p>
+					<footer>
+						<button class="ghost" type="button" data-action="close-eligibility">Done</button>
+					</footer>
+				</form>
+			</dialog>
 			<dialog class="modal" id="game-detail-modal">
 				<form class="modal-card game-detail-card" method="dialog">
 					<header>
@@ -585,6 +613,16 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 							</div>
 								<p class="meta-line tight game-detail-prices">Current low: TBD · Historical low: TBD</p>
 								<p class="muted small game-detail-submitted"></p>
+								<div class="game-detail-eligibility hidden">
+									<label class="toggle-control" for="game-detail-poll-eligible">
+										<span>Poll eligible</span>
+										<span class="toggle-switch">
+											<input id="game-detail-poll-eligible" type="checkbox" />
+											<span class="toggle-slider"></span>
+										</span>
+									</label>
+									<p class="muted small game-detail-eligibility-help">Select up to 2 of your backlog games.</p>
+								</div>
 							</div>
 						</div>
 						<p class="form-error hidden game-detail-action-error" role="alert"></p>
@@ -631,6 +669,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 			const pollError = document.querySelector("#poll-error");
 			const startButton = document.querySelector("[data-action='start-poll']");
 			const closeButton = document.querySelector("[data-action='close-poll']");
+			const openEligibilityButton = document.querySelector("[data-action='open-eligibility']");
 			const meetingNode = document.querySelector("#next-meeting");
 			const meetingModal = document.querySelector("#meeting-modal");
 			const meetingDate = document.querySelector("#meeting-date");
@@ -659,9 +698,12 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 				}
 			}
 
-			function setButtonVisibility({ canStart, canVote, canClose }) {
+			function setButtonVisibility({ canStart, canVote, canClose, canSetEligibility }) {
 				if (startButton) startButton.classList.toggle("hidden", !canStart);
 				if (closeButton) closeButton.classList.toggle("hidden", !canClose);
+				if (openEligibilityButton) {
+					openEligibilityButton.classList.toggle("hidden", !canSetEligibility);
+				}
 			}
 
 			function renderResults(results, label) {
@@ -707,7 +749,12 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 					pollStatus.textContent = "Unable to load poll status.";
 					pollMeta.textContent = "";
 					renderResults([], "No poll data available.");
-					setButtonVisibility({ canStart: false, canVote: false, canClose: false });
+					setButtonVisibility({
+						canStart: false,
+						canVote: false,
+						canClose: false,
+						canSetEligibility: false
+					});
 					return;
 				}
 
@@ -719,15 +766,30 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 					pollMeta.textContent = `Started ${formatPollDate(state.poll?.started_at)}`;
 					if (!isAuthenticated) {
 						renderResults([], "Sign in to vote.");
-						setButtonVisibility({ canStart: false, canVote: false, canClose: false });
+						setButtonVisibility({
+							canStart: false,
+							canVote: false,
+							canClose: false,
+							canSetEligibility: false
+						});
 						toggleVoteForm(false);
 					} else if (state.hasVoted) {
 						renderResults(state.results || [], "Results will appear after votes land.");
-						setButtonVisibility({ canStart: false, canVote: false, canClose: true });
+						setButtonVisibility({
+							canStart: false,
+							canVote: false,
+							canClose: true,
+							canSetEligibility: false
+						});
 						toggleVoteForm(false);
 					} else {
 						renderResults([], null);
-						setButtonVisibility({ canStart: false, canVote: false, canClose: false });
+						setButtonVisibility({
+							canStart: false,
+							canVote: false,
+							canClose: false,
+							canSetEligibility: false
+						});
 						toggleVoteForm(true);
 					}
 				} else {
@@ -742,7 +804,8 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 					setButtonVisibility({
 						canStart: isAuthenticated,
 						canVote: false,
-						canClose: false
+						canClose: false,
+						canSetEligibility: isAuthenticated
 					});
 					toggleVoteForm(false);
 				}
@@ -826,6 +889,10 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 			async function startPoll() {
 				const authed = await ensureAuthenticated("Starting a poll");
 				if (!authed) return;
+				const confirmed = window.confirm(
+					"Start this poll now? Please confirm everyone has submitted and is ready to vote."
+				);
+				if (!confirmed) return;
 				const response = await fetch("/api/polls", { method: "POST" });
 				if (response.ok) {
 					const updated = await loadPollState();
@@ -1018,6 +1085,10 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 				const addForm = document.querySelector(".add-game-form");
 				const addError = document.querySelector("#add-game-error");
 				const titleInput = document.querySelector("#game-title");
+				const eligibilityModal = document.querySelector("#eligibility-modal");
+				const eligibilityList = document.querySelector(".eligibility-list");
+				const eligibilityCount = document.querySelector(".eligibility-count");
+				const eligibilityError = document.querySelector(".eligibility-error");
 				const suggestionList = document.querySelector(".suggestions");
 				const detailModal = document.querySelector("#game-detail-modal");
 				const detailTitle = document.querySelector(".game-detail-title");
@@ -1040,6 +1111,9 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 				const detailTtbInput = document.querySelector("#game-detail-ttb");
 				const detailTtbSave = document.querySelector(".game-detail-ttb-save");
 				const detailTtbError = document.querySelector(".game-detail-ttb-error");
+				const detailEligibility = document.querySelector(".game-detail-eligibility");
+				const detailEligibilityToggle = document.querySelector("#game-detail-poll-eligible");
+				const detailEligibilityHelp = document.querySelector(".game-detail-eligibility-help");
 				const detailActionError = document.querySelector(".game-detail-action-error");
 				const currentGameRateButton = document.querySelector(".rate-current-game");
 				const cardRatingWraps = Array.from(document.querySelectorAll(".game-rating-wrap"));
@@ -1055,12 +1129,15 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 				const tooltipTags = rowTooltip?.querySelector(".tooltip-tags");
 				const steamIdKey = "steamAppId";
 				let selectedGameId = null;
+				let selectedGameIsMine = false;
+				let selectedGamePollEligible = false;
 				let selectedGameFavorite = false;
 				let selectedGameMyRating = null;
 				let activeRateGameId = null;
 				let activeRateGameTitle = "";
 				let currentUserRole = initialUser?.role || "";
 				let isSignedIn = Boolean(initialUser?.email);
+				const MAX_MEMBER_ELIGIBLE = 2;
 				const ratingRowsByGame = new Map();
 
 				function getFirstName(value) {
@@ -1111,6 +1188,18 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 						}
 						clearFormError();
 						addModal?.showModal();
+					}
+					if (target.closest("[data-action='open-eligibility']")) {
+						if (!isSignedIn) {
+							window.location.href = "/api/auth/login";
+							return;
+						}
+						openEligibilityModal();
+						return;
+					}
+					if (target.closest("[data-action='close-eligibility']")) {
+						setEligibilityError("");
+						eligibilityModal?.close();
 					}
 					if (target.closest("[data-action='close-add-game']")) {
 						addModal?.close();
@@ -1163,6 +1252,195 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 					? Array.from(tableBody.querySelectorAll(".game-row"))
 					: [];
 
+				function getOwnedBacklogRows() {
+					return tableRows.filter((row) => row.dataset.isMine === "1");
+				}
+
+				function getOwnedEligibleCount() {
+					return getOwnedBacklogRows().filter((row) => row.dataset.pollEligible === "1").length;
+				}
+
+				function updateEligibilityCountText() {
+					if (!eligibilityCount) return;
+					const count = getOwnedEligibleCount();
+					eligibilityCount.textContent = `${count} of ${MAX_MEMBER_ELIGIBLE} selected`;
+				}
+
+				function setEligibilityError(message) {
+					if (!eligibilityError) return;
+					if (message) {
+						eligibilityError.textContent = message;
+						eligibilityError.classList.remove("hidden");
+					} else {
+						eligibilityError.textContent = "";
+						eligibilityError.classList.add("hidden");
+					}
+				}
+
+				function getRowByGameId(gameId) {
+					return tableRows.find((row) => Number.parseInt(row.dataset.id || "", 10) === gameId) || null;
+				}
+
+				function getActiveSort() {
+					const activeHeader = Array.from(sortHeaders).find((header) => header.dataset.direction);
+					if (!activeHeader) {
+						return { key: "title", direction: "asc" };
+					}
+					return {
+						key: activeHeader.dataset.sort || "title",
+						direction: activeHeader.dataset.direction || "asc"
+					};
+				}
+
+				function applyGamePollEligibleState(gameId, isEligible) {
+					const row = getRowByGameId(gameId);
+					if (!row) return;
+					row.dataset.pollEligible = isEligible ? "1" : "0";
+					row.classList.toggle("is-poll-ineligible", !isEligible);
+				}
+
+				function syncEligibilityControls() {
+					const eligibleCount = getOwnedEligibleCount();
+					const reachedMax = eligibleCount >= MAX_MEMBER_ELIGIBLE;
+
+					if (eligibilityList) {
+						const toggles = eligibilityList.querySelectorAll(".eligibility-toggle");
+						toggles.forEach((toggle) => {
+							if (!(toggle instanceof HTMLInputElement)) return;
+							const gameId = Number.parseInt(toggle.dataset.gameId || "", 10);
+							const row = Number.isNaN(gameId) ? null : getRowByGameId(gameId);
+							const isEligible = row?.dataset.pollEligible === "1";
+							toggle.checked = isEligible;
+							toggle.disabled = !isEligible && reachedMax;
+						});
+					}
+
+					if (detailEligibilityToggle) {
+						const disableEnable = !selectedGamePollEligible && reachedMax;
+						detailEligibilityToggle.disabled = disableEnable;
+						if (detailEligibilityHelp) {
+							detailEligibilityHelp.textContent = disableEnable
+								? "You already have 2 eligible games. Mark one ineligible first."
+								: "Select up to 2 of your backlog games.";
+						}
+					}
+
+					updateEligibilityCountText();
+				}
+
+				function renderEligibilityList() {
+					if (!eligibilityList) return;
+					eligibilityList.innerHTML = "";
+					const rows = getOwnedBacklogRows().sort((a, b) =>
+						(a.dataset.titleSort || "").localeCompare(b.dataset.titleSort || "")
+					);
+					if (rows.length === 0) {
+						const empty = document.createElement("p");
+						empty.className = "muted small";
+						empty.textContent = "You do not have any backlog games yet.";
+						eligibilityList.appendChild(empty);
+						updateEligibilityCountText();
+						return;
+					}
+
+					rows.forEach((row) => {
+						const gameId = Number.parseInt(row.dataset.id || "", 10);
+						if (Number.isNaN(gameId)) return;
+						const isEligible = row.dataset.pollEligible === "1";
+
+						const item = document.createElement("div");
+						item.className = "eligibility-item";
+
+						const title = document.createElement("span");
+						title.className = "eligibility-title";
+						title.textContent = row.dataset.title || "Untitled game";
+
+						const label = document.createElement("label");
+						label.className = "toggle-switch";
+
+						const input = document.createElement("input");
+						input.type = "checkbox";
+						input.className = "eligibility-toggle";
+						input.dataset.gameId = String(gameId);
+						input.checked = isEligible;
+
+						const slider = document.createElement("span");
+						slider.className = "toggle-slider";
+
+						label.appendChild(input);
+						label.appendChild(slider);
+						item.appendChild(title);
+						item.appendChild(label);
+						eligibilityList.appendChild(item);
+					});
+
+					syncEligibilityControls();
+				}
+
+				function openEligibilityModal() {
+					if (!eligibilityModal) return;
+					setEligibilityError("");
+					renderEligibilityList();
+					eligibilityModal.showModal();
+				}
+
+				function setGamePollEligibilityState(gameId, isEligible) {
+					applyGamePollEligibleState(gameId, isEligible);
+					const { key, direction } = getActiveSort();
+					applySort(key, direction);
+
+					if (selectedGameId && Number.parseInt(String(selectedGameId), 10) === gameId) {
+						selectedGamePollEligible = isEligible;
+						if (detailEligibilityToggle) {
+							detailEligibilityToggle.checked = isEligible;
+						}
+					}
+
+					syncEligibilityControls();
+				}
+
+				async function updatePollEligibility(gameIdText, pollEligible, source) {
+					if (!isSignedIn) {
+						window.location.href = "/api/auth/login";
+						return false;
+					}
+					const gameId = Number.parseInt(String(gameIdText), 10);
+					if (Number.isNaN(gameId)) return false;
+
+					const response = await fetch("/api/games/eligibility", {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ id: gameId, poll_eligible: pollEligible })
+					});
+					if (response.ok) {
+						if (detailActionError) {
+							detailActionError.textContent = "";
+							detailActionError.classList.add("hidden");
+						}
+						setEligibilityError("");
+						if (backlogFeedback) {
+							backlogFeedback.textContent = "";
+							backlogFeedback.classList.add("hidden");
+						}
+						setGamePollEligibilityState(gameId, pollEligible);
+						return true;
+					}
+					if (response.status === 401) {
+						window.location.href = "/api/auth/login";
+						return false;
+					}
+					const message = await response.text();
+					if (source === "detail" && detailActionError) {
+						detailActionError.textContent = message || "Unable to update poll eligibility.";
+						detailActionError.classList.remove("hidden");
+					} else if (source === "modal") {
+						setEligibilityError(message || "Unable to update poll eligibility.");
+					} else {
+						showBacklogFeedback(message || "Unable to update poll eligibility.");
+					}
+					return false;
+				}
+
 				if (addForm) {
 					addForm.addEventListener("submit", async (event) => {
 						event.preventDefault();
@@ -1184,6 +1462,33 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 					});
 				}
 
+				if (eligibilityList) {
+					eligibilityList.addEventListener("change", async (event) => {
+						const target = event.target;
+						if (!(target instanceof HTMLInputElement)) return;
+						if (!target.classList.contains("eligibility-toggle")) return;
+						const gameId = Number.parseInt(target.dataset.gameId || "", 10);
+						if (Number.isNaN(gameId)) return;
+						const row = getRowByGameId(gameId);
+						const previous = row?.dataset.pollEligible === "1";
+						const ok = await updatePollEligibility(gameId, target.checked, "modal");
+						if (!ok) {
+							target.checked = previous;
+						}
+					});
+				}
+
+				if (detailEligibilityToggle) {
+					detailEligibilityToggle.addEventListener("change", async () => {
+						if (!selectedGameId) return;
+						const nextValue = detailEligibilityToggle.checked;
+						const ok = await updatePollEligibility(selectedGameId, nextValue, "detail");
+						if (!ok) {
+							detailEligibilityToggle.checked = selectedGamePollEligible;
+						}
+					});
+				}
+
 				bindSearch(titleInput, suggestionList);
 
 				function getRowValue(row, key) {
@@ -1197,6 +1502,11 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 
 				function compareRows(a, b, key, direction) {
 					const dir = direction === "desc" ? -1 : 1;
+					const aEligible = Number.parseInt(a.dataset.pollEligible || "0", 10);
+					const bEligible = Number.parseInt(b.dataset.pollEligible || "0", 10);
+					if (aEligible !== bEligible) {
+						return bEligible - aEligible;
+					}
 					if (key === "favorite") {
 						const aFavorite = Number.parseInt(a.dataset.favorite || "0", 10);
 						const bFavorite = Number.parseInt(b.dataset.favorite || "0", 10);
@@ -1235,6 +1545,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 				});
 
 				applySort("title", "asc");
+				updateEligibilityCountText();
 
 				function applyFavoriteStateToButton(button, isFavorite) {
 					if (!(button instanceof HTMLElement)) return;
@@ -1855,14 +2166,18 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 					const itadSlug = card.dataset.itadSlug || "";
 					const currentPrice = card.dataset.currentPrice || "";
 					const bestPrice = card.dataset.bestPrice || "";
-					const status = card.dataset.status || "";
-					const ttbMinutes = card.dataset.ttbMinutes || "";
-					const ratingCount = card.dataset.ratingCount || "0";
-					const ratingAverage = card.dataset.ratingAverage || "";
-					const myRatingValue = card.dataset.myRating || "";
-					const isFavorite = card.dataset.favorite === "1";
-					selectedGameId = card.dataset.id || null;
-					selectedGameFavorite = isFavorite;
+						const status = card.dataset.status || "";
+						const ttbMinutes = card.dataset.ttbMinutes || "";
+						const ratingCount = card.dataset.ratingCount || "0";
+						const ratingAverage = card.dataset.ratingAverage || "";
+						const myRatingValue = card.dataset.myRating || "";
+						const isMine = card.dataset.isMine === "1";
+						const isPollEligible = card.dataset.pollEligible === "1";
+						const isFavorite = card.dataset.favorite === "1";
+						selectedGameId = card.dataset.id || null;
+						selectedGameIsMine = isMine;
+						selectedGamePollEligible = isPollEligible;
+						selectedGameFavorite = isFavorite;
 					selectedGameMyRating = (() => {
 						const parsed = Number.parseInt(myRatingValue, 10);
 						return Number.isNaN(parsed) ? null : parsed;
@@ -1950,11 +2265,19 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 						detailSetCurrent.classList.toggle("hidden", !currentUserIsAdmin);
 						detailSetCurrent.disabled = status === "current";
 					}
-					if (detailRate) {
-						detailRate.classList.toggle("hidden", !isSignedIn);
-					}
+						if (detailRate) {
+							detailRate.classList.toggle("hidden", !isSignedIn);
+						}
+						if (detailEligibility && detailEligibilityToggle) {
+							const canEditEligibility = isSignedIn && selectedGameIsMine && status === "backlog";
+							detailEligibility.classList.toggle("hidden", !canEditEligibility);
+							detailEligibilityToggle.checked = selectedGamePollEligible;
+							if (canEditEligibility) {
+								syncEligibilityControls();
+							}
+						}
 
-					detailModal.showModal();
+						detailModal.showModal();
 					if (selectedGameId) {
 						loadGameRatings(selectedGameId);
 					}

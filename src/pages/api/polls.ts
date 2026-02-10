@@ -118,12 +118,12 @@ export const POST: APIRoute = async ({ locals, request }) => {
 	}
 
 	const backlogGames = await db
-		.prepare("select id from games where status = 'backlog' order by title asc")
+		.prepare("select id from games where status = 'backlog' and poll_eligible = 1 order by title asc")
 		.bind()
 		.all<{ id: number }>();
 
 	if (backlogGames.results.length === 0) {
-		return new Response("No backlog games available.", { status: 400 });
+		return new Response("No poll-eligible backlog games available.", { status: 400 });
 	}
 
 	try {
@@ -132,7 +132,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
 			db
 				.prepare(
 					"insert into poll_games (poll_id, game_id) " +
-						"select polls.id, games.id from polls join games on games.status = 'backlog' " +
+						"select polls.id, games.id from polls join games on games.status = 'backlog' and games.poll_eligible = 1 " +
 						"where polls.status = 'active'"
 				)
 				.bind()

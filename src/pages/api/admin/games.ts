@@ -6,6 +6,7 @@ type GameRow = {
 	title: string;
 	submitted_by_email: string;
 	status: "backlog" | "current" | "played";
+	poll_eligible?: number | null;
 	tags_json?: string;
 	time_to_beat_minutes?: number;
 	played_month?: string;
@@ -36,7 +37,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
 	const { results } = await db
 		.prepare(
-			"select id, title, submitted_by_email, status, tags_json, time_to_beat_minutes, played_month from games order by lower(title) asc"
+			"select id, title, submitted_by_email, status, poll_eligible, tags_json, time_to_beat_minutes, played_month from games order by lower(title) asc"
 		)
 		.bind()
 		.all<GameRow>();
@@ -59,7 +60,7 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
 
 	const existing = await db
 		.prepare(
-			"select id, title, submitted_by_email, status, tags_json, time_to_beat_minutes, played_month from games where id = ?1"
+			"select id, title, submitted_by_email, status, poll_eligible, tags_json, time_to_beat_minutes, played_month from games where id = ?1"
 		)
 		.bind(id)
 		.first<GameRow>();
@@ -69,6 +70,10 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
 
 	const updates: string[] = [];
 	const values: unknown[] = [];
+	let nextSubmittedByEmail = existing.submitted_by_email;
+	let nextStatus = existing.status;
+	let nextPollEligible: number | null =
+		existing.poll_eligible === 1 ? 1 : existing.poll_eligible === 0 ? 0 : null;
 
 	if (typeof body?.submitted_by_email === "string") {
 		const email = body.submitted_by_email.trim().toLowerCase();
@@ -83,16 +88,57 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
 		if (!member) {
 			return new Response("Submitted by email must belong to an existing member.", { status: 400 });
 		}
-		updates.push(`submitted_by_email = ?${values.length + 1}`);
-		values.push(email);
+		nextSubmittedByEmail = email;
 	}
 
 	if (typeof body?.status === "string") {
 		if (!["backlog", "current", "played"].includes(body.status)) {
 			return new Response("Invalid status.", { status: 400 });
 		}
+		nextStatus = body.status as "backlog" | "current" | "played";
+	}
+
+	if (body && Object.prototype.hasOwnProperty.call(body, "poll_eligible")) {
+		const parsedPollEligible = parsePollEligible(body.poll_eligible);
+		if (parsedPollEligible === null) {
+			return new Response("Invalid poll eligibility value.", { status: 400 });
+		}
+		nextPollEligible = parsedPollEligible;
+	}
+
+	if (nextStatus !== "backlog") {
+		nextPollEligible = null;
+	} else if (nextPollEligible === null) {
+		nextPollEligible = 0;
+	}
+
+	if (nextStatus === "backlog" && nextPollEligible === 1) {
+		const eligibleCount = await db
+			.prepare(
+				"select count(*) as count from games where submitted_by_email = ?1 and status = 'backlog' and poll_eligible = 1 and id != ?2"
+			)
+			.bind(nextSubmittedByEmail, id)
+			.first<{ count: number }>();
+		if ((eligibleCount?.count ?? 0) >= 2) {
+			return new Response("Member already has 2 poll-eligible backlog games.", { status: 409 });
+		}
+	}
+
+	if (nextSubmittedByEmail !== existing.submitted_by_email) {
+		updates.push(`submitted_by_email = ?${values.length + 1}`);
+		values.push(nextSubmittedByEmail);
+	}
+
+	if (nextStatus !== existing.status) {
 		updates.push(`status = ?${values.length + 1}`);
-		values.push(body.status);
+		values.push(nextStatus);
+	}
+
+	const existingPollEligible =
+		existing.poll_eligible === 1 ? 1 : existing.poll_eligible === 0 ? 0 : null;
+	if (nextPollEligible !== existingPollEligible) {
+		updates.push(`poll_eligible = ?${values.length + 1}`);
+		values.push(nextPollEligible);
 	}
 
 	if (typeof body?.played_month === "string") {
@@ -124,7 +170,7 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
 		return new Response("No updates provided.", { status: 400 });
 	}
 
-	const newStatus = typeof body?.status === "string" ? body.status : null;
+	const newStatus = nextStatus !== existing.status ? nextStatus : null;
 	const sql = `update games set ${updates.join(", ")} where id = ?${values.length + 1}`;
 	values.push(id);
 	const updateStatement = db.prepare(sql).bind(...values);
@@ -135,7 +181,7 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
 				await db.batch([
 					db
 						.prepare(
-							"update games set status = 'played', played_month = coalesce(played_month, ?1) where status = 'current' and id != ?2 and exists(select 1 from games where id = ?2)"
+							"update games set status = 'played', poll_eligible = null, played_month = coalesce(played_month, ?1) where status = 'current' and id != ?2 and exists(select 1 from games where id = ?2)"
 						)
 						.bind(playedMonth, id),
 					updateStatement
@@ -153,7 +199,7 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
 
 	const updated = await db
 		.prepare(
-			"select id, title, submitted_by_email, status, tags_json, time_to_beat_minutes, played_month from games where id = ?1"
+			"select id, title, submitted_by_email, status, poll_eligible, tags_json, time_to_beat_minutes, played_month from games where id = ?1"
 		)
 		.bind(id)
 		.first<GameRow>();
@@ -203,7 +249,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
 
 	const existing = await db
 		.prepare(
-			"select id, title, submitted_by_email, status, tags_json, time_to_beat_minutes, played_month from games where id = ?1"
+			"select id, title, submitted_by_email, status, poll_eligible, tags_json, time_to_beat_minutes, played_month from games where id = ?1"
 		)
 		.bind(id)
 		.first<GameRow>();
@@ -274,6 +320,7 @@ async function readJson(request: Request): Promise<{
 	id?: unknown;
 	submitted_by_email?: unknown;
 	status?: unknown;
+	poll_eligible?: unknown;
 	tags?: unknown;
 	time_to_beat_hours?: unknown;
 	played_month?: unknown;
@@ -301,6 +348,14 @@ function isValidPlayedMonth(value: string) {
 
 function isValidEmail(value: string) {
 	return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function parsePollEligible(value: unknown): 0 | 1 | null {
+	if (value === null || value === undefined) return null;
+	if (typeof value === "boolean") {
+		return value ? 1 : 0;
+	}
+	return null;
 }
 
 function mapAdminGameConstraintError(error: unknown): Response | null {

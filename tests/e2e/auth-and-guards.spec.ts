@@ -45,6 +45,15 @@ test("unauthenticated rating submit returns 401", async ({ request }) => {
 	await expect(response.text()).resolves.toContain("Authentication required.");
 });
 
+test("unauthenticated poll eligibility toggle returns 401", async ({ request }) => {
+	const response = await request.post("/api/games/eligibility", {
+		headers: { "Content-Type": "application/json" },
+		data: { id: 1, poll_eligible: true }
+	});
+	expect(response.status()).toBe(401);
+	await expect(response.text()).resolves.toContain("Authentication required.");
+});
+
 test("unauthenticated member admin mutation returns 401", async ({ request }) => {
 	const response = await request.post("/api/admin/members", {
 		headers: { "Content-Type": "application/json" },

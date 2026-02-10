@@ -15,7 +15,8 @@ This project maintains a website that is a companion tool for a video game club 
 - Games: Members can submit games to a backlog. Metadata will be pulled in when a game is submitted. Games can be in one of 3 states: backlog, current (only 1 at a time), or played (was previously a current game).
 - Favorites: Members can privately tag games as favorites (heart icon) to help prioritize voting; favorite indicators appear in backlog, game details, and poll choices for that member.
 - Ratings: Members can rate any game on a 1-5 star scale, can clear/update their own rating, and can view aggregate ratings site-wide. Individual member ratings are visible in the game detail modal for authenticated members.
-- Polls: One active poll at a time, ranked choice voting (top 3).
+- Polls: One active poll at a time, ranked choice voting (top 3). Polls include only backlog games marked poll-eligible.
+- Poll eligibility: Members can mark up to 2 of their own backlog games as poll-eligible. Existing/new backlog games default to ineligible until explicitly marked.
 
 ## Tech Stack
 - Frontend: Astro
