@@ -25,6 +25,7 @@
 22. Added admin Poll History API (`/api/admin/polls`) with list/detail payloads and controls to toggle validity or delete closed poll history entries.
 23. Added Admin page Poll History section and detail modal for inspecting winners/results/voter count and managing validity/deletion.
 24. Expanded E2E coverage for unauthenticated/admin-forbidden access to the new poll history admin endpoint.
+25. Refined Admin Poll History modal UX: removed redundant footer Close/Save buttons and switched validity updates to autosave when toggled.
 
 ## 2026-02-09
 1. Moved games page content to the Home page and removed the separate Games page flow.

@@ -273,8 +273,6 @@ export const prerender = false;
 				<p class="form-error hidden" id="poll-history-error" role="alert"></p>
 				<footer>
 					<button class="ghost danger" type="button" data-action="delete-poll-history">Delete poll</button>
-					<button class="ghost" type="button" data-action="close-poll-history">Close</button>
-					<button class="cta" type="button" data-action="save-poll-history">Save validity</button>
 				</footer>
 			</form>
 		</dialog>
@@ -725,6 +723,7 @@ export const prerender = false;
 			async function savePollHistoryValidity() {
 				if (!activePollHistoryId || !(pollHistoryValidity instanceof HTMLInputElement)) return;
 				const nextValidity = pollHistoryValidity.checked;
+				pollHistoryValidity.disabled = true;
 				const response = await fetch("/api/admin/polls", {
 					method: "PATCH",
 					headers: { "Content-Type": "application/json" },
@@ -734,11 +733,13 @@ export const prerender = false;
 					activePollHistoryValidity = nextValidity;
 					setPollHistoryError("");
 					loadPollHistory();
+					pollHistoryValidity.disabled = false;
 					return;
 				}
 				const message = await response.text();
 				setPollHistoryError(message || "Unable to save poll validity.");
 				pollHistoryValidity.checked = activePollHistoryValidity;
+				pollHistoryValidity.disabled = false;
 			}
 
 			async function deletePollHistory() {
@@ -1102,13 +1103,15 @@ export const prerender = false;
 				pollHistoryModal.addEventListener("click", async (event) => {
 					const target = event.target;
 					if (!(target instanceof HTMLElement)) return;
-					if (target.closest("[data-action='save-poll-history']")) {
-						await savePollHistoryValidity();
-					}
 					if (target.closest("[data-action='delete-poll-history']")) {
 						await deletePollHistory();
 					}
 				});
+				if (pollHistoryValidity instanceof HTMLInputElement) {
+					pollHistoryValidity.addEventListener("change", async () => {
+						await savePollHistoryValidity();
+					});
+				}
 				pollHistoryModal.addEventListener("close", () => {
 					activePollHistoryId = null;
 					activePollHistoryValidity = false;
