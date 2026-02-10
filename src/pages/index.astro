@@ -239,7 +239,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 									data-rating-average={typeof currentGame.rating_average === "number" ? String(currentGame.rating_average) : ""}
 									tabindex="0"
 								>
-									Rating: {formatRatingSummaryText(currentGame.rating_average, currentGame.rating_count)}
+									Member Rating: {formatRatingSummaryText(currentGame.rating_average, currentGame.rating_count)}
 								</p>
 								<div class="game-rating-hover">
 									<ul class="game-rating-hover-list" data-game-id={currentGame.id}></ul>
@@ -478,7 +478,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 											}
 											tabindex="0"
 										>
-											Rating: {formatRatingSummaryText(game.rating_average, game.rating_count)}
+											Member Rating: {formatRatingSummaryText(game.rating_average, game.rating_count)}
 										</p>
 										<div class="game-rating-hover">
 											<ul class="game-rating-hover-list" data-game-id={game.id}></ul>
@@ -568,7 +568,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 								<a class="ghost small-pill game-detail-itad" target="_blank" rel="noreferrer" title="View on IsThereAnyDeal">ITAD</a>
 							</div>
 							<div class="game-detail-rating-wrap">
-								<p class="meta-line tight game-detail-rating-summary" tabindex="0">Rating: No ratings yet</p>
+								<p class="meta-line tight game-detail-rating-summary" tabindex="0">Member Rating: No ratings yet</p>
 								<div class="game-detail-rating-hover">
 									<ul class="game-detail-rating-hover-list"></ul>
 								</div>
@@ -1487,7 +1487,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 						if (!(node instanceof HTMLElement)) return;
 						node.dataset.ratingCount = String(normalizedCount);
 						node.dataset.ratingAverage = averageText;
-						node.textContent = `Rating: ${formatRatingSummary(ratingAverage, normalizedCount)}`;
+						node.textContent = `Member Rating: ${formatRatingSummary(ratingAverage, normalizedCount)}`;
 					});
 
 					if (
@@ -1495,7 +1495,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 						Number.parseInt(String(selectedGameId), 10) === gameId &&
 						detailRatingSummary
 					) {
-						detailRatingSummary.textContent = `Rating: ${formatRatingSummary(
+						detailRatingSummary.textContent = `Member Rating: ${formatRatingSummary(
 							ratingAverage,
 							normalizedCount
 						)}`;
@@ -1880,7 +1880,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 					}
 					applyFavoriteStateToButton(detailFavorite, isFavorite);
 					if (detailRatingSummary) {
-						detailRatingSummary.textContent = `Rating: ${formatRatingSummary(
+						detailRatingSummary.textContent = `Member Rating: ${formatRatingSummary(
 							ratingAverage,
 							ratingCount
 						)}`;
