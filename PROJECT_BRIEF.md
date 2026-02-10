@@ -14,6 +14,7 @@ This project maintains a website that is a companion tool for a video game club 
 - Non-members: Membership is invite-only, but unauthenticated users can view poll results and games, but not vote or submit (read-only).
 - Games: Members can submit games to a backlog. Metadata will be pulled in when a game is submitted. Games can be in one of 3 states: backlog, current (only 1 at a time), or played (was previously a current game).
 - Favorites: Members can privately tag games as favorites (heart icon) to help prioritize voting; favorite indicators appear in backlog, game details, and poll choices for that member.
+- Ratings: Members can rate any game on a 1-5 star scale, can clear/update their own rating, and can view aggregate ratings site-wide. Individual member ratings are visible in the game detail modal for authenticated members.
 - Polls: One active poll at a time, ranked choice voting (top 3).
 
 ## Tech Stack
