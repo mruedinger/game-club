@@ -13,6 +13,7 @@ This project maintains a website that is a companion tool for a video game club 
 - Admins: Can perform all Member functions. Additionally, they can manage the user list, and may have other superuser permissions across the site.
 - Non-members: Membership is invite-only, but unauthenticated users can view poll results and games, but not vote or submit (read-only).
 - Games: Members can submit games to a backlog. Metadata will be pulled in when a game is submitted. Games can be in one of 3 states: backlog, current (only 1 at a time), or played (was previously a current game).
+- Favorites: Members can privately tag games as favorites (heart icon) to help prioritize voting; favorite indicators appear in backlog, game details, and poll choices for that member.
 - Polls: One active poll at a time, ranked choice voting (top 3).
 
 ## Tech Stack

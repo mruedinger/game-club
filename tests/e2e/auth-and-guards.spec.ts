@@ -27,6 +27,15 @@ test("unauthenticated poll start returns 401", async ({ request }) => {
 	await expect(response.text()).resolves.toContain("Authentication required.");
 });
 
+test("unauthenticated favorite toggle returns 401", async ({ request }) => {
+	const response = await request.post("/api/games/favorite", {
+		headers: { "Content-Type": "application/json" },
+		data: { id: 1, favorite: true }
+	});
+	expect(response.status()).toBe(401);
+	await expect(response.text()).resolves.toContain("Authentication required.");
+});
+
 test("unauthenticated member admin mutation returns 401", async ({ request }) => {
 	const response = await request.post("/api/admin/members", {
 		headers: { "Content-Type": "application/json" },

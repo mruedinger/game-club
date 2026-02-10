@@ -372,6 +372,12 @@ main {
 	color: var(--ink);
 }
 
+.games-table th.favorite-header,
+.games-table td.favorite-cell {
+	width: 5.5rem;
+	text-align: center;
+}
+
 .games-table .clickable-row {
 	cursor: pointer;
 }
@@ -500,10 +506,39 @@ main {
 	justify-content: space-between;
 }
 
+.game-detail-header-actions {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
 .game-detail-links {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 0.5rem;
+}
+
+.favorite-toggle {
+	padding: 0;
+	border-radius: 999px;
+}
+
+.favorite-toggle .favorite-icon {
+	font-size: 1.1rem;
+	line-height: 1;
+}
+
+.favorite-toggle.is-favorite {
+	color: #a9192e;
+	background: rgba(255, 240, 242, 0.92);
+	border-color: rgba(169, 25, 46, 0.3);
+}
+
+.favorite-cell .favorite-toggle {
+	width: 30px;
+	height: 30px;
+	min-width: 30px;
+	min-height: 30px;
 }
 
 .game-detail-ttb-edit {
