@@ -57,6 +57,18 @@ test("authenticated member cannot call admin member mutation", async ({ request 
 	await expect(response.text()).resolves.toContain("Admin access required.");
 });
 
+test("favorite toggle validates payload when authenticated", async ({ request }) => {
+	const response = await request.post("/api/games/favorite", {
+		headers: {
+			"Content-Type": "application/json",
+			Cookie: memberCookie()
+		},
+		data: { id: "x", favorite: "yes" }
+	});
+	expect(response.status()).toBe(400);
+	await expect(response.text()).resolves.toContain("Game id and favorite flag are required.");
+});
+
 test("admin member mutation enforces payload validation when authenticated", async ({ request }) => {
 	const response = await request.post("/api/admin/members", {
 		headers: {

@@ -24,6 +24,7 @@ type GameRow = {
 	itad_game_id?: string;
 	itad_slug?: string;
 	price_checked_at?: string;
+	is_favorite?: number;
 };
 
 type D1Database = {
@@ -45,19 +46,25 @@ type D1Database = {
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ locals }) => {
+export const GET: APIRoute = async ({ locals, request }) => {
 	const env = getRuntimeEnv(locals.runtime?.env);
 	const db = getDb(env);
 	if (!db) {
 		return new Response("Games database not configured.", { status: 500 });
 	}
+	const session = await readSession(request, env);
+	const memberEmail = session?.email?.toLowerCase() ?? "";
 
 	const { results } = await db
 		.prepare(
-			"select games.id, games.title, members.name as submitted_by_name, members.alias as submitted_by_alias, games.status, games.created_at, games.cover_art_url, games.itad_boxart_url, games.tags_json, games.description, games.time_to_beat_minutes, games.current_price_cents, games.best_price_cents, games.played_month, games.steam_app_id, games.itad_game_id, games.itad_slug " +
-				"from games left join members on members.email = games.submitted_by_email order by games.status asc, games.title asc"
+			"select games.id, games.title, members.name as submitted_by_name, members.alias as submitted_by_alias, games.status, games.created_at, games.cover_art_url, games.itad_boxart_url, games.tags_json, games.description, games.time_to_beat_minutes, games.current_price_cents, games.best_price_cents, games.played_month, games.steam_app_id, games.itad_game_id, games.itad_slug, " +
+				"case when game_favorites.game_id is null then 0 else 1 end as is_favorite " +
+				"from games " +
+				"left join members on members.email = games.submitted_by_email " +
+				"left join game_favorites on game_favorites.game_id = games.id and game_favorites.member_email = ?1 " +
+				"order by games.status asc, games.title asc"
 		)
-		.bind()
+		.bind(memberEmail)
 		.all<GameRow>();
 
 	const backlog = results.filter((game) => game.status === "backlog");
@@ -74,7 +81,7 @@ export const GET: APIRoute = async ({ locals }) => {
 			status: 200,
 			headers: {
 				"Content-Type": "application/json",
-				"Cache-Control": "public, max-age=30"
+				"Cache-Control": "private, no-store"
 			}
 		}
 	);
@@ -237,6 +244,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
 			.prepare("delete from poll_votes where choice_1 = ?1 or choice_2 = ?1 or choice_3 = ?1")
 			.bind(id),
 		db.prepare("delete from poll_games where game_id = ?1").bind(id),
+		db.prepare("delete from game_favorites where game_id = ?1").bind(id),
 		db.prepare("delete from games where id = ?1").bind(id)
 	]);
 

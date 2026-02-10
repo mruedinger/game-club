@@ -29,6 +29,7 @@ type PollRow = {
 type PollChoice = {
 	id: number;
 	title: string;
+	is_favorite?: number;
 };
 
 export const prerender = false;
@@ -57,9 +58,14 @@ export const GET: APIRoute = async ({ locals, request }) => {
 		const hasVoted = Boolean(existingVote);
 		const choices = await db
 			.prepare(
-				"select games.id, games.title from poll_games join games on games.id = poll_games.game_id where poll_games.poll_id = ?1 order by games.title asc"
+				"select games.id, games.title, case when game_favorites.game_id is null then 0 else 1 end as is_favorite " +
+					"from poll_games " +
+					"join games on games.id = poll_games.game_id " +
+					"left join game_favorites on game_favorites.game_id = games.id and game_favorites.member_email = ?2 " +
+					"where poll_games.poll_id = ?1 " +
+					"order by games.title asc"
 			)
-			.bind(activePoll.id)
+			.bind(activePoll.id, voterEmail)
 			.all<PollChoice>();
 
 		const results = hasVoted

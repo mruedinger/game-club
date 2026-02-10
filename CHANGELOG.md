@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-02-10
+1. Added private per-member game favorites with heart toggles in the backlog table and game detail modal.
+2. Added favorite indicators to active poll game choices so members can see their own favorites while voting.
+3. Added `game_favorites` schema support in bootstrap + migration and wired favorite cleanup into game deletion.
+4. Added new favorites API endpoint (`POST /api/games/favorite`) with auth, validation, and audit logging.
+5. Updated games and polls payloads to include per-member favorite state and aligned `/api/games` caching to private/no-store.
+6. Expanded E2E coverage for favorite auth guard and payload validation paths.
+
 ## 2026-02-09
 1. Moved games page content to the Home page and removed the separate Games page flow.
 2. Hardened session revocation behavior with a sliding session model, periodic membership/role revalidation, and middleware-driven cookie refresh.

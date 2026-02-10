@@ -319,6 +319,10 @@ main {
 	overflow-x: auto;
 }
 
+.backlog-table-wrapper {
+	margin-top: 0.95rem;
+}
+
 .table-wrapper.scroll-rows {
 	max-height: 360px;
 	overflow-y: auto;
@@ -370,6 +374,12 @@ main {
 
 .games-table th.sortable:hover {
 	color: var(--ink);
+}
+
+.games-table th.favorite-header,
+.games-table td.favorite-cell {
+	width: 5.5rem;
+	text-align: center;
 }
 
 .games-table .clickable-row {
@@ -500,10 +510,65 @@ main {
 	justify-content: space-between;
 }
 
+.game-detail-title-row {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.game-detail-title {
+	margin: 0;
+}
+
 .game-detail-links {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 0.5rem;
+}
+
+.favorite-toggle {
+	padding: 0;
+	border-radius: 0;
+	background: transparent;
+	border: none;
+	box-shadow: none;
+}
+
+.favorite-toggle .favorite-icon {
+	font-size: 1.2rem;
+	line-height: 1;
+}
+
+.ghost.favorite-toggle {
+	padding: 0;
+	background: transparent;
+	border: none;
+	box-shadow: none;
+}
+
+.ghost.favorite-toggle:hover {
+	background: transparent;
+	box-shadow: none;
+}
+
+.icon-button.favorite-toggle {
+	width: auto;
+	height: auto;
+	min-width: 0;
+	min-height: 0;
+}
+
+.favorite-toggle.is-favorite {
+	color: #a9192e;
+	background: transparent;
+	border: none;
+}
+
+.favorite-cell .favorite-toggle {
+	width: 30px;
+	height: 30px;
+	min-width: 30px;
+	min-height: 30px;
 }
 
 .game-detail-ttb-edit {

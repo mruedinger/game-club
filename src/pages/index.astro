@@ -20,6 +20,7 @@ type Game = {
 	current_price_cents?: number;
 	best_price_cents?: number;
 	time_to_beat_minutes?: number;
+	is_favorite?: number;
 };
 
 const env = getRuntimeEnv(Astro.locals.runtime?.env);
@@ -263,10 +264,11 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 							<button class="cta add-game hidden" type="button">Add a game</button>
 						</div>
 						<p class="form-error hidden" id="backlog-feedback" role="alert"></p>
-						<div class="table-wrapper">
+						<div class="table-wrapper backlog-table-wrapper">
 						<table class="games-table">
 							<thead>
 								<tr>
+									<th data-sort="favorite" class="sortable favorite-header">Favorite</th>
 									<th data-sort="title" class="sortable">Title</th>
 									<th data-sort="submitter" class="sortable">Submitter</th>
 									<th data-sort="ttb" class="sortable">Time to beat</th>
@@ -310,7 +312,21 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 											data-steam-app-id={game.steam_app_id ? String(game.steam_app_id) : ""}
 											data-itad-slug={game.itad_slug || ""}
 											data-status={game.status}
+											data-favorite={game.is_favorite ? "1" : "0"}
 										>
+										<td class="favorite-cell">
+											<button
+												class:list={["ghost", "icon-button", "favorite-toggle", game.is_favorite ? "is-favorite" : ""]}
+												type="button"
+												data-game-id={game.id}
+												data-favorite={game.is_favorite ? "1" : "0"}
+												aria-label={game.is_favorite ? "Remove from favorites" : "Add to favorites"}
+												title={game.is_favorite ? "Remove from favorites" : "Add to favorites"}
+												aria-pressed={game.is_favorite ? "true" : "false"}
+											>
+												<span class="favorite-icon" aria-hidden="true">{game.is_favorite ? "♥" : "♡"}</span>
+											</button>
+										</td>
 										<td>
 											<div class="game-title-cell">
 												<div class="game-icon">
@@ -371,6 +387,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 										: ""
 								}
 								data-status={game.status}
+								data-favorite={game.is_favorite ? "1" : "0"}
 							>
 								<h3>{game.title}</h3>
 								<div class="game-cover">
@@ -444,7 +461,18 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 			<dialog class="modal" id="game-detail-modal">
 				<form class="modal-card game-detail-card" method="dialog">
 					<header>
-						<h3 class="game-detail-title">Game title</h3>
+						<div class="game-detail-title-row">
+							<button
+								class="ghost icon-button favorite-toggle game-detail-favorite"
+								type="button"
+								aria-label="Add to favorites"
+								title="Add to favorites"
+								aria-pressed="false"
+							>
+								<span class="favorite-icon" aria-hidden="true">♡</span>
+							</button>
+							<h3 class="game-detail-title">Game title</h3>
+						</div>
 						<button class="ghost icon-button" type="button" data-action="close-game-detail" aria-label="Close">
 							×
 						</button>
@@ -612,10 +640,11 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 
 			function populateChoices(choices) {
 				const selects = [pollChoice1, pollChoice2, pollChoice3];
+				const selectedValues = selects.map((select) => (select ? select.value : ""));
 				const sortedChoices = Array.isArray(choices)
 					? [...choices].sort((a, b) => (a.title || "").localeCompare(b.title || ""))
 					: [];
-				selects.forEach((select) => {
+				selects.forEach((select, index) => {
 					if (!select) return;
 					const placeholder = select.querySelector("option");
 					clearElement(select);
@@ -625,9 +654,13 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 					sortedChoices.forEach((choice) => {
 						const option = document.createElement("option");
 						option.value = String(choice.id);
-						option.textContent = choice.title;
+						const favoritePrefix = choice?.is_favorite ? "♥ " : "♡ ";
+						option.textContent = `${favoritePrefix}${choice.title}`;
 						select.appendChild(option);
 					});
+					if (selectedValues[index]) {
+						select.value = selectedValues[index];
+					}
 				});
 			}
 
@@ -884,6 +917,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 				const detailCover = document.querySelector(".game-detail-cover");
 				const detailDelete = document.querySelector(".game-detail-delete");
 				const detailSetCurrent = document.querySelector(".game-detail-set-current");
+				const detailFavorite = document.querySelector(".game-detail-favorite");
 				const detailSteam = document.querySelector(".game-detail-steam");
 				const detailHltb = document.querySelector(".game-detail-hltb");
 				const detailItad = document.querySelector(".game-detail-itad");
@@ -901,6 +935,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 				const tooltipTags = rowTooltip?.querySelector(".tooltip-tags");
 				const steamIdKey = "steamAppId";
 				let selectedGameId = null;
+				let selectedGameFavorite = false;
 				let currentUserRole = initialUser?.role || "";
 				let isSignedIn = Boolean(initialUser?.email);
 
@@ -913,9 +948,22 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 					addButton.classList.remove("hidden");
 				}
 
-				document.addEventListener("click", (event) => {
+				document.addEventListener("click", async (event) => {
 					const target = event.target;
 					if (!(target instanceof HTMLElement)) return;
+					const favoriteToggle = target.closest(".favorite-toggle");
+					if (favoriteToggle instanceof HTMLElement) {
+						event.preventDefault();
+						event.stopPropagation();
+						const isDetailToggle = favoriteToggle.classList.contains("game-detail-favorite");
+						const gameId = isDetailToggle ? selectedGameId : favoriteToggle.dataset.gameId;
+						if (!gameId) return;
+						const currentFavorite = isDetailToggle
+							? selectedGameFavorite
+							: favoriteToggle.dataset.favorite === "1";
+						await toggleFavorite(String(gameId), !currentFavorite);
+						return;
+					}
 					if (target.closest(".add-game")) {
 						if (!isSignedIn) {
 							window.location.href = "/api/auth/login";
@@ -983,6 +1031,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 				function getRowValue(row, key) {
 					if (key === "title") return row.dataset.titleSort || "";
 					if (key === "submitter") return row.dataset.submitterSort || "";
+					if (key === "favorite") return Number.parseInt(row.dataset.favorite || "0", 10);
 					if (key === "ttb") return Number.parseInt(row.dataset.ttb || "0", 10);
 					if (key === "current") return Number.parseInt(row.dataset.currentPrice || "0", 10);
 					return "";
@@ -990,6 +1039,13 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 
 				function compareRows(a, b, key, direction) {
 					const dir = direction === "desc" ? -1 : 1;
+					if (key === "favorite") {
+						const aFavorite = Number.parseInt(a.dataset.favorite || "0", 10);
+						const bFavorite = Number.parseInt(b.dataset.favorite || "0", 10);
+						const favoriteCompare = (aFavorite - bFavorite) * dir;
+						if (favoriteCompare !== 0) return favoriteCompare;
+						return (a.dataset.titleSort || "").localeCompare(b.dataset.titleSort || "");
+					}
 					const aValue = getRowValue(a, key);
 					const bValue = getRowValue(b, key);
 					if (typeof aValue === "number" && typeof bValue === "number") {
@@ -1021,6 +1077,102 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 				});
 
 				applySort("title", "asc");
+
+				function applyFavoriteStateToButton(button, isFavorite) {
+					if (!(button instanceof HTMLElement)) return;
+					const icon = button.querySelector(".favorite-icon");
+					if (icon) {
+						icon.textContent = isFavorite ? "♥" : "♡";
+					}
+					button.classList.toggle("is-favorite", isFavorite);
+					button.dataset.favorite = isFavorite ? "1" : "0";
+					button.setAttribute("aria-pressed", isFavorite ? "true" : "false");
+					button.setAttribute(
+						"aria-label",
+						isFavorite ? "Remove from favorites" : "Add to favorites"
+					);
+					button.setAttribute(
+						"title",
+						isFavorite ? "Remove from favorites" : "Add to favorites"
+					);
+				}
+
+				function updatePollChoiceFavorites(gameId, isFavorite) {
+					if (!currentPollState?.active || !Array.isArray(currentPollState?.choices)) return;
+					let changed = false;
+					currentPollState.choices.forEach((choice) => {
+						if (Number.parseInt(String(choice.id), 10) !== gameId) return;
+						choice.is_favorite = isFavorite ? 1 : 0;
+						changed = true;
+					});
+					if (changed) {
+						populateChoices(currentPollState.choices || []);
+					}
+				}
+
+				function setGameFavoriteState(gameId, isFavorite) {
+					tableRows.forEach((row) => {
+						const rowGameId = Number.parseInt(row.dataset.id || "", 10);
+						if (rowGameId !== gameId) return;
+						row.dataset.favorite = isFavorite ? "1" : "0";
+						const rowButton = row.querySelector(".favorite-toggle");
+						applyFavoriteStateToButton(rowButton, isFavorite);
+					});
+
+					const playedCard = document.querySelector(`.game-card[data-id='${gameId}']`);
+					if (playedCard instanceof HTMLElement) {
+						playedCard.dataset.favorite = isFavorite ? "1" : "0";
+					}
+
+					if (selectedGameId && Number.parseInt(String(selectedGameId), 10) === gameId) {
+						selectedGameFavorite = isFavorite;
+						applyFavoriteStateToButton(detailFavorite, isFavorite);
+					}
+
+					updatePollChoiceFavorites(gameId, isFavorite);
+				}
+
+				function showFavoriteError(message) {
+					const text = message || "Unable to update favorite.";
+					if (detailModal?.open && detailActionError) {
+						detailActionError.textContent = text;
+						detailActionError.classList.remove("hidden");
+						return;
+					}
+					showBacklogFeedback(text);
+				}
+
+				async function toggleFavorite(gameIdText, isFavorite) {
+					if (!isSignedIn) {
+						window.location.href = "/api/auth/login";
+						return;
+					}
+					const gameId = Number.parseInt(gameIdText, 10);
+					if (Number.isNaN(gameId)) return;
+					const response = await fetch("/api/games/favorite", {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ id: gameId, favorite: isFavorite })
+					});
+					if (response.ok) {
+						if (detailActionError) {
+							detailActionError.textContent = "";
+							detailActionError.classList.add("hidden");
+						}
+						if (backlogFeedback) {
+							backlogFeedback.textContent = "";
+							backlogFeedback.classList.add("hidden");
+						}
+						setGameFavoriteState(gameId, isFavorite);
+						return;
+					}
+					if (response.status === 401) {
+						window.location.href = "/api/auth/login";
+						return;
+					}
+					const message = await response.text();
+					showFavoriteError(message);
+				}
 
 				if (rowTooltip && tooltipDescription && tooltipTags && tableRows.length > 0) {
 					let activeRow = null;
@@ -1285,7 +1437,9 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 					const bestPrice = card.dataset.bestPrice || "";
 					const status = card.dataset.status || "";
 					const ttbMinutes = card.dataset.ttbMinutes || "";
+					const isFavorite = card.dataset.favorite === "1";
 					selectedGameId = card.dataset.id || null;
+					selectedGameFavorite = isFavorite;
 
 					if (detailTitle) detailTitle.textContent = title;
 					if (detailDescription) detailDescription.textContent = description;
@@ -1297,6 +1451,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 						detailActionError.classList.add("hidden");
 						detailActionError.textContent = "";
 					}
+					applyFavoriteStateToButton(detailFavorite, isFavorite);
 					if (detailCover) {
 						if (cover) {
 							detailCover.src = cover;

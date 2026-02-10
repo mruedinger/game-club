@@ -13,6 +13,7 @@ This project maintains a website that is a companion tool for a video game club 
 - Admins: Can perform all Member functions. Additionally, they can manage the user list, and may have other superuser permissions across the site.
 - Non-members: Membership is invite-only, but unauthenticated users can view poll results and games, but not vote or submit (read-only).
 - Games: Members can submit games to a backlog. Metadata will be pulled in when a game is submitted. Games can be in one of 3 states: backlog, current (only 1 at a time), or played (was previously a current game).
+- Favorites: Members can privately tag games as favorites (heart icon) to help prioritize voting; favorite indicators appear in backlog, game details, and poll choices for that member.
 - Polls: One active poll at a time, ranked choice voting (top 3).
 
 ## Tech Stack
@@ -56,6 +57,7 @@ This project maintains a website that is a companion tool for a video game club 
   - For non-stale errors, keep message visible until the next user action.
 
 ## Operational Notes for AI Agents
+- `CHANGELOG.md` tracks high-level patch notes and audit-remediation history; use it for cross-session change context.
 - Always develop on `dev` branch. Do not add/commit/push/merge to `main` or any other branch unless explicitly told to do so.
 - Mandatory default workflow after making file changes (unless user explicitly says not to commit yet):
   - Validate current branch is `dev` (or user-specified branch).
@@ -67,5 +69,6 @@ This project maintains a website that is a companion tool for a video game club 
 - Changes to the main branch will be automatically deployed to cloudflare pages production deployment
 - When troubleshooting problems involving external apis, provide the user with curl commands to test & troubleshoot locally
 - After changes: Give user a checklist/playbook (or a script when appropriate) to validate functionality after changes
+- Test baseline: `npm run test:e2e` covers smoke checks, unauthenticated guard behavior, and authenticated auth/authz API paths.
 - Use /tmp/ for temporary file storage during devlopment (e.g. logs or files for inspection)
 - Update this file, when appropriate, to ensure key context and decisions are available in new chat sessions
