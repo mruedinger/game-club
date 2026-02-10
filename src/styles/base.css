@@ -817,6 +817,13 @@ main {
 	gap: 0.5rem;
 }
 
+.poll-history-results {
+	display: grid;
+	gap: 0.5rem;
+	max-height: 260px;
+	overflow-y: auto;
+}
+
 .poll-results-list {
 	list-style: none;
 	padding: 0;

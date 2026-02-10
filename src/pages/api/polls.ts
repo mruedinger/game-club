@@ -24,6 +24,7 @@ type PollRow = {
 	status: "active" | "closed";
 	started_at: string;
 	closed_at?: string;
+	history_valid?: number | null;
 };
 
 type PollChoice = {
@@ -42,7 +43,7 @@ export const GET: APIRoute = async ({ locals, request }) => {
 	}
 
 	const activePoll = await db
-		.prepare("select id, status, started_at, closed_at from polls where status = 'active' limit 1")
+		.prepare("select id, status, started_at, closed_at, history_valid from polls where status = 'active' limit 1")
 		.bind()
 		.first<PollRow>();
 
@@ -83,7 +84,7 @@ export const GET: APIRoute = async ({ locals, request }) => {
 
 	const lastPoll = await db
 		.prepare(
-			"select id, status, started_at, closed_at from polls where status = 'closed' order by closed_at desc limit 1"
+			"select id, status, started_at, closed_at, history_valid from polls where status = 'closed' order by closed_at desc limit 1"
 		)
 		.bind()
 		.first<PollRow>();
@@ -191,9 +192,16 @@ export const PATCH: APIRoute = async ({ locals, request }) => {
 		return new Response("No active poll.", { status: 404 });
 	}
 
-	await db
-		.prepare("update polls set status = 'closed', closed_at = datetime('now') where id = ?1")
+	const voteCount = await db
+		.prepare("select count(distinct voter_email) as voter_count from poll_votes where poll_id = ?1")
 		.bind(activePoll.id)
+		.first<{ voter_count: number }>();
+	const uniqueVoters = voteCount?.voter_count ?? 0;
+	const historyValid = uniqueVoters >= 3 ? 1 : 0;
+
+	await db
+		.prepare("update polls set status = 'closed', closed_at = datetime('now'), history_valid = ?1 where id = ?2")
+		.bind(historyValid, activePoll.id)
 		.run();
 
 	await writeAudit(
@@ -203,7 +211,7 @@ export const PATCH: APIRoute = async ({ locals, request }) => {
 		"poll",
 		activePoll.id,
 		null,
-		{ poll_id: activePoll.id }
+		{ poll_id: activePoll.id, unique_voters: uniqueVoters, history_valid: historyValid === 1 }
 	);
 
 	return new Response(null, { status: 204 });

@@ -19,6 +19,12 @@
 16. Added start-poll confirmation prompt and backlog UX updates for eligibility (eligible-first sorting and ineligible row fade).
 17. Expanded E2E guard coverage for the new `/api/games/eligibility` endpoint.
 18. Refreshed dependency lock state and bumped direct `wrangler` devDependency range to `^4.64.0`; build and E2E checks pass on updated toolchain.
+19. Added poll history validity support in schema/bootstrap + migration, with default validity seeded from unique voter count (`>=3` valid).
+20. Updated poll close behavior to automatically set poll history validity based on unique voter count at close time.
+21. Added lifetime backlog points aggregation sourced from closed valid polls only, surfaced as a new backlog table column.
+22. Added admin Poll History API (`/api/admin/polls`) with list/detail payloads and controls to toggle validity or delete closed poll history entries.
+23. Added Admin page Poll History section and detail modal for inspecting winners/results/voter count and managing validity/deletion.
+24. Expanded E2E coverage for unauthenticated/admin-forbidden access to the new poll history admin endpoint.
 
 ## 2026-02-09
 1. Moved games page content to the Home page and removed the separate Games page flow.

@@ -80,12 +80,14 @@ create table if not exists polls (
 	id integer primary key autoincrement,
 	status text not null check (status in ('active', 'closed')) default 'active',
 	started_at text not null default (datetime('now')),
-	closed_at text
+	closed_at text,
+	history_valid integer check (history_valid in (0, 1))
 );
 
 create unique index if not exists idx_polls_single_active
 	on polls(status)
 	where status = 'active';
+create index if not exists idx_polls_history_valid_closed_at on polls(status, history_valid, closed_at);
 
 create table if not exists poll_games (
 	poll_id integer not null,

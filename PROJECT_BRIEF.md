@@ -17,6 +17,7 @@ This project maintains a website that is a companion tool for a video game club 
 - Ratings: Members can rate any game on a 1-5 star scale, can clear/update their own rating, and can view aggregate ratings site-wide. Individual member ratings are visible in the game detail modal for authenticated members.
 - Polls: One active poll at a time, ranked choice voting (top 3). Polls include only backlog games marked poll-eligible.
 - Poll eligibility: Members can mark up to 2 of their own backlog games as poll-eligible. Existing/new backlog games default to ineligible until explicitly marked.
+- Poll history: Track lifetime backlog points from closed polls only. Polls with at least 3 unique voters are automatically valid for history, and admins can override validity in Admin > Poll History.
 
 ## Tech Stack
 - Frontend: Astro
