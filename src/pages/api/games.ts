@@ -19,6 +19,7 @@ type GameRow = {
 	tags_json?: string;
 	description?: string;
 	time_to_beat_minutes?: number;
+	lifetime_poll_points?: number;
 	current_price_cents?: number;
 	best_price_cents?: number;
 	played_month?: string;
@@ -65,10 +66,21 @@ export const GET: APIRoute = async ({ locals, request }) => {
 			"select games.id, games.title, members.name as submitted_by_name, members.alias as submitted_by_alias, games.status, games.created_at, games.cover_art_url, games.itad_boxart_url, games.tags_json, games.description, games.time_to_beat_minutes, games.current_price_cents, games.best_price_cents, games.played_month, games.steam_app_id, games.itad_game_id, games.itad_slug, " +
 				"games.poll_eligible, case when ?1 != '' and games.submitted_by_email = ?1 then 1 else 0 end as is_mine, " +
 				"case when game_favorites.game_id is null then 0 else 1 end as is_favorite " +
+				", coalesce(game_poll_history_points.lifetime_poll_points, 0) as lifetime_poll_points " +
 				", coalesce(game_rating_totals.rating_count, 0) as rating_count, game_rating_totals.rating_average as rating_average, my_game_rating.rating as my_rating " +
 				"from games " +
 				"left join members on members.email = games.submitted_by_email " +
 				"left join game_favorites on game_favorites.game_id = games.id and game_favorites.member_email = ?1 " +
+				"left join (" +
+					"select poll_games.game_id as game_id, " +
+					"sum(case when poll_votes.choice_1 = poll_games.game_id then 3 else 0 end + " +
+					"case when poll_votes.choice_2 = poll_games.game_id then 2 else 0 end + " +
+					"case when poll_votes.choice_3 = poll_games.game_id then 1 else 0 end) as lifetime_poll_points " +
+					"from poll_games " +
+					"join polls on polls.id = poll_games.poll_id and polls.status = 'closed' and polls.history_valid = 1 " +
+					"left join poll_votes on poll_votes.poll_id = poll_games.poll_id " +
+					"group by poll_games.game_id" +
+				") as game_poll_history_points on game_poll_history_points.game_id = games.id " +
 				"left join (select game_id, count(*) as rating_count, avg(rating) as rating_average from game_ratings group by game_id) as game_rating_totals on game_rating_totals.game_id = games.id " +
 				"left join game_ratings as my_game_rating on my_game_rating.game_id = games.id and my_game_rating.member_email = ?1 " +
 				"order by games.status asc, games.title asc"

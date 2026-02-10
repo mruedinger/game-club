@@ -81,6 +81,30 @@ export const prerender = false;
 					</div>
 				</section>
 
+				<section class="section card poll-history-card">
+					<div class="section-head">
+						<h2>Poll History</h2>
+						<p class="muted">Review closed polls and control validity for lifetime points.</p>
+					</div>
+					<div class="table-wrapper scroll-rows">
+						<table class="games-table poll-history-table">
+							<thead>
+								<tr>
+									<th>Poll date</th>
+									<th>Winner</th>
+									<th>Voter count</th>
+									<th>Validity</th>
+								</tr>
+							</thead>
+							<tbody class="poll-history-body">
+								<tr>
+									<td class="muted small" colspan="4">Loading poll history…</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+				</section>
+
 				<section class="section card audit-card">
 					<div class="section-head">
 						<h2>Audit logs</h2>
@@ -224,13 +248,50 @@ export const prerender = false;
 			</form>
 		</dialog>
 
+		<dialog class="modal" id="poll-history-modal">
+			<form class="modal-card poll-history-detail" method="dialog" novalidate>
+				<header>
+					<div>
+						<h3 id="poll-history-title">Poll</h3>
+						<p class="muted small" id="poll-history-meta"></p>
+					</div>
+					<button class="ghost icon-button" type="button" data-action="close-poll-history" aria-label="Close">
+						×
+					</button>
+				</header>
+				<p class="muted small" id="poll-history-summary"></p>
+				<div class="poll-history-results" id="poll-history-results"></div>
+				<div class="field">
+					<label class="toggle-control" for="poll-history-validity">
+						<span>Valid for lifetime points</span>
+						<span class="toggle-switch">
+							<input id="poll-history-validity" type="checkbox" />
+							<span class="toggle-slider"></span>
+						</span>
+					</label>
+				</div>
+				<p class="form-error hidden" id="poll-history-error" role="alert"></p>
+				<footer>
+					<button class="ghost danger" type="button" data-action="delete-poll-history">Delete poll</button>
+				</footer>
+			</form>
+		</dialog>
+
 		<script>
 			const shell = document.querySelector(".admin-shell");
 			const inviteForm = document.querySelector("#invite-modal .invite-form");
 			const memberList = document.querySelector(".member-list");
 			const gamesBody = document.querySelector(".games-editor-body");
+			const pollHistoryBody = document.querySelector(".poll-history-body");
 			const auditBody = document.querySelector(".audit-body");
 			const gameModal = document.querySelector("#game-modal");
+			const pollHistoryModal = document.querySelector("#poll-history-modal");
+			const pollHistoryTitle = document.querySelector("#poll-history-title");
+			const pollHistoryMeta = document.querySelector("#poll-history-meta");
+			const pollHistorySummary = document.querySelector("#poll-history-summary");
+			const pollHistoryResults = document.querySelector("#poll-history-results");
+			const pollHistoryValidity = document.querySelector("#poll-history-validity");
+			const pollHistoryError = document.querySelector("#poll-history-error");
 			const gameModalTitle = document.querySelector("#game-modal-title");
 			const gameModalSubtitle = document.querySelector("#game-modal-subtitle");
 			const gameModalError = document.querySelector("#game-modal-error");
@@ -252,8 +313,11 @@ export const prerender = false;
 			const editAlias = document.querySelector("#edit-alias");
 			let activeMember = null;
 			let activeGameId = null;
+			let activePollHistoryId = null;
+			let activePollHistoryValidity = false;
 			let cachedMembers = [];
 			let cachedGames = [];
+			let cachedPollHistory = [];
 
 			let currentUserEmail = null;
 
@@ -274,6 +338,7 @@ export const prerender = false;
 					if (shell) shell.classList.remove("is-hidden");
 					renderMembers(data?.members || []);
 					loadGames();
+					loadPollHistory();
 					loadAuditLogs();
 				})
 				.catch(() => {});
@@ -359,6 +424,19 @@ export const prerender = false;
 				renderGames(cachedGames);
 			}
 
+			async function loadPollHistory() {
+				if (!pollHistoryBody) return;
+				pollHistoryBody.innerHTML = '<tr><td class="muted small" colspan="4">Loading poll history…</td></tr>';
+				const response = await fetch("/api/admin/polls");
+				if (!response.ok) {
+					pollHistoryBody.innerHTML = '<tr><td class="muted small" colspan="4">Unable to load poll history.</td></tr>';
+					return;
+				}
+				const rows = await response.json();
+				cachedPollHistory = rows || [];
+				renderPollHistory(cachedPollHistory);
+			}
+
 			async function loadAuditLogs() {
 				if (!auditBody) return;
 				auditBody.innerHTML = '<tr><td class="muted small" colspan="4">Loading activity…</td></tr>';
@@ -369,6 +447,61 @@ export const prerender = false;
 				}
 				const logs = await response.json();
 				renderAuditLogs(logs || []);
+			}
+
+			function formatPollDate(value) {
+				if (!value) return "TBD";
+				const normalized = value.includes("T") ? value : value.replace(" ", "T") + "Z";
+				const parsed = new Date(normalized);
+				if (Number.isNaN(parsed.getTime())) return value;
+				return parsed.toLocaleDateString("en-US", {
+					month: "short",
+					day: "numeric",
+					year: "numeric"
+				});
+			}
+
+			function setPollHistoryError(message) {
+				if (!pollHistoryError) return;
+				if (message) {
+					pollHistoryError.textContent = message;
+					pollHistoryError.classList.remove("hidden");
+				} else {
+					pollHistoryError.textContent = "";
+					pollHistoryError.classList.add("hidden");
+				}
+			}
+
+			function renderPollHistory(rows) {
+				if (!pollHistoryBody) return;
+				if (!rows || rows.length === 0) {
+					pollHistoryBody.innerHTML = '<tr><td class="muted small" colspan="4">No closed polls yet.</td></tr>';
+					return;
+				}
+				pollHistoryBody.innerHTML = "";
+				rows.forEach((row) => {
+					const tr = document.createElement("tr");
+					tr.className = "clickable-row poll-history-row";
+					tr.dataset.pollId = String(row.id);
+
+					const dateCell = document.createElement("td");
+					dateCell.textContent = formatPollDate(row.closed_at || row.started_at);
+
+					const winnerCell = document.createElement("td");
+					winnerCell.textContent = row.winner_title || "—";
+
+					const voterCell = document.createElement("td");
+					voterCell.textContent = String(row.voter_count || 0);
+
+					const validCell = document.createElement("td");
+					validCell.textContent = row.history_valid ? "Valid" : "Invalid";
+
+					tr.appendChild(dateCell);
+					tr.appendChild(winnerCell);
+					tr.appendChild(voterCell);
+					tr.appendChild(validCell);
+					pollHistoryBody.appendChild(tr);
+				});
 			}
 
 			function renderAuditLogs(logs) {
@@ -492,6 +625,140 @@ export const prerender = false;
 					if (!game) return;
 					openGameModal(game);
 				});
+			}
+
+			if (pollHistoryBody) {
+				pollHistoryBody.addEventListener("click", (event) => {
+					const target = event.target;
+					if (!(target instanceof HTMLElement)) return;
+					const row = target.closest(".poll-history-row");
+					if (!(row instanceof HTMLElement)) return;
+					const pollId = Number.parseInt(row.dataset.pollId || "", 10);
+					if (Number.isNaN(pollId)) return;
+					openPollHistoryModal(pollId);
+				});
+			}
+
+			function renderPollHistoryResults(results) {
+				if (!pollHistoryResults) return;
+				pollHistoryResults.innerHTML = "";
+				if (!Array.isArray(results) || results.length === 0) {
+					const empty = document.createElement("p");
+					empty.className = "muted small";
+					empty.textContent = "No scored results for this poll.";
+					pollHistoryResults.appendChild(empty);
+					return;
+				}
+				const list = document.createElement("ol");
+				list.className = "poll-results-list";
+				results.forEach((result, index) => {
+					const item = document.createElement("li");
+					item.className = "poll-result";
+
+					const title = document.createElement("span");
+					title.className = "poll-result-title";
+					title.textContent = `${index + 1}. ${result.title}`;
+
+					const points = document.createElement("span");
+					points.className = "poll-result-points";
+					points.textContent = `${result.points ?? 0} pts`;
+
+					item.appendChild(title);
+					item.appendChild(points);
+					list.appendChild(item);
+				});
+				pollHistoryResults.appendChild(list);
+			}
+
+			async function openPollHistoryModal(pollId) {
+				if (!pollHistoryModal) return;
+				activePollHistoryId = pollId;
+				activePollHistoryValidity = false;
+				setPollHistoryError("");
+				if (pollHistoryTitle) pollHistoryTitle.textContent = `Poll #${pollId}`;
+				if (pollHistoryMeta) pollHistoryMeta.textContent = "Loading poll details…";
+				if (pollHistorySummary) pollHistorySummary.textContent = "";
+				if (pollHistoryResults) {
+					pollHistoryResults.innerHTML = '<p class="muted small">Loading results…</p>';
+				}
+				if (pollHistoryValidity instanceof HTMLInputElement) {
+					pollHistoryValidity.checked = false;
+					pollHistoryValidity.disabled = true;
+				}
+				pollHistoryModal.showModal();
+
+				const response = await fetch(`/api/admin/polls?id=${encodeURIComponent(String(pollId))}`);
+				if (!response.ok) {
+					const message = await response.text();
+					setPollHistoryError(message || "Unable to load poll details.");
+					if (pollHistoryMeta) pollHistoryMeta.textContent = "";
+					if (pollHistoryResults) pollHistoryResults.innerHTML = "";
+					return;
+				}
+
+				const payload = await response.json();
+				const poll = payload?.poll;
+				const results = payload?.results || [];
+				if (!poll) {
+					setPollHistoryError("Unable to load poll details.");
+					return;
+				}
+
+				activePollHistoryValidity = Boolean(poll.history_valid);
+				if (pollHistoryTitle) pollHistoryTitle.textContent = `Poll #${poll.id}`;
+				if (pollHistoryMeta) {
+					pollHistoryMeta.textContent = `Closed ${formatPollDate(poll.closed_at || poll.started_at)}`;
+				}
+				if (pollHistorySummary) {
+					pollHistorySummary.textContent =
+						`Winner: ${poll.winner_title || "—"} · Unique voters: ${poll.voter_count || 0}`;
+				}
+				if (pollHistoryValidity instanceof HTMLInputElement) {
+					pollHistoryValidity.disabled = false;
+					pollHistoryValidity.checked = activePollHistoryValidity;
+				}
+				renderPollHistoryResults(results);
+			}
+
+			async function savePollHistoryValidity() {
+				if (!activePollHistoryId || !(pollHistoryValidity instanceof HTMLInputElement)) return;
+				const nextValidity = pollHistoryValidity.checked;
+				pollHistoryValidity.disabled = true;
+				const response = await fetch("/api/admin/polls", {
+					method: "PATCH",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ id: activePollHistoryId, history_valid: nextValidity })
+				});
+				if (response.ok) {
+					activePollHistoryValidity = nextValidity;
+					setPollHistoryError("");
+					loadPollHistory();
+					pollHistoryValidity.disabled = false;
+					return;
+				}
+				const message = await response.text();
+				setPollHistoryError(message || "Unable to save poll validity.");
+				pollHistoryValidity.checked = activePollHistoryValidity;
+				pollHistoryValidity.disabled = false;
+			}
+
+			async function deletePollHistory() {
+				if (!activePollHistoryId) return;
+				const confirmed = window.confirm("Delete this poll history entry? This cannot be undone.");
+				if (!confirmed) return;
+				const response = await fetch("/api/admin/polls", {
+					method: "DELETE",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ id: activePollHistoryId })
+				});
+				if (response.ok) {
+					setPollHistoryError("");
+					pollHistoryModal?.close();
+					loadPollHistory();
+					return;
+				}
+				const message = await response.text();
+				setPollHistoryError(message || "Unable to delete poll history entry.");
 			}
 
 			function syncGameEligibilityControl() {
@@ -692,6 +959,11 @@ export const prerender = false;
 					}
 					memberModal.close();
 				}
+				const closePollHistory = target.closest("[data-action='close-poll-history']");
+				if (closePollHistory && pollHistoryModal) {
+					setPollHistoryError("");
+					pollHistoryModal.close();
+				}
 				const row = target.closest("tr[data-email]");
 				if (row && memberModal) {
 					const email = row.dataset.email;
@@ -826,6 +1098,26 @@ export const prerender = false;
 						}
 					});
 				}
+
+			if (pollHistoryModal) {
+				pollHistoryModal.addEventListener("click", async (event) => {
+					const target = event.target;
+					if (!(target instanceof HTMLElement)) return;
+					if (target.closest("[data-action='delete-poll-history']")) {
+						await deletePollHistory();
+					}
+				});
+				if (pollHistoryValidity instanceof HTMLInputElement) {
+					pollHistoryValidity.addEventListener("change", async () => {
+						await savePollHistoryValidity();
+					});
+				}
+				pollHistoryModal.addEventListener("close", () => {
+					activePollHistoryId = null;
+					activePollHistoryValidity = false;
+					setPollHistoryError("");
+				});
+			}
 
 		</script>
 	</body>

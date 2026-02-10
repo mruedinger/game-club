@@ -22,6 +22,7 @@ type Game = {
 	current_price_cents?: number;
 	best_price_cents?: number;
 	time_to_beat_minutes?: number;
+	lifetime_poll_points?: number;
 	is_favorite?: number;
 	rating_count?: number;
 	rating_average?: number;
@@ -326,6 +327,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 									<th data-sort="submitter" class="sortable">Submitter</th>
 									<th data-sort="ttb" class="sortable">Time to beat</th>
 									<th data-sort="current" class="sortable">Current low</th>
+									<th data-sort="points" class="sortable">PTS</th>
 								</tr>
 							</thead>
 							<tbody>
@@ -372,6 +374,11 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 											data-favorite={game.is_favorite ? "1" : "0"}
 											data-poll-eligible={game.poll_eligible === 1 ? "1" : "0"}
 											data-is-mine={game.is_mine ? "1" : "0"}
+											data-lifetime-points={
+												typeof game.lifetime_poll_points === "number"
+													? String(game.lifetime_poll_points)
+													: "0"
+											}
 											data-rating-count={typeof game.rating_count === "number" ? String(game.rating_count) : "0"}
 											data-rating-average={
 												typeof game.rating_average === "number"
@@ -408,6 +415,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 										<td class="muted">{getSubmitter(game)}</td>
 										<td class="muted">{formatTimeToBeat(game.time_to_beat_minutes)}</td>
 										<td class="muted">{formatUsd(game.current_price_cents)}</td>
+										<td class="muted">{typeof game.lifetime_poll_points === "number" ? game.lifetime_poll_points : 0}</td>
 									</tr>
 								))}
 							</tbody>
@@ -1494,6 +1502,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 				function getRowValue(row, key) {
 					if (key === "title") return row.dataset.titleSort || "";
 					if (key === "submitter") return row.dataset.submitterSort || "";
+					if (key === "points") return Number.parseInt(row.dataset.lifetimePoints || "0", 10);
 					if (key === "favorite") return Number.parseInt(row.dataset.favorite || "0", 10);
 					if (key === "ttb") return Number.parseInt(row.dataset.ttb || "0", 10);
 					if (key === "current") return Number.parseInt(row.dataset.currentPrice || "0", 10);
@@ -1506,6 +1515,13 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 					const bEligible = Number.parseInt(b.dataset.pollEligible || "0", 10);
 					if (aEligible !== bEligible) {
 						return bEligible - aEligible;
+					}
+					if (key === "points") {
+						const aPoints = Number.parseInt(a.dataset.lifetimePoints || "0", 10) || 0;
+						const bPoints = Number.parseInt(b.dataset.lifetimePoints || "0", 10) || 0;
+						const pointsCompare = (aPoints - bPoints) * dir;
+						if (pointsCompare !== 0) return pointsCompare;
+						return (a.dataset.titleSort || "").localeCompare(b.dataset.titleSort || "");
 					}
 					if (key === "favorite") {
 						const aFavorite = Number.parseInt(a.dataset.favorite || "0", 10);

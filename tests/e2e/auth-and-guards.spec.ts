@@ -12,6 +12,12 @@ test("unauthenticated admin summary returns 401", async ({ request }) => {
 	await expect(response.text()).resolves.toContain("Authentication required.");
 });
 
+test("unauthenticated admin poll history returns 401", async ({ request }) => {
+	const response = await request.get("/api/admin/polls");
+	expect(response.status()).toBe(401);
+	await expect(response.text()).resolves.toContain("Authentication required.");
+});
+
 test("unauthenticated game create returns 401", async ({ request }) => {
 	const response = await request.post("/api/games", {
 		headers: { "Content-Type": "application/json" },

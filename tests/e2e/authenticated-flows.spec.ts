@@ -35,6 +35,14 @@ test("authenticated member cannot access admin summary", async ({ request }) => 
 	await expect(response.text()).resolves.toContain("Admin access required.");
 });
 
+test("authenticated member cannot access admin poll history", async ({ request }) => {
+	const response = await request.get("/api/admin/polls", {
+		headers: { Cookie: memberCookie() }
+	});
+	expect(response.status()).toBe(403);
+	await expect(response.text()).resolves.toContain("Admin access required.");
+});
+
 test("authenticated admin can read /api/me", async ({ request }) => {
 	const response = await request.get("/api/me", {
 		headers: { Cookie: adminCookie() }
