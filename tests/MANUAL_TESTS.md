@@ -25,5 +25,7 @@
 
 ## Games
 - Add a game via the modal; verify duplicates are rejected.
+- Confirm new submissions with Steam IDs populate MC Score in Backlog and can be sorted by the MC Score column.
 - Open a game detail modal from the games table.
+- Confirm game detail and current card metadata render in order: tags | ttb | metacritic score.
 - Delete a game (as owner/admin) and confirm it disappears.

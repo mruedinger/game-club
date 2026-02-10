@@ -22,6 +22,7 @@ type GameRow = {
 	steam_app_id?: number;
 	itad_slug?: string;
 	time_to_beat_minutes?: number;
+	metacritic_score?: number;
 };
 
 export const prerender = false;
@@ -35,7 +36,7 @@ export const GET: APIRoute = async ({ locals }) => {
 
 	const current = await db
 		.prepare(
-			"select games.id, games.title, members.name as submitted_by_name, members.alias as submitted_by_alias, games.cover_art_url, games.tags_json, games.description, games.current_price_cents, games.best_price_cents, games.steam_app_id, games.itad_slug, games.time_to_beat_minutes " +
+			"select games.id, games.title, members.name as submitted_by_name, members.alias as submitted_by_alias, games.cover_art_url, games.tags_json, games.description, games.current_price_cents, games.best_price_cents, games.steam_app_id, games.itad_slug, games.time_to_beat_minutes, games.metacritic_score " +
 				"from games left join members on members.email = games.submitted_by_email where games.status = 'current' limit 1"
 		)
 		.bind()

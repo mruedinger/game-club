@@ -24,6 +24,7 @@ create table if not exists games (
 	time_to_beat_minutes integer,
 	current_price_cents integer,
 	best_price_cents integer,
+	metacritic_score integer check (metacritic_score between 0 and 100),
 	played_month text,
 	steam_app_id integer,
 	itad_game_id text,

@@ -19,6 +19,7 @@ type GameRow = {
 	tags_json?: string;
 	description?: string;
 	time_to_beat_minutes?: number;
+	metacritic_score?: number;
 	lifetime_poll_points?: number;
 	current_price_cents?: number;
 	best_price_cents?: number;
@@ -63,7 +64,7 @@ export const GET: APIRoute = async ({ locals, request }) => {
 
 	const { results } = await db
 		.prepare(
-			"select games.id, games.title, members.name as submitted_by_name, members.alias as submitted_by_alias, games.status, games.created_at, games.cover_art_url, games.itad_boxart_url, games.tags_json, games.description, games.time_to_beat_minutes, games.current_price_cents, games.best_price_cents, games.played_month, games.steam_app_id, games.itad_game_id, games.itad_slug, " +
+			"select games.id, games.title, members.name as submitted_by_name, members.alias as submitted_by_alias, games.status, games.created_at, games.cover_art_url, games.itad_boxart_url, games.tags_json, games.description, games.time_to_beat_minutes, games.metacritic_score, games.current_price_cents, games.best_price_cents, games.played_month, games.steam_app_id, games.itad_game_id, games.itad_slug, " +
 				"games.poll_eligible, case when ?1 != '' and games.submitted_by_email = ?1 then 1 else 0 end as is_mine, " +
 				"case when game_favorites.game_id is null then 0 else 1 end as is_favorite " +
 				", coalesce(game_poll_history_points.lifetime_poll_points, 0) as lifetime_poll_points " +
@@ -157,6 +158,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 			? JSON.stringify(steamData.genres.map((genre) => genre.description))
 			: null;
 	const ttbMinutes = await fetchIgdbTimeMinutes(env, title, steamAppId);
+	const metacriticScore = normalizeMetacriticScore(steamData?.metacritic?.score);
 	const currentPriceCents = itadPrices?.currentPriceCents ?? null;
 	const bestPriceCents = itadPrices?.bestPriceCents ?? null;
 
@@ -165,7 +167,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 		if (itadPrices) {
 			inserted = await db
 				.prepare(
-					"insert into games (title, submitted_by_email, status, poll_eligible, cover_art_url, tags_json, description, steam_app_id, itad_game_id, itad_slug, itad_boxart_url, current_price_cents, best_price_cents, price_checked_at, time_to_beat_minutes) values (?1, ?2, 'backlog', 0, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, datetime('now'), ?12) returning id"
+					"insert into games (title, submitted_by_email, status, poll_eligible, cover_art_url, tags_json, description, steam_app_id, itad_game_id, itad_slug, itad_boxart_url, current_price_cents, best_price_cents, price_checked_at, time_to_beat_minutes, metacritic_score) values (?1, ?2, 'backlog', 0, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, datetime('now'), ?12, ?13) returning id"
 				)
 				.bind(
 					title,
@@ -179,13 +181,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
 					itadGame?.boxart ?? null,
 					currentPriceCents,
 					bestPriceCents,
-					ttbMinutes
+					ttbMinutes,
+					metacriticScore
 				)
 				.first<{ id: number }>();
 		} else {
 			inserted = await db
 				.prepare(
-					"insert into games (title, submitted_by_email, status, poll_eligible, cover_art_url, tags_json, description, steam_app_id, itad_game_id, itad_slug, itad_boxart_url, current_price_cents, best_price_cents, price_checked_at, time_to_beat_minutes) values (?1, ?2, 'backlog', 0, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, null, ?12) returning id"
+					"insert into games (title, submitted_by_email, status, poll_eligible, cover_art_url, tags_json, description, steam_app_id, itad_game_id, itad_slug, itad_boxart_url, current_price_cents, best_price_cents, price_checked_at, time_to_beat_minutes, metacritic_score) values (?1, ?2, 'backlog', 0, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, null, ?12, ?13) returning id"
 				)
 				.bind(
 					title,
@@ -199,7 +202,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 					itadGame?.boxart ?? null,
 					currentPriceCents,
 					bestPriceCents,
-					ttbMinutes
+					ttbMinutes,
+					metacriticScore
 				)
 				.first<{ id: number }>();
 		}
@@ -330,6 +334,18 @@ function normalizeSteamAppId(value: unknown): number | null {
 	return null;
 }
 
+function normalizeMetacriticScore(value: unknown): number | null {
+	const parsed =
+		typeof value === "number"
+			? Math.trunc(value)
+			: typeof value === "string"
+				? Number.parseInt(value, 10)
+				: Number.NaN;
+	if (!Number.isFinite(parsed) || Number.isNaN(parsed)) return null;
+	if (parsed < 0 || parsed > 100) return null;
+	return parsed;
+}
+
 export const PATCH: APIRoute = async ({ request, locals }) => {
 	const env = getRuntimeEnv(locals.runtime?.env);
 	const session = await readSession(request, env);
@@ -406,11 +422,15 @@ function getCurrentMonth() {
 }
 
 type SteamGenre = { description: string };
+type SteamMetacritic = {
+	score?: number | string;
+};
 type SteamAppDetails = {
 	name?: string;
 	header_image?: string;
 	short_description?: string;
 	genres?: SteamGenre[];
+	metacritic?: SteamMetacritic;
 };
 
 async function fetchSteamDetails(
