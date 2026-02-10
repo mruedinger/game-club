@@ -21,6 +21,6 @@
   "devDependencies": {
     "@astrojs/cloudflare": "^12.6.12",
     "@playwright/test": "^1.58.2",
-    "wrangler": "^4.63.0"
+    "wrangler": "^4.64.0"
   }
 }

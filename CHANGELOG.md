@@ -18,6 +18,7 @@
 15. Added admin poll-eligibility editing in the game editor modal, including cap enforcement when changing submitter/status/eligibility.
 16. Added start-poll confirmation prompt and backlog UX updates for eligibility (eligible-first sorting and ineligible row fade).
 17. Expanded E2E guard coverage for the new `/api/games/eligibility` endpoint.
+18. Refreshed dependency lock state and bumped direct `wrangler` devDependency range to `^4.64.0`; build and E2E checks pass on updated toolchain.
 
 ## 2026-02-09
 1. Moved games page content to the Home page and removed the separate Games page flow.
