@@ -49,6 +49,8 @@
 38. Increased bulk metadata refresh fetch concurrency back to 10 after batching/queued-write safeguards were in place.
 39. Increased bulk metadata refresh batch size from 5 to 10 games per request to improve throughput while keeping cursor-based batching.
 40. Reduced bulk metadata refresh fetch concurrency and batch size back to 5 after upstream limits impacted metadata completeness at higher settings.
+41. Further reduced bulk metadata refresh fetch concurrency to 3 to mitigate transient TTB/IGDB misses while preserving current null-overwrite behavior.
+42. Switched bulk metadata refresh to serial game processing (`concurrency = 1`) and reduced batch size to 3 to minimize IGDB concurrent pressure while keeping null-overwrite behavior.
 
 ## 2026-02-09
 1. Moved games page content to the Home page and removed the separate Games page flow.
