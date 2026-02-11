@@ -5,7 +5,7 @@ import { fetchExternalGameMetadata, type ExternalGameMetadata } from "../../../l
 
 const BULK_METADATA_REFRESH_CONCURRENCY = 10;
 const BULK_METADATA_REFRESH_MAX_RETRIES = 2;
-const BULK_METADATA_REFRESH_BATCH_SIZE = 5;
+const BULK_METADATA_REFRESH_BATCH_SIZE = 10;
 
 type GameRow = {
 	id: number;

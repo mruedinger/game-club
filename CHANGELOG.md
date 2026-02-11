@@ -39,6 +39,7 @@
 36. Hardened bulk metadata refresh reliability by serializing DB writes and adding retry/backoff for transient refresh failures while keeping fetch concurrency capped at 3.
 37. Converted admin refresh-all to cursor-based batching and client-side batch iteration so large metadata refreshes complete via multiple short requests instead of one long request.
 38. Increased bulk metadata refresh fetch concurrency back to 10 after batching/queued-write safeguards were in place.
+39. Increased bulk metadata refresh batch size from 5 to 10 games per request to improve throughput while keeping cursor-based batching.
 
 ## 2026-02-09
 1. Moved games page content to the Home page and removed the separate Games page flow.
