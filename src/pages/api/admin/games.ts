@@ -1,9 +1,10 @@
 import type { APIRoute } from "astro";
 import { getRuntimeEnv, readSession } from "../../../lib/auth";
 import { writeAudit } from "../../../lib/audit";
-import { fetchExternalGameMetadata } from "../../../lib/game-metadata";
+import { fetchExternalGameMetadata, type ExternalGameMetadata } from "../../../lib/game-metadata";
 
 const BULK_METADATA_REFRESH_CONCURRENCY = 3;
+const BULK_METADATA_REFRESH_MAX_RETRIES = 2;
 
 type GameRow = {
 	id: number;
@@ -148,12 +149,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
 		const candidates = results.filter(
 			(game) => typeof game.steam_app_id === "number" && Number.isInteger(game.steam_app_id)
 		);
+		const enqueueWrite = createAsyncQueue();
 		const runResults = await mapWithConcurrency(
 			candidates,
 			BULK_METADATA_REFRESH_CONCURRENCY,
 			async (game) => {
 			try {
-				await refreshGameMetadata(db, env, game);
+				await refreshGameMetadataWithRetry(
+					db,
+					env,
+					game,
+					(task) => enqueueWrite(task),
+					BULK_METADATA_REFRESH_MAX_RETRIES
+				);
 				return { id: game.id, failed: false };
 			} catch (error) {
 				console.warn(`[admin metadata refresh] game ${game.id} failed: ${getErrorMessage(error)}`);
@@ -431,7 +439,42 @@ async function refreshGameMetadata(
 	if (!steamAppId || !Number.isInteger(steamAppId)) return;
 
 	const metadata = await fetchExternalGameMetadata(env, game.title, steamAppId);
-	const title = metadata.title ?? game.title;
+	await applyGameMetadataUpdate(db, game.id, game.title, metadata);
+}
+
+async function refreshGameMetadataWithRetry(
+	db: D1Database,
+	env: Record<string, unknown>,
+	game: GameRow,
+	enqueueWrite: <T>(task: () => Promise<T>) => Promise<T>,
+	maxRetries: number
+) {
+	const steamAppId = game.steam_app_id;
+	if (!steamAppId || !Number.isInteger(steamAppId)) return;
+
+	let attempt = 0;
+	while (true) {
+		try {
+			const metadata = await fetchExternalGameMetadata(env, game.title, steamAppId);
+			await enqueueWrite(() => applyGameMetadataUpdate(db, game.id, game.title, metadata));
+			return;
+		} catch (error) {
+			if (attempt >= maxRetries || !isRetryableMetadataRefreshError(error)) {
+				throw error;
+			}
+			attempt += 1;
+			await sleep(Math.min(1200, 200 * 2 ** (attempt - 1)));
+		}
+	}
+}
+
+async function applyGameMetadataUpdate(
+	db: D1Database,
+	gameId: number,
+	existingTitle: string,
+	metadata: ExternalGameMetadata
+) {
+	const title = metadata.title ?? existingTitle;
 
 	if (metadata.hasPriceData) {
 		await db
@@ -451,7 +494,7 @@ async function refreshGameMetadata(
 				metadata.itadBoxartUrl,
 				metadata.currentPriceCents,
 				metadata.bestPriceCents,
-				game.id
+				gameId
 			)
 			.run();
 		return;
@@ -474,9 +517,51 @@ async function refreshGameMetadata(
 			metadata.itadBoxartUrl,
 			metadata.currentPriceCents,
 			metadata.bestPriceCents,
-			game.id
+			gameId
 		)
 		.run();
+}
+
+function createAsyncQueue() {
+	let tail: Promise<void> = Promise.resolve();
+	return async function enqueue<T>(task: () => Promise<T>): Promise<T> {
+		const run = tail.then(task, task);
+		tail = run.then(
+			() => undefined,
+			() => undefined
+		);
+		return run;
+	};
+}
+
+function isRetryableMetadataRefreshError(error: unknown) {
+	const message = getErrorMessage(error).toLowerCase();
+	if (!message) return true;
+	if (message.includes("constraint")) return false;
+	if (
+		message.includes("database is locked") ||
+		message.includes("database busy") ||
+		message.includes("busy") ||
+		message.includes("timed out") ||
+		message.includes("timeout") ||
+		message.includes("abort") ||
+		message.includes("network") ||
+		message.includes("fetch failed") ||
+		message.includes("too many requests") ||
+		message.includes("temporarily unavailable") ||
+		message.includes("429") ||
+		message.includes("500") ||
+		message.includes("502") ||
+		message.includes("503") ||
+		message.includes("504")
+	) {
+		return true;
+	}
+	return false;
+}
+
+function sleep(ms: number) {
+	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function mapWithConcurrency<T, R>(
