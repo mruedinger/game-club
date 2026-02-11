@@ -1,5 +1,7 @@
 import type { APIRoute } from "astro";
 import { getRuntimeEnv, readSession } from "../../../lib/auth";
+import { writeAudit } from "../../../lib/audit";
+import { fetchExternalGameMetadata } from "../../../lib/game-metadata";
 
 type GameRow = {
 	id: number;
@@ -10,6 +12,17 @@ type GameRow = {
 	tags_json?: string;
 	time_to_beat_minutes?: number;
 	played_month?: string;
+	cover_art_url?: string;
+	description?: string;
+	steam_review_score?: number | null;
+	steam_review_desc?: string;
+	steam_app_id?: number;
+	itad_game_id?: string;
+	itad_slug?: string;
+	itad_boxart_url?: string;
+	current_price_cents?: number | null;
+	best_price_cents?: number | null;
+	price_checked_at?: string;
 };
 
 type D1Database = {
@@ -46,6 +59,127 @@ export const GET: APIRoute = async ({ request, locals }) => {
 		status: 200,
 		headers: { "Content-Type": "application/json" }
 	});
+};
+
+export const POST: APIRoute = async ({ request, locals }) => {
+	const env = getRuntimeEnv(locals.runtime?.env);
+	const session = await readSession(request, env);
+	if (!session) {
+		return new Response("Authentication required.", { status: 401 });
+	}
+	if (session.role !== "admin") {
+		return new Response("Admin access required.", { status: 403 });
+	}
+
+	const body = await readJson(request);
+
+	if (body?.action === "refresh-metadata") {
+		const id = normalizeId(body?.id);
+		if (!id) {
+			return new Response("Game id is required.", { status: 400 });
+		}
+		const db = getDb(env);
+		if (!db) {
+			return new Response("Games database not configured.", { status: 500 });
+		}
+
+		const existing = await db
+			.prepare(
+				"select id, title, submitted_by_email, status, poll_eligible, tags_json, time_to_beat_minutes, played_month, cover_art_url, description, steam_review_score, steam_review_desc, steam_app_id, itad_game_id, itad_slug, itad_boxart_url, current_price_cents, best_price_cents, price_checked_at from games where id = ?1"
+			)
+			.bind(id)
+			.first<GameRow>();
+		if (!existing) {
+			return new Response("Game not found.", { status: 404 });
+		}
+
+		if (!existing.steam_app_id || !Number.isInteger(existing.steam_app_id)) {
+			return new Response(JSON.stringify({ refreshed: false, game: existing }), {
+				status: 200,
+				headers: { "Content-Type": "application/json" }
+			});
+		}
+
+		try {
+			await refreshGameMetadata(db, env, existing);
+		} catch (error) {
+			const mapped = mapAdminGameConstraintError(error);
+			if (mapped) return mapped;
+			throw error;
+		}
+
+		const updated = await db
+			.prepare(
+				"select id, title, submitted_by_email, status, poll_eligible, tags_json, time_to_beat_minutes, played_month, cover_art_url, description, steam_review_score, steam_review_desc, steam_app_id, itad_game_id, itad_slug, itad_boxart_url, current_price_cents, best_price_cents, price_checked_at from games where id = ?1"
+			)
+			.bind(id)
+			.first<GameRow>();
+
+		await writeAudit(
+			env,
+			session.email,
+			"game_metadata_refresh",
+			"game",
+			id,
+			existing,
+			updated
+		);
+
+		return new Response(JSON.stringify({ refreshed: true, game: updated }), {
+			status: 200,
+			headers: { "Content-Type": "application/json" }
+		});
+	}
+
+	if (body?.action === "refresh-metadata-all") {
+		const db = getDb(env);
+		if (!db) {
+			return new Response("Games database not configured.", { status: 500 });
+		}
+		const { results } = await db
+			.prepare(
+				"select id, title, submitted_by_email, status, poll_eligible, tags_json, time_to_beat_minutes, played_month, cover_art_url, description, steam_review_score, steam_review_desc, steam_app_id, itad_game_id, itad_slug, itad_boxart_url, current_price_cents, best_price_cents, price_checked_at from games order by id asc"
+			)
+			.bind()
+			.all<GameRow>();
+
+		const candidates = results.filter(
+			(game) => typeof game.steam_app_id === "number" && Number.isInteger(game.steam_app_id)
+		);
+		const runResults = await mapWithConcurrency(candidates, 10, async (game) => {
+			try {
+				await refreshGameMetadata(db, env, game);
+				return { id: game.id, failed: false };
+			} catch (error) {
+				console.warn(`[admin metadata refresh] game ${game.id} failed: ${getErrorMessage(error)}`);
+				return { id: game.id, failed: true };
+			}
+		});
+
+		const failedGameIds = runResults.filter((result) => result.failed).map((result) => result.id);
+		const summary = {
+			processed: candidates.length,
+			updated: candidates.length - failedGameIds.length,
+			failed: failedGameIds.length
+		};
+
+		await writeAudit(
+			env,
+			session.email,
+			"game_metadata_refresh_all",
+			"game",
+			0,
+			null,
+			{ ...summary, failed_game_ids: failedGameIds }
+		);
+
+		return new Response(JSON.stringify(summary), {
+			status: 200,
+			headers: { "Content-Type": "application/json" }
+		});
+	}
+
+	return new Response("Unsupported action.", { status: 400 });
 };
 
 export const PATCH: APIRoute = async ({ request, locals }) => {
@@ -175,17 +309,17 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
 	values.push(id);
 	const updateStatement = db.prepare(sql).bind(...values);
 
-		try {
-			if (newStatus === "current") {
-				const playedMonth = getCurrentMonth();
-				await db.batch([
-					db
-						.prepare(
-							"update games set status = 'played', poll_eligible = null, played_month = coalesce(played_month, ?1) where status = 'current' and id != ?2 and exists(select 1 from games where id = ?2)"
-						)
-						.bind(playedMonth, id),
-					updateStatement
-				]);
+	try {
+		if (newStatus === "current") {
+			const playedMonth = getCurrentMonth();
+			await db.batch([
+				db
+					.prepare(
+						"update games set status = 'played', poll_eligible = null, played_month = coalesce(played_month, ?1) where status = 'current' and id != ?2 and exists(select 1 from games where id = ?2)"
+					)
+					.bind(playedMonth, id),
+				updateStatement
+			]);
 		} else {
 			await updateStatement.run();
 		}
@@ -282,6 +416,86 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
 	return new Response(null, { status: 204 });
 };
 
+async function refreshGameMetadata(
+	db: D1Database,
+	env: Record<string, unknown>,
+	game: GameRow
+) {
+	const steamAppId = game.steam_app_id;
+	if (!steamAppId || !Number.isInteger(steamAppId)) return;
+
+	const metadata = await fetchExternalGameMetadata(env, game.title, steamAppId);
+	const title = metadata.title ?? game.title;
+
+	if (metadata.hasPriceData) {
+		await db
+			.prepare(
+				"update games set title = ?1, cover_art_url = ?2, tags_json = ?3, description = ?4, time_to_beat_minutes = ?5, steam_review_score = ?6, steam_review_desc = ?7, itad_game_id = ?8, itad_slug = ?9, itad_boxart_url = ?10, current_price_cents = ?11, best_price_cents = ?12, price_checked_at = datetime('now') where id = ?13"
+			)
+			.bind(
+				title,
+				metadata.coverArtUrl,
+				metadata.tagsJson,
+				metadata.description,
+				metadata.timeToBeatMinutes,
+				metadata.steamReviewScore,
+				metadata.steamReviewDesc,
+				metadata.itadGameId,
+				metadata.itadSlug,
+				metadata.itadBoxartUrl,
+				metadata.currentPriceCents,
+				metadata.bestPriceCents,
+				game.id
+			)
+			.run();
+		return;
+	}
+
+	await db
+		.prepare(
+			"update games set title = ?1, cover_art_url = ?2, tags_json = ?3, description = ?4, time_to_beat_minutes = ?5, steam_review_score = ?6, steam_review_desc = ?7, itad_game_id = ?8, itad_slug = ?9, itad_boxart_url = ?10, current_price_cents = ?11, best_price_cents = ?12, price_checked_at = null where id = ?13"
+		)
+		.bind(
+			title,
+			metadata.coverArtUrl,
+			metadata.tagsJson,
+			metadata.description,
+			metadata.timeToBeatMinutes,
+			metadata.steamReviewScore,
+			metadata.steamReviewDesc,
+			metadata.itadGameId,
+			metadata.itadSlug,
+			metadata.itadBoxartUrl,
+			metadata.currentPriceCents,
+			metadata.bestPriceCents,
+			game.id
+		)
+		.run();
+}
+
+async function mapWithConcurrency<T, R>(
+	items: T[],
+	concurrency: number,
+	worker: (item: T, index: number) => Promise<R>
+): Promise<R[]> {
+	const results = new Array<R>(items.length);
+	let nextIndex = 0;
+	const workerCount = Math.max(1, Math.min(concurrency, items.length));
+
+	await Promise.all(
+		Array.from({ length: workerCount }, async () => {
+			while (true) {
+				const currentIndex = nextIndex;
+				nextIndex += 1;
+				if (currentIndex >= items.length) return;
+				results[currentIndex] = await worker(items[currentIndex], currentIndex);
+			}
+		})
+	);
+
+	return results;
+}
+
 async function requireAdmin(request: Request, locals: App.Locals) {
 	const env = getRuntimeEnv(locals.runtime?.env);
 	const session = await readSession(request, env);
@@ -317,6 +531,7 @@ function normalizeId(value: unknown): number | null {
 }
 
 async function readJson(request: Request): Promise<{
+	action?: unknown;
 	id?: unknown;
 	submitted_by_email?: unknown;
 	status?: unknown;
@@ -362,6 +577,19 @@ function mapAdminGameConstraintError(error: unknown): Response | null {
 	const message = getErrorMessage(error).toLowerCase();
 	if (!message.includes("constraint")) {
 		return null;
+	}
+	if (
+		message.includes("idx_games_title_normalized_unique") ||
+		message.includes("games.title") ||
+		message.includes("lower(title)")
+	) {
+		return new Response("Metadata refresh would duplicate an existing game title.", { status: 409 });
+	}
+	if (
+		message.includes("idx_games_steam_app_id_unique") ||
+		message.includes("games.steam_app_id")
+	) {
+		return new Response("Metadata refresh would duplicate an existing Steam app id.", { status: 409 });
 	}
 	if (message.includes("idx_games_single_current") || message.includes("games.status")) {
 		return new Response("Another game is already set as current.", { status: 409 });

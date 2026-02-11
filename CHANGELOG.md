@@ -31,6 +31,11 @@
 28. Replaced backlog `MC Score` with `Reviews`, sorting by numeric Steam review score while displaying the familiar Steam review description.
 29. Updated current card and game detail metadata line order to `tags | ttb | review description` using Steam review labels.
 30. Updated smoke/manual test coverage to validate the `Reviews` column and Steam review metadata behavior.
+31. Added shared external game metadata fetcher (`src/lib/game-metadata.ts`) and parallelized Steam details/reviews, ITAD lookup/prices, and IGDB TTB fetch flow per game.
+32. Updated game-add ingestion to use the shared metadata fetcher so add-game metadata calls run in parallel and stay aligned with admin refresh logic.
+33. Added admin metadata refresh actions to `/api/admin/games`: refresh one game or refresh all games, with all-games processing capped at concurrency 10.
+34. Added admin UI controls for metadata refresh (single-game in modal + refresh-all button) with overwrite confirmation dialogs and run status messaging.
+35. Expanded E2E guard/validation coverage and manual test checklist for the new admin metadata refresh paths.
 
 ## 2026-02-09
 1. Moved games page content to the Home page and removed the separate Games page flow.

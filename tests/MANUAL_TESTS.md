@@ -17,6 +17,8 @@
 - Open `/admin` and click a game row.
 - Edit submitter, status, tags, time-to-beat, played month; Save updates.
 - Set a game to `current` and confirm previous current moves to `played`.
+- In the game modal, click `Refresh metadata`, confirm overwrite prompt, and verify title/metadata refreshes.
+- Click `Refresh metadata (all)`, confirm overwrite prompt, and verify completion status + updated game rows.
 
 ## Polls
 - On Home: Start a poll and ensure voting UI appears.
