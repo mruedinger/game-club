@@ -3,6 +3,8 @@ import { getRuntimeEnv, readSession } from "../../../lib/auth";
 import { writeAudit } from "../../../lib/audit";
 import { fetchExternalGameMetadata } from "../../../lib/game-metadata";
 
+const BULK_METADATA_REFRESH_CONCURRENCY = 3;
+
 type GameRow = {
 	id: number;
 	title: string;
@@ -146,7 +148,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
 		const candidates = results.filter(
 			(game) => typeof game.steam_app_id === "number" && Number.isInteger(game.steam_app_id)
 		);
-		const runResults = await mapWithConcurrency(candidates, 10, async (game) => {
+		const runResults = await mapWithConcurrency(
+			candidates,
+			BULK_METADATA_REFRESH_CONCURRENCY,
+			async (game) => {
 			try {
 				await refreshGameMetadata(db, env, game);
 				return { id: game.id, failed: false };
@@ -154,7 +159,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 				console.warn(`[admin metadata refresh] game ${game.id} failed: ${getErrorMessage(error)}`);
 				return { id: game.id, failed: true };
 			}
-		});
+			}
+		);
 
 		const failedGameIds = runResults.filter((result) => result.failed).map((result) => result.id);
 		const summary = {

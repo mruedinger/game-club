@@ -33,7 +33,7 @@
 30. Updated smoke/manual test coverage to validate the `Reviews` column and Steam review metadata behavior.
 31. Added shared external game metadata fetcher (`src/lib/game-metadata.ts`) and parallelized Steam details/reviews, ITAD lookup/prices, and IGDB TTB fetch flow per game.
 32. Updated game-add ingestion to use the shared metadata fetcher so add-game metadata calls run in parallel and stay aligned with admin refresh logic.
-33. Added admin metadata refresh actions to `/api/admin/games`: refresh one game or refresh all games, with all-games processing capped at concurrency 10.
+33. Added admin metadata refresh actions to `/api/admin/games`: refresh one game or refresh all games, with all-games processing capped at concurrency 3.
 34. Added admin UI controls for metadata refresh (single-game in modal + refresh-all button) with overwrite confirmation dialogs and run status messaging.
 35. Expanded E2E guard/validation coverage and manual test checklist for the new admin metadata refresh paths.
 
