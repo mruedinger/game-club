@@ -466,26 +466,54 @@ export const prerender = false;
 				gamesRefreshAllButton.disabled = true;
 				setGamesRefreshStatus("Refreshing metadata for all games...");
 				try {
-					const response = await fetch("/api/admin/games", {
-						method: "POST",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({ action: "refresh-metadata-all" })
-					});
-					if (!response.ok) {
-						const message = await response.text();
-						setGamesRefreshStatus(message || "Unable to refresh metadata.");
-						return;
+					let cursor = 0;
+					let totalProcessed = 0;
+					let totalUpdated = 0;
+					let totalFailed = 0;
+					let safetyCounter = 0;
+
+					while (safetyCounter < 500) {
+						safetyCounter += 1;
+						const response = await fetch("/api/admin/games", {
+							method: "POST",
+							headers: { "Content-Type": "application/json" },
+							body: JSON.stringify({
+								action: "refresh-metadata-all",
+								cursor,
+								limit: 5
+							})
+						});
+						if (!response.ok) {
+							const message = await response.text();
+							setGamesRefreshStatus(message || "Unable to refresh metadata.");
+							return;
+						}
+						const summary = await response.json();
+						const processed = Number(summary?.processed || 0);
+						const updated = Number(summary?.updated || 0);
+						const failed = Number(summary?.failed || 0);
+						totalProcessed += processed;
+						totalUpdated += updated;
+						totalFailed += failed;
+
+						setGamesRefreshStatus(
+							`Refreshing metadata... processed ${totalProcessed}, updated ${totalUpdated}, failed ${totalFailed}.`
+						);
+
+						if (summary?.done) break;
+						if (typeof summary?.next_cursor !== "number" || Number.isNaN(summary.next_cursor)) break;
+						if (processed === 0) break;
+						cursor = summary.next_cursor;
 					}
-					const summary = await response.json();
+
 					await loadGames();
-					const processed = Number(summary?.processed || 0);
-					const updated = Number(summary?.updated || 0);
-					const failed = Number(summary?.failed || 0);
-					if (failed > 0) {
-						setGamesRefreshStatus(`Metadata refresh complete. Updated ${updated}/${processed}; ${failed} failed.`);
+					if (totalFailed > 0) {
+						setGamesRefreshStatus(
+							`Metadata refresh complete. Updated ${totalUpdated}/${totalProcessed}; ${totalFailed} failed.`
+						);
 						return;
 					}
-					setGamesRefreshStatus(`Metadata refresh complete. Updated ${updated} games.`);
+					setGamesRefreshStatus(`Metadata refresh complete. Updated ${totalUpdated} games.`);
 				} catch {
 					setGamesRefreshStatus("Unable to refresh metadata.");
 				} finally {

@@ -5,6 +5,7 @@ import { fetchExternalGameMetadata, type ExternalGameMetadata } from "../../../l
 
 const BULK_METADATA_REFRESH_CONCURRENCY = 3;
 const BULK_METADATA_REFRESH_MAX_RETRIES = 2;
+const BULK_METADATA_REFRESH_BATCH_SIZE = 5;
 
 type GameRow = {
 	id: number;
@@ -139,16 +140,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
 		if (!db) {
 			return new Response("Games database not configured.", { status: 500 });
 		}
+
+		const cursor = normalizeCursor(body?.cursor);
+		if (cursor === null) {
+			return new Response("Invalid refresh cursor.", { status: 400 });
+		}
+		const batchSize = normalizeBatchSize(body?.limit) ?? BULK_METADATA_REFRESH_BATCH_SIZE;
+
 		const { results } = await db
 			.prepare(
-				"select id, title, submitted_by_email, status, poll_eligible, tags_json, time_to_beat_minutes, played_month, cover_art_url, description, steam_review_score, steam_review_desc, steam_app_id, itad_game_id, itad_slug, itad_boxart_url, current_price_cents, best_price_cents, price_checked_at from games order by id asc"
+				"select id, title, submitted_by_email, status, poll_eligible, tags_json, time_to_beat_minutes, played_month, cover_art_url, description, steam_review_score, steam_review_desc, steam_app_id, itad_game_id, itad_slug, itad_boxart_url, current_price_cents, best_price_cents, price_checked_at from games where steam_app_id is not null and id > ?1 order by id asc limit ?2"
 			)
-			.bind()
+			.bind(cursor, batchSize)
 			.all<GameRow>();
 
-		const candidates = results.filter(
-			(game) => typeof game.steam_app_id === "number" && Number.isInteger(game.steam_app_id)
-		);
+		const candidates = results;
 		const enqueueWrite = createAsyncQueue();
 		const runResults = await mapWithConcurrency(
 			candidates,
@@ -171,21 +177,39 @@ export const POST: APIRoute = async ({ request, locals }) => {
 		);
 
 		const failedGameIds = runResults.filter((result) => result.failed).map((result) => result.id);
+		const nextCursor = candidates.length > 0 ? candidates[candidates.length - 1].id : cursor;
+		const hasMore = candidates.length
+			? Boolean(
+					await db
+						.prepare("select id from games where steam_app_id is not null and id > ?1 limit 1")
+						.bind(nextCursor)
+						.first<{ id: number }>()
+				)
+			: false;
 		const summary = {
 			processed: candidates.length,
 			updated: candidates.length - failedGameIds.length,
-			failed: failedGameIds.length
+			failed: failedGameIds.length,
+			done: !hasMore,
+			next_cursor: hasMore ? nextCursor : null
 		};
 
-		await writeAudit(
-			env,
-			session.email,
-			"game_metadata_refresh_all",
-			"game",
-			0,
-			null,
-			{ ...summary, failed_game_ids: failedGameIds }
-		);
+		if (summary.processed > 0) {
+			await writeAudit(
+				env,
+				session.email,
+				"game_metadata_refresh_all",
+				"game",
+				0,
+				null,
+				{
+					...summary,
+					cursor,
+					batch_size: batchSize,
+					failed_game_ids: failedGameIds
+				}
+			);
+		}
 
 		return new Response(JSON.stringify(summary), {
 			status: 200,
@@ -621,9 +645,25 @@ function normalizeId(value: unknown): number | null {
 	return null;
 }
 
+function normalizeCursor(value: unknown): number | null {
+	if (value === undefined || value === null || value === "") return 0;
+	const parsed = normalizeId(value);
+	if (parsed === null || parsed < 0) return null;
+	return parsed;
+}
+
+function normalizeBatchSize(value: unknown): number | null {
+	if (value === undefined || value === null || value === "") return null;
+	const parsed = normalizeId(value);
+	if (parsed === null) return null;
+	return Math.max(1, Math.min(25, parsed));
+}
+
 async function readJson(request: Request): Promise<{
 	action?: unknown;
 	id?: unknown;
+	cursor?: unknown;
+	limit?: unknown;
 	submitted_by_email?: unknown;
 	status?: unknown;
 	poll_eligible?: unknown;
