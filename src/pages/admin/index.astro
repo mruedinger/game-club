@@ -56,8 +56,12 @@ export const prerender = false;
 				<section class="section card games-editor">
 					<div class="section-head">
 						<h2>Games data editor</h2>
-						<p class="muted">Edit submitters, status, tags, and timing details.</p>
+						<p class="muted">Edit submitters, status, tags, timing details, and refresh metadata.</p>
 					</div>
+					<button class="ghost small-button games-refresh-all" type="button" data-action="refresh-metadata-all">
+						Refresh metadata (all)
+					</button>
+					<p class="muted small hidden" id="games-refresh-status" role="status"></p>
 					<p class="muted small">Tags: comma-separated list (e.g. Narrative, Roguelike, Puzzle)</p>
 					<div class="table-wrapper scroll-rows">
 						<table class="games-table games-editor-table">
@@ -238,8 +242,12 @@ export const prerender = false;
 					<input id="edit-game-played" name="played_month" type="month" />
 				</div>
 				<div class="actions">
+					<button class="ghost small-button" data-action="refresh-game-metadata" type="button">
+						Refresh metadata
+					</button>
 					<button class="ghost danger small-button" data-action="delete-game" type="button">Delete game</button>
 				</div>
+				<p class="muted small hidden" id="game-modal-status" role="status"></p>
 				<p class="form-error hidden" id="game-modal-error" role="alert"></p>
 				<footer>
 					<button class="ghost" type="button" data-action="close-game">Cancel</button>
@@ -295,6 +303,7 @@ export const prerender = false;
 			const gameModalTitle = document.querySelector("#game-modal-title");
 			const gameModalSubtitle = document.querySelector("#game-modal-subtitle");
 			const gameModalError = document.querySelector("#game-modal-error");
+			const gameModalStatus = document.querySelector("#game-modal-status");
 			const gameSubmitter = document.querySelector("#edit-game-submitter");
 			const gameStatus = document.querySelector("#edit-game-status");
 			const gameEligibility = document.querySelector("#edit-game-eligibility");
@@ -303,6 +312,8 @@ export const prerender = false;
 			const gameTtb = document.querySelector("#edit-game-ttb");
 			const gamePlayed = document.querySelector("#edit-game-played");
 			const gameSortHeaders = document.querySelectorAll(".games-editor-table th[data-sort]");
+			const gamesRefreshStatus = document.querySelector("#games-refresh-status");
+			const gamesRefreshAllButton = document.querySelector("[data-action='refresh-metadata-all']");
 			const inviteModal = document.querySelector("#invite-modal");
 			const memberModal = document.querySelector("#member-modal");
 			const inviteError = document.querySelector("#invite-error");
@@ -422,6 +433,127 @@ export const prerender = false;
 				const games = await response.json();
 				cachedGames = games || [];
 				renderGames(cachedGames);
+			}
+
+			function setGamesRefreshStatus(message) {
+				if (!gamesRefreshStatus) return;
+				if (message) {
+					gamesRefreshStatus.textContent = message;
+					gamesRefreshStatus.classList.remove("hidden");
+				} else {
+					gamesRefreshStatus.textContent = "";
+					gamesRefreshStatus.classList.add("hidden");
+				}
+			}
+
+			function setGameModalStatus(message) {
+				if (!gameModalStatus) return;
+				if (message) {
+					gameModalStatus.textContent = message;
+					gameModalStatus.classList.remove("hidden");
+				} else {
+					gameModalStatus.textContent = "";
+					gameModalStatus.classList.add("hidden");
+				}
+			}
+
+			async function refreshAllGameMetadata() {
+				if (!(gamesRefreshAllButton instanceof HTMLButtonElement)) return;
+				const confirmed = window.confirm(
+					"Refresh metadata for all games? This will overwrite existing metadata with latest external data."
+				);
+				if (!confirmed) return;
+				gamesRefreshAllButton.disabled = true;
+				setGamesRefreshStatus("Refreshing metadata for all games...");
+				try {
+					let cursor = 0;
+					let totalProcessed = 0;
+					let totalUpdated = 0;
+					let totalFailed = 0;
+					let safetyCounter = 0;
+
+					while (safetyCounter < 500) {
+						safetyCounter += 1;
+						const response = await fetch("/api/admin/games", {
+							method: "POST",
+							headers: { "Content-Type": "application/json" },
+							body: JSON.stringify({
+								action: "refresh-metadata-all",
+								cursor,
+								limit: 5
+							})
+						});
+						if (!response.ok) {
+							const message = await response.text();
+							setGamesRefreshStatus(message || "Unable to refresh metadata.");
+							return;
+						}
+						const summary = await response.json();
+						const processed = Number(summary?.processed || 0);
+						const updated = Number(summary?.updated || 0);
+						const failed = Number(summary?.failed || 0);
+						totalProcessed += processed;
+						totalUpdated += updated;
+						totalFailed += failed;
+
+						setGamesRefreshStatus(
+							`Refreshing metadata... processed ${totalProcessed}, updated ${totalUpdated}, failed ${totalFailed}.`
+						);
+
+						if (summary?.done) break;
+						if (typeof summary?.next_cursor !== "number" || Number.isNaN(summary.next_cursor)) break;
+						if (processed === 0) break;
+						cursor = summary.next_cursor;
+					}
+
+					await loadGames();
+					if (totalFailed > 0) {
+						setGamesRefreshStatus(
+							`Metadata refresh complete. Updated ${totalUpdated}/${totalProcessed}; ${totalFailed} failed.`
+						);
+						return;
+					}
+					setGamesRefreshStatus(`Metadata refresh complete. Updated ${totalUpdated} games.`);
+				} catch {
+					setGamesRefreshStatus("Unable to refresh metadata.");
+				} finally {
+					gamesRefreshAllButton.disabled = false;
+				}
+			}
+
+			async function refreshActiveGameMetadata() {
+				if (!activeGameId) return;
+				const confirmed = window.confirm(
+					"Refresh metadata for this game? This will overwrite existing metadata with latest external data."
+				);
+				if (!confirmed) return;
+				setGameModalStatus("Refreshing metadata...");
+				gameModalError.textContent = "";
+				gameModalError.classList.add("hidden");
+				try {
+					const response = await fetch("/api/admin/games", {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ action: "refresh-metadata", id: activeGameId })
+					});
+					if (!response.ok) {
+						const message = await response.text();
+						gameModalError.textContent = message || "Unable to refresh metadata.";
+						gameModalError.classList.remove("hidden");
+						setGameModalStatus("");
+						return;
+					}
+					const payload = await response.json();
+					await loadGames();
+					if (payload?.game) {
+						openGameModal(payload.game);
+					}
+					setGameModalStatus(payload?.refreshed ? "Metadata refresh complete." : "");
+				} catch {
+					gameModalError.textContent = "Unable to refresh metadata.";
+					gameModalError.classList.remove("hidden");
+					setGameModalStatus("");
+				}
 			}
 
 			async function loadPollHistory() {
@@ -806,46 +938,55 @@ export const prerender = false;
 				gamePlayed.value = game.played_month || "";
 				gameModalError.classList.add("hidden");
 				gameModalError.textContent = "";
+				setGameModalStatus("");
 				gameModal.showModal();
 			}
 
 			if (gameModal) {
-				gameModal.addEventListener("click", (event) => {
+				gameModal.addEventListener("click", async (event) => {
 					const target = event.target;
 					if (!(target instanceof HTMLElement)) return;
 					if (target.closest("[data-action='close-game']")) {
+						setGameModalStatus("");
 						gameModal.close();
+						return;
 					}
-						if (target.closest("[data-action='delete-game']")) {
-							if (!activeGameId) return;
-							const confirmed = window.confirm("Delete this game? This cannot be undone.");
-							if (!confirmed) return;
-							fetch("/api/admin/games", {
+					if (target.closest("[data-action='refresh-game-metadata']")) {
+						await refreshActiveGameMetadata();
+						return;
+					}
+					if (target.closest("[data-action='delete-game']")) {
+						if (!activeGameId) return;
+						const confirmed = window.confirm("Delete this game? This cannot be undone.");
+						if (!confirmed) return;
+						fetch("/api/admin/games", {
 							method: "DELETE",
 							headers: { "Content-Type": "application/json" },
 							body: JSON.stringify({ id: activeGameId })
-							}).then((response) => {
-								if (response.ok) {
-									gameModal.close();
-									loadGames();
-								} else {
-									response
-										.text()
-										.then((message) => {
-											gameModalError.textContent = message || "Unable to delete game.";
-											gameModalError.classList.remove("hidden");
-										})
-										.catch(() => {
-											gameModalError.textContent = "Unable to delete game.";
-											gameModalError.classList.remove("hidden");
-										});
-								}
-							});
-						}
+						}).then((response) => {
+							if (response.ok) {
+								setGameModalStatus("");
+								gameModal.close();
+								loadGames();
+							} else {
+								response
+									.text()
+									.then((message) => {
+										gameModalError.textContent = message || "Unable to delete game.";
+										gameModalError.classList.remove("hidden");
+									})
+									.catch(() => {
+										gameModalError.textContent = "Unable to delete game.";
+										gameModalError.classList.remove("hidden");
+									});
+							}
+						});
+					}
 				});
 				gameModal.addEventListener("submit", async (event) => {
 					event.preventDefault();
 					if (!activeGameId) return;
+					setGameModalStatus("");
 					const hoursValue = gameTtb.value ? Number.parseFloat(gameTtb.value) : null;
 					if (hoursValue !== null && Number.isNaN(hoursValue)) {
 						gameModalError.textContent = "Time to beat must be a number.";
@@ -879,16 +1020,21 @@ export const prerender = false;
 						headers: { "Content-Type": "application/json" },
 						body: JSON.stringify(payload)
 					});
-						if (response.ok) {
-							gameModal.close();
-							loadGames();
-						} else {
-							const message = await response.text();
-							gameModalError.textContent = message || "Unable to update game.";
-							gameModalError.classList.remove("hidden");
-						}
-					});
-				}
+					if (response.ok) {
+						setGameModalStatus("");
+						gameModal.close();
+						loadGames();
+					} else {
+						const message = await response.text();
+						gameModalError.textContent = message || "Unable to update game.";
+						gameModalError.classList.remove("hidden");
+					}
+				});
+				gameModal.addEventListener("close", () => {
+					activeGameId = null;
+					setGameModalStatus("");
+				});
+			}
 
 			function getSortValue(row, key) {
 				if (key === "title") return row.dataset.title || "";
@@ -931,6 +1077,12 @@ export const prerender = false;
 					sortGameRows(key, nextDirection);
 				});
 			});
+
+			if (gamesRefreshAllButton instanceof HTMLButtonElement) {
+				gamesRefreshAllButton.addEventListener("click", async () => {
+					await refreshAllGameMetadata();
+				});
+			}
 
 			document.addEventListener("click", (event) => {
 				const target = event.target;
@@ -1186,6 +1338,15 @@ export const prerender = false;
 
 	.invite-cta {
 		width: fit-content;
+	}
+
+	.games-refresh-all {
+		width: fit-content;
+	}
+
+	#games-refresh-status,
+	#game-modal-status {
+		margin-top: -0.35rem;
 	}
 
 	@media (max-width: 900px) {

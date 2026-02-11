@@ -43,6 +43,18 @@ test("authenticated member cannot access admin poll history", async ({ request }
 	await expect(response.text()).resolves.toContain("Admin access required.");
 });
 
+test("authenticated member cannot trigger admin game metadata refresh", async ({ request }) => {
+	const response = await request.post("/api/admin/games", {
+		headers: {
+			"Content-Type": "application/json",
+			Cookie: memberCookie()
+		},
+		data: { action: "refresh-metadata-all" }
+	});
+	expect(response.status()).toBe(403);
+	await expect(response.text()).resolves.toContain("Admin access required.");
+});
+
 test("authenticated admin can read /api/me", async ({ request }) => {
 	const response = await request.get("/api/me", {
 		headers: { Cookie: adminCookie() }
@@ -99,4 +111,16 @@ test("admin member mutation enforces payload validation when authenticated", asy
 	});
 	expect(response.status()).toBe(400);
 	await expect(response.text()).resolves.toContain("Email and role are required.");
+});
+
+test("admin game metadata refresh enforces payload validation when authenticated", async ({ request }) => {
+	const response = await request.post("/api/admin/games", {
+		headers: {
+			"Content-Type": "application/json",
+			Cookie: adminCookie()
+		},
+		data: { action: "refresh-metadata" }
+	});
+	expect(response.status()).toBe(400);
+	await expect(response.text()).resolves.toContain("Game id is required.");
 });

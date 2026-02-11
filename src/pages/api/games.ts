@@ -1,9 +1,7 @@
 import type { APIRoute } from "astro";
 import { getRuntimeEnv, readSession } from "../../lib/auth";
 import { writeAudit } from "../../lib/audit";
-import { fetchWithTimeoutRetry } from "../../lib/http";
-import { fetchIgdbTimeMinutes } from "../../lib/igdb";
-import { fetchItadGame, fetchItadPrices } from "../../lib/itad";
+import { fetchExternalGameMetadata } from "../../lib/game-metadata";
 
 type GameRow = {
 	id: number;
@@ -124,15 +122,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 	const body = await readJson(request);
 	const steamAppId = normalizeSteamAppId(body?.steamAppId);
-	const steamData = steamAppId ? await fetchSteamDetails(steamAppId) : null;
-	const itadGame = steamAppId ? await fetchItadGame(env, steamAppId) : null;
-	const itadPrices = itadGame?.id ? await fetchItadPrices(env, itadGame.id) : null;
-	const title =
-		steamData?.name ??
-		(typeof body?.title === "string" ? body.title.trim() : "");
-	if (!title) {
-		return new Response("Title is required.", { status: 400 });
-	}
 
 	const existingBySteam = steamAppId
 		? await db
@@ -144,6 +133,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
 		return new Response("Game already exists in the backlog.", { status: 409 });
 	}
 
+	const fallbackTitle = typeof body?.title === "string" ? body.title.trim() : "";
+	const metadata = steamAppId ? await fetchExternalGameMetadata(env, fallbackTitle, steamAppId) : null;
+	const title = metadata?.title ?? fallbackTitle;
+	if (!title) {
+		return new Response("Title is required.", { status: 400 });
+	}
+
 	const existingByTitle = await db
 		.prepare("select id from games where lower(title) = ?1 limit 1")
 		.bind(title.toLowerCase())
@@ -152,22 +148,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
 		return new Response("Game already exists in the backlog.", { status: 409 });
 	}
 
-	const coverArtUrl = steamData?.header_image ?? null;
-	const description = steamData?.short_description ?? null;
-	const tagsJson =
-		steamData?.genres && steamData.genres.length > 0
-			? JSON.stringify(steamData.genres.map((genre) => genre.description))
-			: null;
-	const ttbMinutes = await fetchIgdbTimeMinutes(env, title, steamAppId);
-	const steamReviews = steamAppId
-		? await fetchSteamReviewSummary(steamAppId)
-		: { score: null, desc: null };
-	const currentPriceCents = itadPrices?.currentPriceCents ?? null;
-	const bestPriceCents = itadPrices?.bestPriceCents ?? null;
+	const coverArtUrl = metadata?.coverArtUrl ?? null;
+	const description = metadata?.description ?? null;
+	const tagsJson = metadata?.tagsJson ?? null;
+	const ttbMinutes = metadata?.timeToBeatMinutes ?? null;
+	const steamReviewScore = metadata?.steamReviewScore ?? null;
+	const steamReviewDesc = metadata?.steamReviewDesc ?? null;
+	const itadGameId = metadata?.itadGameId ?? null;
+	const itadSlug = metadata?.itadSlug ?? null;
+	const itadBoxartUrl = metadata?.itadBoxartUrl ?? null;
+	const currentPriceCents = metadata?.currentPriceCents ?? null;
+	const bestPriceCents = metadata?.bestPriceCents ?? null;
 
 	let inserted: { id: number } | null = null;
 	try {
-		if (itadPrices) {
+		if (metadata?.hasPriceData) {
 			inserted = await db
 				.prepare(
 					"insert into games (title, submitted_by_email, status, poll_eligible, cover_art_url, tags_json, description, steam_app_id, itad_game_id, itad_slug, itad_boxart_url, current_price_cents, best_price_cents, price_checked_at, time_to_beat_minutes, steam_review_score, steam_review_desc) values (?1, ?2, 'backlog', 0, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, datetime('now'), ?12, ?13, ?14) returning id"
@@ -179,14 +174,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
 					tagsJson,
 					description,
 					steamAppId,
-					itadGame?.id ?? null,
-					itadGame?.slug ?? null,
-					itadGame?.boxart ?? null,
+					itadGameId,
+					itadSlug,
+					itadBoxartUrl,
 					currentPriceCents,
 					bestPriceCents,
 					ttbMinutes,
-					steamReviews.score,
-					steamReviews.desc
+					steamReviewScore,
+					steamReviewDesc
 				)
 				.first<{ id: number }>();
 		} else {
@@ -201,14 +196,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
 					tagsJson,
 					description,
 					steamAppId,
-					itadGame?.id ?? null,
-					itadGame?.slug ?? null,
-					itadGame?.boxart ?? null,
+					itadGameId,
+					itadSlug,
+					itadBoxartUrl,
 					currentPriceCents,
 					bestPriceCents,
 					ttbMinutes,
-					steamReviews.score,
-					steamReviews.desc
+					steamReviewScore,
+					steamReviewDesc
 				)
 				.first<{ id: number }>();
 		}
@@ -339,24 +334,6 @@ function normalizeSteamAppId(value: unknown): number | null {
 	return null;
 }
 
-function normalizeSteamReviewScore(value: unknown): number | null {
-	const parsed =
-		typeof value === "number"
-			? Math.trunc(value)
-			: typeof value === "string"
-				? Number.parseInt(value, 10)
-				: Number.NaN;
-	if (!Number.isFinite(parsed) || Number.isNaN(parsed)) return null;
-	if (parsed < 0 || parsed > 9) return null;
-	return parsed;
-}
-
-function normalizeSteamReviewDesc(value: unknown): string | null {
-	if (typeof value !== "string") return null;
-	const text = value.trim();
-	return text ? text : null;
-}
-
 export const PATCH: APIRoute = async ({ request, locals }) => {
 	const env = getRuntimeEnv(locals.runtime?.env);
 	const session = await readSession(request, env);
@@ -430,65 +407,6 @@ function getCurrentMonth() {
 	const year = now.getFullYear();
 	const month = String(now.getMonth() + 1).padStart(2, "0");
 	return `${year}-${month}`;
-}
-
-type SteamGenre = { description: string };
-type SteamAppDetails = {
-	name?: string;
-	header_image?: string;
-	short_description?: string;
-	genres?: SteamGenre[];
-};
-
-async function fetchSteamDetails(
-	appId: number
-): Promise<SteamAppDetails | null> {
-	let response: Response;
-	try {
-		response = await fetchWithTimeoutRetry(
-			`https://store.steampowered.com/api/appdetails?appids=${appId}&cc=us&l=en`,
-			{},
-			{ timeoutMs: 2000, retries: 1 }
-		);
-	} catch {
-		return null;
-	}
-	if (!response.ok) return null;
-	const payload = (await response.json()) as Record<
-		string,
-		{ success: boolean; data?: SteamAppDetails }
-	>;
-	const entry = payload[String(appId)];
-	if (!entry || !entry.success || !entry.data) return null;
-	return entry.data;
-}
-
-type SteamReviewsResponse = {
-	query_summary?: {
-		review_score?: number | string;
-		review_score_desc?: string;
-	};
-};
-
-async function fetchSteamReviewSummary(
-	appId: number
-): Promise<{ score: number | null; desc: string | null }> {
-	let response: Response;
-	try {
-		response = await fetchWithTimeoutRetry(
-			`https://store.steampowered.com/appreviews/${appId}?json=1&language=english&purchase_type=steam&num_per_page=0`,
-			{},
-			{ timeoutMs: 2000, retries: 1 }
-		);
-	} catch {
-		return { score: null, desc: null };
-	}
-	if (!response.ok) return { score: null, desc: null };
-	const payload = (await response.json()) as SteamReviewsResponse;
-	return {
-		score: normalizeSteamReviewScore(payload?.query_summary?.review_score),
-		desc: normalizeSteamReviewDesc(payload?.query_summary?.review_score_desc)
-	};
 }
 
 function mapGameConstraintError(error: unknown): Response | null {
