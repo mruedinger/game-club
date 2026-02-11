@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-02-11
+1. Implemented Backlog issue #9 UI updates across Home/Admin views: smaller Steam/HLTB/ITAD pills, backlog header label updates (`Fav`, `Rating`, `TTB`), quarter-hour TTB formatting (`10 h`, `10½ h`) on backlog/current/detail, `GOTM` detail action label with tooltip, and admin game-modal footer cleanup (removed redundant Cancel button).
+2. Updated backlog rating column display to use Steam review score format (`x/9`) while keeping review descriptions on the current card and game detail modal.
+3. Expanded backlog row hover tooltip content to include submitter alias/name under tags.
+4. Removed the backlog `Submitter` table column from the Home page view while keeping submitter context in the hover tooltip.
+5. Updated project operating policies in `PROJECT_BRIEF.md`: planning-first workflow for substantial tasks and `CHANGELOG.md` updates only when merging to `main`.
+6. Updated smoke/manual test expectations to align backlog terminology (`Rating`).
+
 ## 2026-02-10
 1. Added private per-member game favorites with heart toggles in the backlog table and game detail modal.
 2. Added favorite indicators to active poll game choices so members can see their own favorites while voting.

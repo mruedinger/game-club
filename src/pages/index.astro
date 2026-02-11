@@ -84,19 +84,16 @@ function getSubmitterLabel(game?: Game | null) {
 	return submitter ? `Submitted by ${submitter}` : "Submitted by a member";
 }
 
-function formatTtbHours(minutes?: number) {
-	if (typeof minutes !== "number" || minutes <= 0) return null;
-	const hours = minutes / 60;
-	const rounded = Math.round(hours * 10) / 10;
-	const text = rounded % 1 === 0 ? String(Math.trunc(rounded)) : String(rounded);
-	return `${text} Hours`;
-}
-
-function formatTimeToBeat(minutes?: number | null) {
-	if (!minutes && minutes !== 0) return "-";
-	const hours = Math.floor(minutes / 60);
-	const mins = Math.round(minutes % 60);
-	return `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
+function formatTtbQuarterHours(minutes?: number | null) {
+	if (typeof minutes !== "number" || !Number.isFinite(minutes) || minutes <= 0) return null;
+	const quarterHours = Math.round(minutes / 15);
+	if (quarterHours <= 0) return null;
+	const wholeHours = Math.floor(quarterHours / 4);
+	const remainder = quarterHours % 4;
+	const quarterGlyph = remainder === 1 ? "¼" : remainder === 2 ? "½" : remainder === 3 ? "¾" : "";
+	if (!quarterGlyph) return `${wholeHours} h`;
+	if (wholeHours === 0) return `${quarterGlyph} h`;
+	return `${wholeHours}${quarterGlyph} h`;
 }
 
 function mapSteamReviewLabel(score?: number | null) {
@@ -121,6 +118,11 @@ function formatSteamReviewDesc(
 ) {
 	if (typeof desc === "string" && desc.trim()) return desc.trim();
 	return mapSteamReviewLabel(score) || "-";
+}
+
+function formatSteamReviewScore(score?: number | null) {
+	if (typeof score !== "number" || !Number.isFinite(score)) return "-";
+	return `${Math.trunc(score)}/9`;
 }
 
 function getSubmitter(game: Game) {
@@ -213,7 +215,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 								<h4 class="game-title">Current Game: {currentGame.title}</h4>
 								{(() => {
 									const tags = formatTags(currentGame.tags_json);
-									const ttb = formatTtbHours(currentGame.time_to_beat_minutes);
+									const ttb = formatTtbQuarterHours(currentGame.time_to_beat_minutes);
 									const steamReview = formatSteamReviewDesc(
 										currentGame.steam_review_score,
 										currentGame.steam_review_desc
@@ -230,7 +232,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 							<div class="game-detail-links">
 								{currentGame.steam_app_id ? (
 									<a
-										class="ghost small-pill"
+										class="ghost small-pill resource-pill"
 										target="_blank"
 										rel="noreferrer"
 										title="View on Steam"
@@ -240,7 +242,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 									</a>
 								) : null}
 								<a
-									class="ghost small-pill"
+									class="ghost small-pill resource-pill"
 									target="_blank"
 									rel="noreferrer"
 									title="View on HowLongToBeat"
@@ -250,7 +252,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 								</a>
 								{currentGame.itad_slug ? (
 									<a
-										class="ghost small-pill"
+										class="ghost small-pill resource-pill"
 										target="_blank"
 										rel="noreferrer"
 										title="View on IsThereAnyDeal"
@@ -352,11 +354,10 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 							<table class="games-table">
 								<thead>
 									<tr>
-										<th data-sort="favorite" class="sortable favorite-header">Favorite</th>
+										<th data-sort="favorite" class="sortable favorite-header">Fav</th>
 										<th data-sort="title" class="sortable">Title</th>
-										<th data-sort="reviews" class="sortable">Reviews</th>
-										<th data-sort="submitter" class="sortable">Submitter</th>
-										<th data-sort="ttb" class="sortable">Time to beat</th>
+										<th data-sort="reviews" class="sortable">Rating</th>
+										<th data-sort="ttb" class="sortable">TTB</th>
 										<th data-sort="current" class="sortable">Current low</th>
 										<th data-sort="points" class="sortable">PTS</th>
 									</tr>
@@ -453,9 +454,8 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 													<span class="game-title">{game.title}</span>
 												</div>
 											</td>
-											<td class="muted">{formatSteamReviewDesc(game.steam_review_score, game.steam_review_desc)}</td>
-											<td class="muted">{getSubmitter(game)}</td>
-											<td class="muted">{formatTimeToBeat(game.time_to_beat_minutes)}</td>
+											<td class="muted">{formatSteamReviewScore(game.steam_review_score)}</td>
+											<td class="muted">{formatTtbQuarterHours(game.time_to_beat_minutes) || "-"}</td>
 											<td class="muted">{formatUsd(game.current_price_cents)}</td>
 											<td class="muted">{typeof game.lifetime_poll_points === "number" ? game.lifetime_poll_points : 0}</td>
 										</tr>
@@ -466,6 +466,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 					<div class="row-tooltip" role="tooltip" aria-hidden="true">
 						<div class="tooltip-description"></div>
 						<div class="tooltip-tags"></div>
+						<div class="tooltip-submitter"></div>
 					</div>
 				</section>
 
@@ -651,9 +652,9 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 							<p class="meta-line tight game-detail-tags"></p>
 							<p class="game-detail-description"></p>
 							<div class="game-detail-links">
-								<a class="ghost small-pill game-detail-steam" target="_blank" rel="noreferrer" title="View on Steam">Steam</a>
-								<a class="ghost small-pill game-detail-hltb" target="_blank" rel="noreferrer" title="View on HowLongToBeat">HLTB</a>
-								<a class="ghost small-pill game-detail-itad" target="_blank" rel="noreferrer" title="View on IsThereAnyDeal">ITAD</a>
+								<a class="ghost small-pill resource-pill game-detail-steam" target="_blank" rel="noreferrer" title="View on Steam">Steam</a>
+								<a class="ghost small-pill resource-pill game-detail-hltb" target="_blank" rel="noreferrer" title="View on HowLongToBeat">HLTB</a>
+								<a class="ghost small-pill resource-pill game-detail-itad" target="_blank" rel="noreferrer" title="View on IsThereAnyDeal">ITAD</a>
 							</div>
 							<div class="game-detail-rating-wrap">
 								<p class="meta-line tight game-detail-rating-summary" tabindex="0">Member Rating: No ratings yet</p>
@@ -688,7 +689,14 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 						<p class="form-error hidden game-detail-action-error" role="alert"></p>
 						<footer class="game-detail-footer">
 						<button class="ghost game-detail-rate hidden" type="button">Rate</button>
-						<button class="ghost game-detail-set-current hidden" type="button">Set current</button>
+						<button
+							class="ghost game-detail-set-current hidden"
+							type="button"
+							aria-label="Set as Game of the Month"
+							title="Set as Game of the Month"
+						>
+							GOTM
+						</button>
 						<button class="ghost danger game-detail-delete hidden" type="button">Delete</button>
 					</footer>
 				</form>
@@ -1187,6 +1195,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 				const rowTooltip = document.querySelector(".row-tooltip");
 				const tooltipDescription = rowTooltip?.querySelector(".tooltip-description");
 				const tooltipTags = rowTooltip?.querySelector(".tooltip-tags");
+				const tooltipSubmitter = rowTooltip?.querySelector(".tooltip-submitter");
 				const steamIdKey = "steamAppId";
 				let selectedGameId = null;
 				let selectedGameIsMine = false;
@@ -1968,7 +1977,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 					setRateGameError(message || "Unable to save rating.");
 				}
 
-				if (rowTooltip && tooltipDescription && tooltipTags && tableRows.length > 0) {
+				if (rowTooltip && tooltipDescription && tooltipTags && tooltipSubmitter && tableRows.length > 0) {
 					let activeRow = null;
 
 					function parseTagList(value) {
@@ -1984,7 +1993,8 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 					function setTooltipContent(row) {
 						const description = row.dataset.description?.trim() || "";
 						const tags = parseTagList(row.dataset.tags || "");
-						if (!description && tags.length === 0) {
+						const submitter = row.dataset.submitter?.trim() || "Member";
+						if (!description && tags.length === 0 && !submitter) {
 							rowTooltip.classList.remove("visible");
 							rowTooltip.setAttribute("aria-hidden", "true");
 							return false;
@@ -1993,6 +2003,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 						tooltipDescription.classList.toggle("muted", !description);
 						tooltipDescription.classList.toggle("small", !description);
 						tooltipTags.textContent = tags.length ? tags.join(" • ") : "";
+						tooltipSubmitter.textContent = `Submitted by ${submitter}`;
 						rowTooltip.classList.add("visible");
 						rowTooltip.setAttribute("aria-hidden", "false");
 						return true;
@@ -2336,7 +2347,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 					}
 					if (detailTags) {
 						const tagLine = tags || "Tags coming soon";
-						const ttbLine = ttbMinutes ? formatTtbHoursForDetail(ttbMinutes) : "-";
+						const ttbLine = ttbMinutes ? formatTtbForDetail(ttbMinutes) : "-";
 						const reviewLine = formatSteamReviewForDetail(reviewScore, reviewDesc);
 						detailTags.textContent = `${tagLine} | ${ttbLine} | ${reviewLine}`;
 					}
@@ -2379,13 +2390,17 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 					return value;
 				}
 
-				function formatTtbHoursForDetail(value) {
+				function formatTtbForDetail(value) {
 					const minutes = Number.parseFloat(String(value));
-					if (!Number.isFinite(minutes) || minutes <= 0) return "0 Hours";
-					const hours = minutes / 60;
-					const rounded = Math.round(hours * 10) / 10;
-					const text = rounded % 1 === 0 ? String(Math.trunc(rounded)) : String(rounded);
-					return `${text} Hours`;
+					if (!Number.isFinite(minutes) || minutes <= 0) return "-";
+					const quarterHours = Math.round(minutes / 15);
+					if (quarterHours <= 0) return "-";
+					const wholeHours = Math.floor(quarterHours / 4);
+					const remainder = quarterHours % 4;
+					const quarterGlyph = remainder === 1 ? "¼" : remainder === 2 ? "½" : remainder === 3 ? "¾" : "";
+					if (!quarterGlyph) return `${wholeHours} h`;
+					if (wholeHours === 0) return `${quarterGlyph} h`;
+					return `${wholeHours}${quarterGlyph} h`;
 				}
 
 				function formatSteamReviewForDetail(scoreValue, descValue) {
