@@ -14,7 +14,7 @@ test("home page shows backlog and played sections", async ({ request }) => {
 	expect(response.status()).toBe(200);
 	const html = await response.text();
 	expect(html).toContain("Backlog");
-	expect(html).toContain("Reviews");
+	expect(html).toContain("Rating");
 	expect(html).toContain("games-table");
 	expect(html).toContain("Played");
 });

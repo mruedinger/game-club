@@ -431,6 +431,12 @@ main {
 	color: var(--muted);
 }
 
+.row-tooltip .tooltip-submitter {
+	margin-top: 0.45rem;
+	font-size: 0.78rem;
+	color: var(--muted);
+}
+
 .game-icon {
 	width: 36px;
 	height: 36px;
@@ -750,6 +756,11 @@ main {
 	transform: none;
 	box-shadow: none;
 	background: rgba(210, 220, 230, 0.95);
+}
+
+.ghost.small-pill.resource-pill {
+	padding: 0.3rem 0.65rem;
+	font-size: 0.68rem;
 }
 
 .ghost.danger {
