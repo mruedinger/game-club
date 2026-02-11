@@ -3,9 +3,9 @@ import { getRuntimeEnv, readSession } from "../../../lib/auth";
 import { writeAudit } from "../../../lib/audit";
 import { fetchExternalGameMetadata, type ExternalGameMetadata } from "../../../lib/game-metadata";
 
-const BULK_METADATA_REFRESH_CONCURRENCY = 10;
+const BULK_METADATA_REFRESH_CONCURRENCY = 5;
 const BULK_METADATA_REFRESH_MAX_RETRIES = 2;
-const BULK_METADATA_REFRESH_BATCH_SIZE = 10;
+const BULK_METADATA_REFRESH_BATCH_SIZE = 5;
 
 type GameRow = {
 	id: number;
