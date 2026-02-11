@@ -193,40 +193,36 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 				<section class="section current-game two-column-grid">
 				<div>
 					{currentGame ? (
-						<div
-							class="card current-game-card"
-							data-id={currentGame.id}
-							data-title={currentGame.title}
+							<div
+								class="card current-game-card"
+								data-id={currentGame.id}
+								data-title={currentGame.title}
 							data-rating-count={typeof currentGame.rating_count === "number" ? String(currentGame.rating_count) : "0"}
-							data-rating-average={typeof currentGame.rating_average === "number" ? String(currentGame.rating_average) : ""}
-							data-my-rating={typeof currentGame.my_rating === "number" ? String(currentGame.my_rating) : ""}
-						>
-							<div class="game-cover">
-								{currentGame.cover_art_url ? (
-									<img
-										src={currentGame.cover_art_url}
+								data-rating-average={typeof currentGame.rating_average === "number" ? String(currentGame.rating_average) : ""}
+								data-my-rating={typeof currentGame.my_rating === "number" ? String(currentGame.my_rating) : ""}
+							>
+								<h4 class="game-title">Current Game: {currentGame.title}</h4>
+								<div class="game-cover">
+									{currentGame.cover_art_url ? (
+										<img
+											src={currentGame.cover_art_url}
 										alt={`${currentGame.title} cover art`}
 										loading="lazy"
 									/>
-								) : (
-									<div class="cover-placeholder">Cover coming soon</div>
-								)}
+									) : (
+										<div class="cover-placeholder">Cover coming soon</div>
+									)}
 								</div>
-								<h4 class="game-title">Current Game: {currentGame.title}</h4>
-								{(() => {
-									const tags = formatTags(currentGame.tags_json);
-									const ttb = formatTtbQuarterHours(currentGame.time_to_beat_minutes);
-									const steamReview = formatSteamReviewDesc(
-										currentGame.steam_review_score,
-										currentGame.steam_review_desc
-									);
-									return (
-										<p class="meta-line tight">
-											{`${tags} | ${ttb || "-"} | ${steamReview}`}
-										</p>
-									);
-								})()}
-							<p class="current-game-description">
+									{(() => {
+										const tags = formatTags(currentGame.tags_json);
+										const ttb = formatTtbQuarterHours(currentGame.time_to_beat_minutes);
+										return (
+											<p class="meta-line tight">
+												{`${tags} | ${ttb || "-"}`}
+											</p>
+										);
+									})()}
+								<p class="current-game-description">
 								{currentGame.description || "Description coming soon."}
 							</p>
 							<div class="game-detail-links">
@@ -258,18 +254,15 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 										title="View on IsThereAnyDeal"
 										href={`https://isthereanydeal.com/game/${currentGame.itad_slug}/info/`}
 									>
-									ITAD
-								</a>
-							) : null}
-							</div>
-							<p class="meta-line">
-								Current low: {formatUsd(currentGame.current_price_cents)} · Historical
-								low: {formatUsd(currentGame.best_price_cents)}
-							</p>
-							<div class="game-rating-wrap current-game-rating-wrap" data-game-id={currentGame.id}>
-								<p
-									class="muted small game-rating-summary"
-									data-game-id={currentGame.id}
+										ITAD
+									</a>
+								) : null}
+								</div>
+								<p class="meta-line tight">Steam Reviews: {formatSteamReviewDesc(currentGame.steam_review_score, currentGame.steam_review_desc)}</p>
+								<div class="game-rating-wrap current-game-rating-wrap" data-game-id={currentGame.id}>
+									<p
+										class="muted small game-rating-summary"
+										data-game-id={currentGame.id}
 									data-rating-count={typeof currentGame.rating_count === "number" ? String(currentGame.rating_count) : "0"}
 									data-rating-average={typeof currentGame.rating_average === "number" ? String(currentGame.rating_average) : ""}
 									tabindex="0"
@@ -277,13 +270,17 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 									Member Rating: {formatRatingSummaryText(currentGame.rating_average, currentGame.rating_count)}
 								</p>
 								<div class="game-rating-hover">
-									<ul class="game-rating-hover-list" data-game-id={currentGame.id}></ul>
+										<ul class="game-rating-hover-list" data-game-id={currentGame.id}></ul>
+									</div>
 								</div>
-							</div>
-							<p class="muted small">{getSubmitterLabel(currentGame)}</p>
-							<button
-								class="ghost small-pill rate-current-game hidden"
-								type="button"
+								<p class="meta-line">
+									Current low: {formatUsd(currentGame.current_price_cents)} · Historical
+									low: {formatUsd(currentGame.best_price_cents)}
+								</p>
+								<p class="muted small">{getSubmitterLabel(currentGame)}</p>
+								<button
+									class="ghost small-pill rate-current-game hidden"
+									type="button"
 								data-game-id={currentGame.id}
 								data-game-title={currentGame.title}
 							>
@@ -646,20 +643,21 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 							×
 						</button>
 					</header>
-						<div class="game-detail-body">
-							<img class="game-detail-cover" alt="" />
-							<div class="game-detail-info">
-							<p class="meta-line tight game-detail-tags"></p>
-							<p class="game-detail-description"></p>
-							<div class="game-detail-links">
-								<a class="ghost small-pill resource-pill game-detail-steam" target="_blank" rel="noreferrer" title="View on Steam">Steam</a>
-								<a class="ghost small-pill resource-pill game-detail-hltb" target="_blank" rel="noreferrer" title="View on HowLongToBeat">HLTB</a>
-								<a class="ghost small-pill resource-pill game-detail-itad" target="_blank" rel="noreferrer" title="View on IsThereAnyDeal">ITAD</a>
-							</div>
-							<div class="game-detail-rating-wrap">
-								<p class="meta-line tight game-detail-rating-summary" tabindex="0">Member Rating: No ratings yet</p>
-								<div class="game-detail-rating-hover">
-									<ul class="game-detail-rating-hover-list"></ul>
+							<div class="game-detail-body">
+								<img class="game-detail-cover" alt="" />
+								<div class="game-detail-info">
+								<p class="meta-line tight game-detail-tags"></p>
+								<p class="game-detail-description"></p>
+								<div class="game-detail-links">
+									<a class="ghost small-pill resource-pill game-detail-steam" target="_blank" rel="noreferrer" title="View on Steam">Steam</a>
+									<a class="ghost small-pill resource-pill game-detail-hltb" target="_blank" rel="noreferrer" title="View on HowLongToBeat">HLTB</a>
+									<a class="ghost small-pill resource-pill game-detail-itad" target="_blank" rel="noreferrer" title="View on IsThereAnyDeal">ITAD</a>
+								</div>
+								<p class="meta-line tight game-detail-steam-review"></p>
+								<div class="game-detail-rating-wrap">
+									<p class="meta-line tight game-detail-rating-summary" tabindex="0">Member Rating: No ratings yet</p>
+									<div class="game-detail-rating-hover">
+										<ul class="game-detail-rating-hover-list"></ul>
 								</div>
 							</div>
 							<div class="game-detail-ttb-edit hidden">
@@ -1159,11 +1157,12 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 				const eligibilityError = document.querySelector(".eligibility-error");
 				const suggestionList = document.querySelector(".suggestions");
 				const detailModal = document.querySelector("#game-detail-modal");
-				const detailTitle = document.querySelector(".game-detail-title");
-				const detailTags = document.querySelector(".game-detail-tags");
-				const detailDescription = document.querySelector(".game-detail-description");
-				const detailSubmitted = document.querySelector(".game-detail-submitted");
-				const detailCover = document.querySelector(".game-detail-cover");
+					const detailTitle = document.querySelector(".game-detail-title");
+					const detailTags = document.querySelector(".game-detail-tags");
+					const detailDescription = document.querySelector(".game-detail-description");
+					const detailSteamReview = document.querySelector(".game-detail-steam-review");
+					const detailSubmitted = document.querySelector(".game-detail-submitted");
+					const detailCover = document.querySelector(".game-detail-cover");
 				const detailDelete = document.querySelector(".game-detail-delete");
 				const detailSetCurrent = document.querySelector(".game-detail-set-current");
 				const detailRate = document.querySelector(".game-detail-rate");
@@ -2345,12 +2344,15 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 							detailTtbError.textContent = "";
 						}
 					}
-					if (detailTags) {
-						const tagLine = tags || "Tags coming soon";
-						const ttbLine = ttbMinutes ? formatTtbForDetail(ttbMinutes) : "-";
-						const reviewLine = formatSteamReviewForDetail(reviewScore, reviewDesc);
-						detailTags.textContent = `${tagLine} | ${ttbLine} | ${reviewLine}`;
-					}
+						if (detailTags) {
+							const tagLine = tags || "Tags coming soon";
+							const ttbLine = ttbMinutes ? formatTtbForDetail(ttbMinutes) : "-";
+							detailTags.textContent = `${tagLine} | ${ttbLine}`;
+						}
+						if (detailSteamReview) {
+							const reviewLine = formatSteamReviewForDetail(reviewScore, reviewDesc);
+							detailSteamReview.textContent = `Steam Reviews: ${reviewLine}`;
+						}
 					if (detailDelete) {
 						detailDelete.classList.toggle("hidden", !isSignedIn);
 						if (isSignedIn) {
