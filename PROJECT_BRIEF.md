@@ -61,6 +61,8 @@ This project maintains a website that is a companion tool for a video game club 
 
 ## Operational Notes for AI Agents
 - `CHANGELOG.md` tracks high-level patch notes and audit-remediation history; use it for cross-session change context.
+- Planning-first workflow: When asked to solve a problem, implement a feature, or tackle a GitHub issue, present a plan first and ask clarifying questions before making changes. For follow-up tweaks or minor edits, use conversation context to decide whether to skip this pattern.
+- Changelog policy: Write summarized changes to `CHANGELOG.md` only when merging to `main`.
 - Always develop on `dev` branch. Do not add/commit/push/merge to `main` or any other branch unless explicitly told to do so.
 - Mandatory default workflow after making file changes (unless user explicitly says not to commit yet):
   - Validate current branch is `dev` (or user-specified branch).
