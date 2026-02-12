@@ -21,7 +21,7 @@ create table if not exists games (
 	cover_art_url text,
 	tags_json text,
 	description text,
-	time_to_beat_minutes integer,
+	time_to_beat_seconds integer,
 	current_price_cents integer,
 	best_price_cents integer,
 	steam_review_score integer check (steam_review_score between 0 and 9),

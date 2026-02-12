@@ -21,7 +21,7 @@ type Game = {
 	itad_slug?: string;
 	current_price_cents?: number;
 	best_price_cents?: number;
-	time_to_beat_minutes?: number;
+	time_to_beat_seconds?: number;
 	steam_review_score?: number;
 	steam_review_desc?: string;
 	lifetime_poll_points?: number;
@@ -84,9 +84,9 @@ function getSubmitterLabel(game?: Game | null) {
 	return submitter ? `Submitted by ${submitter}` : "Submitted by a member";
 }
 
-function formatTtbQuarterHours(minutes?: number | null) {
-	if (typeof minutes !== "number" || !Number.isFinite(minutes) || minutes <= 0) return null;
-	const quarterHours = Math.round(minutes / 15);
+function formatTtbQuarterHours(seconds?: number | null) {
+	if (typeof seconds !== "number" || !Number.isFinite(seconds) || seconds <= 0) return null;
+	const quarterHours = Math.round(seconds / 900);
 	if (quarterHours <= 0) return null;
 	const wholeHours = Math.floor(quarterHours / 4);
 	const remainder = quarterHours % 4;
@@ -215,7 +215,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 								</div>
 									{(() => {
 										const tags = formatTags(currentGame.tags_json);
-										const ttb = formatTtbQuarterHours(currentGame.time_to_beat_minutes);
+										const ttb = formatTtbQuarterHours(currentGame.time_to_beat_seconds);
 										return (
 											<p class="meta-line tight">
 												{`${tags} | ${ttb || "-"}`}
@@ -373,13 +373,13 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 											data-submitter={getSubmitter(game)}
 											data-submitter-sort={getSubmitter(game).toLowerCase()}
 												data-ttb={
-													typeof game.time_to_beat_minutes === "number"
-														? String(game.time_to_beat_minutes)
+													typeof game.time_to_beat_seconds === "number"
+														? String(game.time_to_beat_seconds)
 														: ""
 												}
-												data-ttb-minutes={
-													typeof game.time_to_beat_minutes === "number"
-														? String(game.time_to_beat_minutes)
+												data-ttb-seconds={
+													typeof game.time_to_beat_seconds === "number"
+														? String(game.time_to_beat_seconds)
 														: ""
 												}
 												data-review-score={
@@ -452,7 +452,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 												</div>
 											</td>
 											<td class="muted">{formatSteamReviewScore(game.steam_review_score)}</td>
-											<td class="muted">{formatTtbQuarterHours(game.time_to_beat_minutes) || "-"}</td>
+											<td class="muted">{formatTtbQuarterHours(game.time_to_beat_seconds) || "-"}</td>
 											<td class="muted">{formatUsd(game.current_price_cents)}</td>
 											<td class="muted">{typeof game.lifetime_poll_points === "number" ? game.lifetime_poll_points : 0}</td>
 										</tr>
@@ -490,9 +490,9 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 											? String(game.current_price_cents)
 											: ""
 									}
-									data-ttb-minutes={
-										typeof game.time_to_beat_minutes === "number"
-											? String(game.time_to_beat_minutes)
+									data-ttb-seconds={
+										typeof game.time_to_beat_seconds === "number"
+											? String(game.time_to_beat_seconds)
 											: ""
 									}
 									data-review-score={
@@ -2263,7 +2263,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 					const currentPrice = card.dataset.currentPrice || "";
 					const bestPrice = card.dataset.bestPrice || "";
 					const status = card.dataset.status || "";
-					const ttbMinutes = card.dataset.ttbMinutes || "";
+					const ttbSeconds = card.dataset.ttbSeconds || "";
 					const reviewScore = card.dataset.reviewScore || "";
 					const reviewDesc = card.dataset.reviewDesc || "";
 					const ratingCount = card.dataset.ratingCount || "0";
@@ -2336,7 +2336,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 						detailPrices.textContent = `Current low: ${formatPriceForDetail(currentPrice)} · Historical low: ${formatPriceForDetail(bestPrice)}`;
 					}
 					if (detailTtbEdit) {
-						const hasTtb = Boolean(ttbMinutes);
+						const hasTtb = Boolean(ttbSeconds);
 						detailTtbEdit.classList.toggle("hidden", hasTtb || !isSignedIn);
 						if (detailTtbInput) detailTtbInput.value = "";
 						if (detailTtbError) {
@@ -2346,7 +2346,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 					}
 						if (detailTags) {
 							const tagLine = tags || "Tags coming soon";
-							const ttbLine = ttbMinutes ? formatTtbForDetail(ttbMinutes) : "-";
+							const ttbLine = ttbSeconds ? formatTtbForDetail(ttbSeconds) : "-";
 							detailTags.textContent = `${tagLine} | ${ttbLine}`;
 						}
 						if (detailSteamReview) {
@@ -2393,9 +2393,9 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 				}
 
 				function formatTtbForDetail(value) {
-					const minutes = Number.parseFloat(String(value));
-					if (!Number.isFinite(minutes) || minutes <= 0) return "-";
-					const quarterHours = Math.round(minutes / 15);
+					const seconds = Number.parseFloat(String(value));
+					if (!Number.isFinite(seconds) || seconds <= 0) return "-";
+					const quarterHours = Math.round(seconds / 900);
 					if (quarterHours <= 0) return "-";
 					const wholeHours = Math.floor(quarterHours / 4);
 					const remainder = quarterHours % 4;

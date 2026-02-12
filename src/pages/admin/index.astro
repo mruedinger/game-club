@@ -683,7 +683,7 @@ export const prerender = false;
 					row.dataset.status = game.status || "";
 					row.dataset.eligibility = game.poll_eligible === 1 ? "eligible" : "ineligible";
 					row.dataset.tags = tags.join(", ");
-					row.dataset.ttb = typeof game.time_to_beat_minutes === "number" ? String(game.time_to_beat_minutes) : "";
+					row.dataset.ttb = typeof game.time_to_beat_seconds === "number" ? String(game.time_to_beat_seconds) : "";
 					row.dataset.played = game.played_month || "";
 					row.className = "clickable-row";
 
@@ -707,7 +707,7 @@ export const prerender = false;
 					tagsCell.textContent = tags.length > 0 ? tags.join(", ") : "-";
 
 					const ttbCell = document.createElement("td");
-					ttbCell.textContent = formatHours(game.time_to_beat_minutes);
+					ttbCell.textContent = formatHours(game.time_to_beat_seconds);
 
 					const playedCell = document.createElement("td");
 					playedCell.textContent = game.played_month || "-";
@@ -740,9 +740,9 @@ export const prerender = false;
 				}
 			}
 
-			function formatHours(minutes) {
-				if (typeof minutes !== "number") return "-";
-				return (minutes / 60).toFixed(1);
+			function formatHours(seconds) {
+				if (typeof seconds !== "number") return "-";
+				return (seconds / 3600).toFixed(1);
 			}
 
 			if (gamesBody) {
@@ -931,8 +931,8 @@ export const prerender = false;
 				gameEligibility.checked = game.status === "backlog" && game.poll_eligible === 1;
 				syncGameEligibilityControl();
 				gameTags.value = parseTags(game.tags_json).join(", ");
-				gameTtb.value = typeof game.time_to_beat_minutes === "number"
-					? String((game.time_to_beat_minutes / 60).toFixed(1))
+				gameTtb.value = typeof game.time_to_beat_seconds === "number"
+					? String((game.time_to_beat_seconds / 3600).toFixed(1))
 					: "";
 				gamePlayed.value = game.played_month || "";
 				gameModalError.classList.add("hidden");

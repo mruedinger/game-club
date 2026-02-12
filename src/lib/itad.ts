@@ -26,6 +26,14 @@ export type ItadPrices = {
 	bestPriceCents: number | null;
 };
 
+type ItadGamePageData = {
+	detail?: {
+		hltb?: {
+			all?: number;
+		};
+	};
+};
+
 export async function fetchItadGame(
 	env: Record<string, unknown>,
 	appId: number
@@ -89,7 +97,40 @@ export async function fetchItadPrices(
 	};
 }
 
+export async function fetchItadHowLongToBeatSeconds(slug: string): Promise<number | null> {
+	if (!slug) return null;
+	const url = `https://isthereanydeal.com/game/${encodeURIComponent(slug)}/info/`;
+	let response: Response;
+	try {
+		response = await fetchWithTimeoutRetry(url, {}, { timeoutMs: 2000, retries: 1 });
+	} catch {
+		return null;
+	}
+	if (!response.ok) return null;
+
+	const html = await response.text();
+	const pageMatch = html.match(/^var page = (.+);$/m);
+	if (!pageMatch) return null;
+
+	let pageData: unknown;
+	try {
+		pageData = JSON.parse(pageMatch[1]);
+	} catch {
+		return null;
+	}
+
+	if (!Array.isArray(pageData) || pageData.length < 2 || !isRecord(pageData[1])) return null;
+	const gameData = pageData[1] as ItadGamePageData;
+	const all = gameData.detail?.hltb?.all;
+	if (typeof all !== "number" || !Number.isFinite(all) || all <= 0) return null;
+	return Math.round(all);
+}
+
 function getEnv(env: Record<string, unknown>, key: string) {
 	const value = env[key];
 	return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }

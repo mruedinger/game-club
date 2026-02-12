@@ -1,6 +1,5 @@
 import { fetchWithTimeoutRetry } from "./http";
-import { fetchIgdbTimeMinutes } from "./igdb";
-import { fetchItadGame, fetchItadPrices } from "./itad";
+import { fetchItadGame, fetchItadHowLongToBeatSeconds, fetchItadPrices } from "./itad";
 
 type SteamGenre = { description: string };
 type SteamAppDetails = {
@@ -22,7 +21,7 @@ export type ExternalGameMetadata = {
 	coverArtUrl: string | null;
 	description: string | null;
 	tagsJson: string | null;
-	timeToBeatMinutes: number | null;
+	timeToBeatSeconds: number | null;
 	steamReviewScore: number | null;
 	steamReviewDesc: string | null;
 	itadGameId: string | null;
@@ -35,18 +34,19 @@ export type ExternalGameMetadata = {
 
 export async function fetchExternalGameMetadata(
 	env: Record<string, unknown>,
-	titleHint: string,
 	steamAppId: number
 ): Promise<ExternalGameMetadata> {
 	const steamDetailsPromise = fetchSteamDetails(steamAppId);
 	const steamReviewsPromise = fetchSteamReviewSummary(steamAppId);
 	const itadGamePromise = fetchItadGame(env, steamAppId);
-	const ttbPromise = fetchIgdbTimeMinutes(env, titleHint, steamAppId);
+	const ttbPromise = itadGamePromise.then((itadGame) =>
+		itadGame?.slug ? fetchItadHowLongToBeatSeconds(itadGame.slug) : null
+	);
 	const itadPricesPromise = itadGamePromise.then((itadGame) =>
 		itadGame?.id ? fetchItadPrices(env, itadGame.id) : null
 	);
 
-	const [steamDetails, steamReviews, itadGame, ttbMinutes, itadPrices] = await Promise.all([
+	const [steamDetails, steamReviews, itadGame, ttbSeconds, itadPrices] = await Promise.all([
 		steamDetailsPromise,
 		steamReviewsPromise,
 		itadGamePromise,
@@ -62,7 +62,7 @@ export async function fetchExternalGameMetadata(
 			steamDetails?.genres && steamDetails.genres.length > 0
 				? JSON.stringify(steamDetails.genres.map((genre) => genre.description))
 				: null,
-		timeToBeatMinutes: ttbMinutes,
+		timeToBeatSeconds: ttbSeconds,
 		steamReviewScore: steamReviews.score,
 		steamReviewDesc: steamReviews.desc,
 		itadGameId: itadGame?.id ?? null,

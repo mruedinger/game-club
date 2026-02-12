@@ -14,7 +14,7 @@ type D1Database = {
 type GameRow = {
 	id: number;
 	title: string;
-	time_to_beat_minutes?: number | null;
+	time_to_beat_seconds?: number | null;
 };
 
 export const prerender = false;
@@ -39,20 +39,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
 	}
 
 	const existing = await db
-		.prepare("select id, title, time_to_beat_minutes from games where id = ?1")
+		.prepare("select id, title, time_to_beat_seconds from games where id = ?1")
 		.bind(id)
 		.first<GameRow>();
 	if (!existing) {
 		return new Response("Game not found.", { status: 404 });
 	}
-	if (typeof existing.time_to_beat_minutes === "number" && existing.time_to_beat_minutes > 0) {
+	if (typeof existing.time_to_beat_seconds === "number" && existing.time_to_beat_seconds > 0) {
 		return new Response("Time to beat already set.", { status: 409 });
 	}
 
-	const minutes = Math.round(hours * 60);
+	const seconds = Math.max(0, Math.round(hours * 3600));
+	const normalizedSeconds = seconds > 0 ? seconds : null;
 	await db
-		.prepare("update games set time_to_beat_minutes = ?1 where id = ?2")
-		.bind(minutes, id)
+		.prepare("update games set time_to_beat_seconds = ?1 where id = ?2")
+		.bind(normalizedSeconds, id)
 		.run();
 
 	await writeAudit(
@@ -62,7 +63,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 		"game",
 		id,
 		existing,
-		{ id, title: existing.title, time_to_beat_minutes: minutes }
+		{ id, title: existing.title, time_to_beat_seconds: normalizedSeconds }
 	);
 
 	return new Response(null, { status: 204 });

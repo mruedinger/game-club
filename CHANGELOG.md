@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-02-12
+1. Completed Backlog issue #5 by replacing IGDB Time to Beat ingestion with ITAD game page bootstrap HLTB data (`detail.hltb.all`) and storing raw seconds in `games.time_to_beat_seconds`.
+2. Updated game metadata ingest and admin metadata refresh paths to write HLTB seconds with no fallback source; missing/unavailable values now persist as `NULL`.
+3. Migrated all API payloads, SQL reads/writes, and Home/Admin TTB display/edit math from minutes-based handling to seconds-based storage while preserving hour-based UI presentation.
+4. Added and applied schema migrations to introduce/backfill `time_to_beat_seconds` and then remove the legacy `time_to_beat_minutes` column from the `games` table.
+5. Updated project policy notes in `PROJECT_BRIEF.md` to codify ITAD bootstrap HLTB sourcing, seconds storage, and null-on-missing behavior.
+
 ## 2026-02-11
 1. Implemented Backlog issue #9 UI updates across Home/Admin views: smaller Steam/HLTB/ITAD pills, backlog header label updates (`Fav`, `Rating`, `TTB`), quarter-hour TTB formatting (`10 h`, `10½ h`) on backlog/current/detail, `GOTM` detail action label with tooltip, and admin game-modal footer cleanup (removed redundant Cancel button).
 2. Updated backlog rating column display to use Steam review score format (`x/9`) while keeping review descriptions on the current card and game detail modal.
