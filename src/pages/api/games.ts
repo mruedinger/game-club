@@ -16,7 +16,7 @@ type GameRow = {
 	itad_boxart_url?: string;
 	tags_json?: string;
 	description?: string;
-	time_to_beat_minutes?: number;
+	time_to_beat_seconds?: number;
 	steam_review_score?: number;
 	steam_review_desc?: string;
 	lifetime_poll_points?: number;
@@ -63,7 +63,7 @@ export const GET: APIRoute = async ({ locals, request }) => {
 
 	const { results } = await db
 		.prepare(
-			"select games.id, games.title, members.name as submitted_by_name, members.alias as submitted_by_alias, games.status, games.created_at, games.cover_art_url, games.itad_boxart_url, games.tags_json, games.description, games.time_to_beat_minutes, games.steam_review_score, games.steam_review_desc, games.current_price_cents, games.best_price_cents, games.played_month, games.steam_app_id, games.itad_game_id, games.itad_slug, " +
+			"select games.id, games.title, members.name as submitted_by_name, members.alias as submitted_by_alias, games.status, games.created_at, games.cover_art_url, games.itad_boxart_url, games.tags_json, games.description, games.time_to_beat_seconds, games.steam_review_score, games.steam_review_desc, games.current_price_cents, games.best_price_cents, games.played_month, games.steam_app_id, games.itad_game_id, games.itad_slug, " +
 				"games.poll_eligible, case when ?1 != '' and games.submitted_by_email = ?1 then 1 else 0 end as is_mine, " +
 				"case when game_favorites.game_id is null then 0 else 1 end as is_favorite " +
 				", coalesce(game_poll_history_points.lifetime_poll_points, 0) as lifetime_poll_points " +
@@ -134,7 +134,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 	}
 
 	const fallbackTitle = typeof body?.title === "string" ? body.title.trim() : "";
-	const metadata = steamAppId ? await fetchExternalGameMetadata(env, fallbackTitle, steamAppId) : null;
+	const metadata = steamAppId ? await fetchExternalGameMetadata(env, steamAppId) : null;
 	const title = metadata?.title ?? fallbackTitle;
 	if (!title) {
 		return new Response("Title is required.", { status: 400 });
@@ -151,7 +151,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 	const coverArtUrl = metadata?.coverArtUrl ?? null;
 	const description = metadata?.description ?? null;
 	const tagsJson = metadata?.tagsJson ?? null;
-	const ttbMinutes = metadata?.timeToBeatMinutes ?? null;
+	const ttbSeconds = metadata?.timeToBeatSeconds ?? null;
 	const steamReviewScore = metadata?.steamReviewScore ?? null;
 	const steamReviewDesc = metadata?.steamReviewDesc ?? null;
 	const itadGameId = metadata?.itadGameId ?? null;
@@ -165,7 +165,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 		if (metadata?.hasPriceData) {
 			inserted = await db
 				.prepare(
-					"insert into games (title, submitted_by_email, status, poll_eligible, cover_art_url, tags_json, description, steam_app_id, itad_game_id, itad_slug, itad_boxart_url, current_price_cents, best_price_cents, price_checked_at, time_to_beat_minutes, steam_review_score, steam_review_desc) values (?1, ?2, 'backlog', 0, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, datetime('now'), ?12, ?13, ?14) returning id"
+					"insert into games (title, submitted_by_email, status, poll_eligible, cover_art_url, tags_json, description, steam_app_id, itad_game_id, itad_slug, itad_boxart_url, current_price_cents, best_price_cents, price_checked_at, time_to_beat_seconds, steam_review_score, steam_review_desc) values (?1, ?2, 'backlog', 0, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, datetime('now'), ?12, ?13, ?14) returning id"
 				)
 				.bind(
 					title,
@@ -179,7 +179,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 					itadBoxartUrl,
 					currentPriceCents,
 					bestPriceCents,
-					ttbMinutes,
+					ttbSeconds,
 					steamReviewScore,
 					steamReviewDesc
 				)
@@ -187,7 +187,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 		} else {
 			inserted = await db
 				.prepare(
-					"insert into games (title, submitted_by_email, status, poll_eligible, cover_art_url, tags_json, description, steam_app_id, itad_game_id, itad_slug, itad_boxart_url, current_price_cents, best_price_cents, price_checked_at, time_to_beat_minutes, steam_review_score, steam_review_desc) values (?1, ?2, 'backlog', 0, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, null, ?12, ?13, ?14) returning id"
+					"insert into games (title, submitted_by_email, status, poll_eligible, cover_art_url, tags_json, description, steam_app_id, itad_game_id, itad_slug, itad_boxart_url, current_price_cents, best_price_cents, price_checked_at, time_to_beat_seconds, steam_review_score, steam_review_desc) values (?1, ?2, 'backlog', 0, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, null, ?12, ?13, ?14) returning id"
 				)
 				.bind(
 					title,
@@ -201,7 +201,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 					itadBoxartUrl,
 					currentPriceCents,
 					bestPriceCents,
-					ttbMinutes,
+					ttbSeconds,
 					steamReviewScore,
 					steamReviewDesc
 				)

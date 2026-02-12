@@ -14,7 +14,7 @@ type GameRow = {
 	status: "backlog" | "current" | "played";
 	poll_eligible?: number | null;
 	tags_json?: string;
-	time_to_beat_minutes?: number;
+	time_to_beat_seconds?: number;
 	played_month?: string;
 	cover_art_url?: string;
 	description?: string;
@@ -54,7 +54,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
 	const { results } = await db
 		.prepare(
-			"select id, title, submitted_by_email, status, poll_eligible, tags_json, time_to_beat_minutes, played_month from games order by lower(title) asc"
+			"select id, title, submitted_by_email, status, poll_eligible, tags_json, time_to_beat_seconds, played_month from games order by lower(title) asc"
 		)
 		.bind()
 		.all<GameRow>();
@@ -89,7 +89,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 		const existing = await db
 			.prepare(
-				"select id, title, submitted_by_email, status, poll_eligible, tags_json, time_to_beat_minutes, played_month, cover_art_url, description, steam_review_score, steam_review_desc, steam_app_id, itad_game_id, itad_slug, itad_boxart_url, current_price_cents, best_price_cents, price_checked_at from games where id = ?1"
+				"select id, title, submitted_by_email, status, poll_eligible, tags_json, time_to_beat_seconds, played_month, cover_art_url, description, steam_review_score, steam_review_desc, steam_app_id, itad_game_id, itad_slug, itad_boxart_url, current_price_cents, best_price_cents, price_checked_at from games where id = ?1"
 			)
 			.bind(id)
 			.first<GameRow>();
@@ -114,7 +114,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 		const updated = await db
 			.prepare(
-				"select id, title, submitted_by_email, status, poll_eligible, tags_json, time_to_beat_minutes, played_month, cover_art_url, description, steam_review_score, steam_review_desc, steam_app_id, itad_game_id, itad_slug, itad_boxart_url, current_price_cents, best_price_cents, price_checked_at from games where id = ?1"
+				"select id, title, submitted_by_email, status, poll_eligible, tags_json, time_to_beat_seconds, played_month, cover_art_url, description, steam_review_score, steam_review_desc, steam_app_id, itad_game_id, itad_slug, itad_boxart_url, current_price_cents, best_price_cents, price_checked_at from games where id = ?1"
 			)
 			.bind(id)
 			.first<GameRow>();
@@ -149,7 +149,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 		const { results } = await db
 			.prepare(
-				"select id, title, submitted_by_email, status, poll_eligible, tags_json, time_to_beat_minutes, played_month, cover_art_url, description, steam_review_score, steam_review_desc, steam_app_id, itad_game_id, itad_slug, itad_boxart_url, current_price_cents, best_price_cents, price_checked_at from games where steam_app_id is not null and id > ?1 order by id asc limit ?2"
+				"select id, title, submitted_by_email, status, poll_eligible, tags_json, time_to_beat_seconds, played_month, cover_art_url, description, steam_review_score, steam_review_desc, steam_app_id, itad_game_id, itad_slug, itad_boxart_url, current_price_cents, best_price_cents, price_checked_at from games where steam_app_id is not null and id > ?1 order by id asc limit ?2"
 			)
 			.bind(cursor, batchSize)
 			.all<GameRow>();
@@ -232,7 +232,7 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
 
 	const existing = await db
 		.prepare(
-			"select id, title, submitted_by_email, status, poll_eligible, tags_json, time_to_beat_minutes, played_month from games where id = ?1"
+			"select id, title, submitted_by_email, status, poll_eligible, tags_json, time_to_beat_seconds, played_month from games where id = ?1"
 		)
 		.bind(id)
 		.first<GameRow>();
@@ -323,9 +323,9 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
 	}
 
 	if (typeof body?.time_to_beat_hours === "number") {
-		const minutes = Math.max(0, Math.round(body.time_to_beat_hours * 60));
-		updates.push(`time_to_beat_minutes = ?${values.length + 1}`);
-		values.push(minutes || null);
+		const seconds = Math.max(0, Math.round(body.time_to_beat_hours * 3600));
+		updates.push(`time_to_beat_seconds = ?${values.length + 1}`);
+		values.push(seconds || null);
 	}
 
 	if (typeof body?.tags === "string") {
@@ -371,7 +371,7 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
 
 	const updated = await db
 		.prepare(
-			"select id, title, submitted_by_email, status, poll_eligible, tags_json, time_to_beat_minutes, played_month from games where id = ?1"
+			"select id, title, submitted_by_email, status, poll_eligible, tags_json, time_to_beat_seconds, played_month from games where id = ?1"
 		)
 		.bind(id)
 		.first<GameRow>();
@@ -421,7 +421,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
 
 	const existing = await db
 		.prepare(
-			"select id, title, submitted_by_email, status, poll_eligible, tags_json, time_to_beat_minutes, played_month from games where id = ?1"
+			"select id, title, submitted_by_email, status, poll_eligible, tags_json, time_to_beat_seconds, played_month from games where id = ?1"
 		)
 		.bind(id)
 		.first<GameRow>();
@@ -462,7 +462,7 @@ async function refreshGameMetadata(
 	const steamAppId = game.steam_app_id;
 	if (!steamAppId || !Number.isInteger(steamAppId)) return;
 
-	const metadata = await fetchExternalGameMetadata(env, game.title, steamAppId);
+	const metadata = await fetchExternalGameMetadata(env, steamAppId);
 	await applyGameMetadataUpdate(db, game.id, game.title, metadata);
 }
 
@@ -479,7 +479,7 @@ async function refreshGameMetadataWithRetry(
 	let attempt = 0;
 	while (true) {
 		try {
-			const metadata = await fetchExternalGameMetadata(env, game.title, steamAppId);
+			const metadata = await fetchExternalGameMetadata(env, steamAppId);
 			await enqueueWrite(() => applyGameMetadataUpdate(db, game.id, game.title, metadata));
 			return;
 		} catch (error) {
@@ -503,14 +503,14 @@ async function applyGameMetadataUpdate(
 	if (metadata.hasPriceData) {
 		await db
 			.prepare(
-				"update games set title = ?1, cover_art_url = ?2, tags_json = ?3, description = ?4, time_to_beat_minutes = ?5, steam_review_score = ?6, steam_review_desc = ?7, itad_game_id = ?8, itad_slug = ?9, itad_boxart_url = ?10, current_price_cents = ?11, best_price_cents = ?12, price_checked_at = datetime('now') where id = ?13"
+				"update games set title = ?1, cover_art_url = ?2, tags_json = ?3, description = ?4, time_to_beat_seconds = ?5, steam_review_score = ?6, steam_review_desc = ?7, itad_game_id = ?8, itad_slug = ?9, itad_boxart_url = ?10, current_price_cents = ?11, best_price_cents = ?12, price_checked_at = datetime('now') where id = ?13"
 			)
 			.bind(
 				title,
 				metadata.coverArtUrl,
 				metadata.tagsJson,
 				metadata.description,
-				metadata.timeToBeatMinutes,
+				metadata.timeToBeatSeconds,
 				metadata.steamReviewScore,
 				metadata.steamReviewDesc,
 				metadata.itadGameId,
@@ -526,14 +526,14 @@ async function applyGameMetadataUpdate(
 
 	await db
 		.prepare(
-			"update games set title = ?1, cover_art_url = ?2, tags_json = ?3, description = ?4, time_to_beat_minutes = ?5, steam_review_score = ?6, steam_review_desc = ?7, itad_game_id = ?8, itad_slug = ?9, itad_boxart_url = ?10, current_price_cents = ?11, best_price_cents = ?12, price_checked_at = null where id = ?13"
+			"update games set title = ?1, cover_art_url = ?2, tags_json = ?3, description = ?4, time_to_beat_seconds = ?5, steam_review_score = ?6, steam_review_desc = ?7, itad_game_id = ?8, itad_slug = ?9, itad_boxart_url = ?10, current_price_cents = ?11, best_price_cents = ?12, price_checked_at = null where id = ?13"
 		)
 		.bind(
 			title,
 			metadata.coverArtUrl,
 			metadata.tagsJson,
 			metadata.description,
-			metadata.timeToBeatMinutes,
+			metadata.timeToBeatSeconds,
 			metadata.steamReviewScore,
 			metadata.steamReviewDesc,
 			metadata.itadGameId,
