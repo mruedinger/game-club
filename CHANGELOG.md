@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-02-14
+1. Implemented Backlog issue #4 by adding automatic Home poll-state refresh without manual browser reload.
+2. Added visibility-aware poll refresh cadence on Home: active polls refresh every 2 seconds, inactive polls refresh every 30 seconds, and hidden tabs pause polling until visible again.
+3. Added a client-side in-flight request guard for poll-state reads to prevent overlapping `/api/polls` fetches and stale UI races.
+4. Added cache-safety controls for poll state reads by using `fetch(..., { cache: "no-store" })` on the client and `Cache-Control: no-store, no-cache, must-revalidate` on `/api/polls` responses.
+5. Updated active poll UI for members who already voted to show vote counts (`Votes in: N`) instead of the prior `Current standings:` label.
+6. Extended `/api/polls` active payloads with `voterCount` so clients can render live vote totals.
+7. Fixed cross-session poll activation behavior so users who have not voted always receive populated poll-choice dropdowns after state changes from inactive to active.
+
 ## 2026-02-12
 1. Completed Backlog issue #5 by replacing IGDB Time to Beat ingestion with ITAD game page bootstrap HLTB data (`detail.hltb.all`) and storing raw seconds in `games.time_to_beat_seconds`.
 2. Updated game metadata ingest and admin metadata refresh paths to write HLTB seconds with no fallback source; missing/unavailable values now persist as `NULL`.

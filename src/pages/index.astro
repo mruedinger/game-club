@@ -741,9 +741,13 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 			const meetingDate = document.querySelector("#meeting-date");
 			const meetingTime = document.querySelector("#meeting-time");
 			const meetingError = document.querySelector("#meeting-error");
+			const ACTIVE_POLL_REFRESH_MS = 2000;
+			const INACTIVE_POLL_REFRESH_MS = 30000;
 			let isAuthenticated = Boolean(initialUser?.email);
 			let isAdmin = initialUser?.role === "admin";
 			let currentPollState = initialPollState;
+			let pollRefreshTimerId = null;
+			let pollStateRequest = null;
 
 			function formatPollDate(value) {
 				if (!value) return "TBD";
@@ -762,6 +766,30 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 				while (element.firstChild) {
 					element.removeChild(element.firstChild);
 				}
+			}
+
+			function normalizeVoterCount(value) {
+				const parsed = Number.parseInt(String(value ?? "0"), 10);
+				return Number.isNaN(parsed) || parsed < 0 ? 0 : parsed;
+			}
+
+			function getPollRefreshInterval(state = currentPollState) {
+				return state?.active ? ACTIVE_POLL_REFRESH_MS : INACTIVE_POLL_REFRESH_MS;
+			}
+
+			function clearPollRefreshTimer() {
+				if (pollRefreshTimerId === null) return;
+				window.clearTimeout(pollRefreshTimerId);
+				pollRefreshTimerId = null;
+			}
+
+			function schedulePollRefresh(delayMs = getPollRefreshInterval()) {
+				clearPollRefreshTimer();
+				if (document.visibilityState !== "visible") return;
+				pollRefreshTimerId = window.setTimeout(async () => {
+					await loadPollState();
+					schedulePollRefresh(getPollRefreshInterval());
+				}, delayMs);
 			}
 
 			function setButtonVisibility({ canStart, canVote, canClose, canSetEligibility }) {
@@ -828,7 +856,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 					pollChip.textContent = "Voting live!";
 					pollChip.classList.add("is-active");
 					pollChip.classList.remove("hidden");
-					pollStatus.textContent = state.hasVoted ? "Current standings:" : "";
+					pollStatus.textContent = state.hasVoted ? `Votes in: ${normalizeVoterCount(state.voterCount)}` : "";
 					pollMeta.textContent = `Started ${formatPollDate(state.poll?.started_at)}`;
 					if (!isAuthenticated) {
 						renderResults([], "Sign in to vote.");
@@ -849,6 +877,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 						});
 						toggleVoteForm(false);
 					} else {
+						populateChoices(state.choices || []);
 						renderResults([], null);
 						setButtonVisibility({
 							canStart: false,
@@ -931,15 +960,25 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 			}
 
 			async function loadPollState() {
-				const response = await fetch("/api/polls");
-				if (!response.ok) {
-					renderPoll(null);
-					return null;
+				if (pollStateRequest) {
+					return pollStateRequest;
 				}
-				const data = await response.json();
-				currentPollState = data;
-				renderPoll(data);
-				return data;
+				pollStateRequest = (async () => {
+					const response = await fetch("/api/polls", { cache: "no-store" });
+					if (!response.ok) {
+						renderPoll(null);
+						return null;
+					}
+					const data = await response.json();
+					currentPollState = data;
+					renderPoll(data);
+					return data;
+				})();
+				try {
+					return await pollStateRequest;
+				} finally {
+					pollStateRequest = null;
+				}
 			}
 
 			async function ensureAuthenticated(actionLabel) {
@@ -1042,6 +1081,14 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 				populateChoices(initialPollState?.choices || []);
 			}
 			renderPoll(initialPollState);
+			schedulePollRefresh(getPollRefreshInterval(initialPollState));
+			document.addEventListener("visibilitychange", () => {
+				if (document.visibilityState === "visible") {
+					schedulePollRefresh(0);
+					return;
+				}
+				clearPollRefreshTimer();
+			});
 
 			if (meetingNode && isAdmin) {
 				meetingNode.classList.add("editable");
