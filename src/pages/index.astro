@@ -877,6 +877,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 						});
 						toggleVoteForm(false);
 					} else {
+						populateChoices(state.choices || []);
 						renderResults([], null);
 						setButtonVisibility({
 							canStart: false,
