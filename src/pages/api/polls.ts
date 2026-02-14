@@ -72,11 +72,17 @@ export const GET: APIRoute = async ({ locals, request }) => {
 		const results = hasVoted
 			? await getPollResults(db, activePoll.id)
 			: [];
+		const voteCount = await db
+			.prepare("select count(distinct voter_email) as voter_count from poll_votes where poll_id = ?1")
+			.bind(activePoll.id)
+			.first<{ voter_count: number }>();
+		const voterCount = voteCount?.voter_count ?? 0;
 
 		return jsonResponse({
 			active: true,
 			poll: activePoll,
 			hasVoted,
+			voterCount,
 			choices: choices.results,
 			results
 		});
@@ -260,7 +266,10 @@ async function getPollResults(db: D1Database, pollId: number) {
 function jsonResponse(payload: unknown, status = 200) {
 	return new Response(JSON.stringify(payload), {
 		status,
-		headers: { "Content-Type": "application/json" }
+		headers: {
+			"Content-Type": "application/json",
+			"Cache-Control": "no-store, no-cache, must-revalidate"
+		}
 	});
 }
 
