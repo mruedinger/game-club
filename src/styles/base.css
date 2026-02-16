@@ -671,8 +671,22 @@ main {
 }
 
 .favorite-toggle .favorite-icon {
-	font-size: 1.2rem;
-	line-height: 1;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.favorite-toggle .favorite-icon svg {
+	width: 1.2rem;
+	height: 1.2rem;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 1.5;
+}
+
+.favorite-toggle.is-favorite .favorite-icon svg {
+	fill: currentColor;
+	stroke: none;
 }
 
 .ghost.favorite-toggle {
