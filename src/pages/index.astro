@@ -914,7 +914,12 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 				const selects = [pollChoice1, pollChoice2, pollChoice3];
 				const selectedValues = selects.map((select) => (select ? select.value : ""));
 				const sortedChoices = Array.isArray(choices)
-					? [...choices].sort((a, b) => (a.title || "").localeCompare(b.title || ""))
+					? [...choices].sort((a, b) => {
+							const aFavorite = a?.is_favorite ? 1 : 0;
+							const bFavorite = b?.is_favorite ? 1 : 0;
+							if (aFavorite !== bFavorite) return bFavorite - aFavorite;
+							return (a.title || "").localeCompare(b.title || "");
+						})
 					: [];
 				selects.forEach((select, index) => {
 					if (!select) return;
@@ -926,7 +931,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 					sortedChoices.forEach((choice) => {
 						const option = document.createElement("option");
 						option.value = String(choice.id);
-						const favoritePrefix = choice?.is_favorite ? "♥ " : "";
+						const favoritePrefix = choice?.is_favorite ? "♥ " : "♡ ";
 						option.textContent = `${favoritePrefix}${choice.title}`;
 						select.appendChild(option);
 					});
@@ -1286,7 +1291,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 
 				document.addEventListener("click", async (event) => {
 					const target = event.target;
-					if (!(target instanceof HTMLElement)) return;
+					if (!(target instanceof Element)) return;
 					const favoriteToggle = target.closest(".favorite-toggle");
 					if (favoriteToggle instanceof HTMLElement) {
 						event.preventDefault();
