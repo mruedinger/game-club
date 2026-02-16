@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-02-16
+1. Fixed Backlog issue #12 by replacing favorite toggle Unicode heart glyphs with SVG hearts for cross-browser consistency (including Windows Firefox), while preserving filled-state styling for favorited games.
+2. Fixed favorite toggles after the SVG migration by broadening click-target handling to support SVG element clicks in backlog and game-detail favorite buttons.
+3. Updated poll voting option ordering to list favorites first, then sort alphabetically within each favorite group.
+4. Restored the non-favorite outline-heart prefix in poll choice labels to keep visual alignment between favorite and non-favorite option text.
+
 ## 2026-02-14
 1. Implemented Backlog issue #4 by adding automatic Home poll-state refresh without manual browser reload.
 2. Added visibility-aware poll refresh cadence on Home: active polls refresh every 2 seconds, inactive polls refresh every 30 seconds, and hidden tabs pause polling until visible again.
