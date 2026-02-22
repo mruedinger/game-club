@@ -1,7 +1,8 @@
 # Game Club — Project Brief
 
 ## File Usage
-Primarily used as a session-starter brief to provide key context and intent to AI agents (e.g. codex, claude) at the start of a session. Keep the file updated as key decisions are made or as intent is clarified.
+Primary project context and decision record. Keep the file updated as key decisions are made or as intent is clarified.
+Agent workflow/operational guardrails live in `AGENTS.md`.
 
 ## Vision
 This project maintains a website that is a companion tool for a video game club (similar to a traditional book club). The club meets regularly to discuss their thoughts on a game, then select a new game to play. The site provides an all-in-one place to manage the game backlog, view game info, create polls, and leave reviews.
@@ -59,21 +60,6 @@ This project maintains a website that is a companion tool for a video game club 
   - For stale/race modal actions (e.g. target deleted in another tab), close the modal, show page-level error, and auto-refresh after 1800ms.
   - For non-stale errors, keep message visible until the next user action.
 
-## Operational Notes for AI Agents
-- `CHANGELOG.md` tracks high-level patch notes and audit-remediation history; use it for cross-session change context.
-- Planning-first workflow: When asked to solve a problem, implement a feature, or tackle a GitHub issue, present a plan first and ask clarifying questions before making changes. For follow-up tweaks or minor edits, use conversation context to decide whether to skip this pattern.
-- Changelog policy: Write summarized changes to `CHANGELOG.md` only when merging to `main`.
-- Always develop on `dev` branch. Do not add/commit/push/merge to `main` or any other branch unless explicitly told to do so.
-- Mandatory default workflow after making file changes (unless user explicitly says not to commit yet):
-  - Validate current branch is `dev` (or user-specified branch).
-  - Stage all intended changes with `git add .`.
-  - Create a commit with a clear message.
-  - Push that commit to the remote `dev` branch.
-  - Do not leave local modifications unstaged or uncommitted at handoff.
-- Changes to the dev branch will be automatically deployed to cloudflare pages dev deployment
-- Changes to the main branch will be automatically deployed to cloudflare pages production deployment
-- When troubleshooting problems involving external apis, provide the user with curl commands to test & troubleshoot locally
-- After changes: Give user a checklist/playbook (or a script when appropriate) to validate functionality after changes
-- Test baseline: `npm run test:e2e` covers smoke checks, unauthenticated guard behavior, and authenticated auth/authz API paths.
-- Use /tmp/ for temporary file storage during devlopment (e.g. logs or files for inspection)
-- Update this file, when appropriate, to ensure key context and decisions are available in new chat sessions
+## Agent Notes
+- See `AGENTS.md` for agent workflow and operational guardrails.
+- Keep this brief focused on product context, scope, and architecture decisions.
