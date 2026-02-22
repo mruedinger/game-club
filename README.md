@@ -55,6 +55,7 @@ npx wrangler secret put ITAD_API_KEY -c wrangler.itad-sync.toml
 
 ## Project Docs
 - `PROJECT_BRIEF.md` is the authoritative project context and decision record
+- `AGENTS.md` contains agent workflow and operational guardrails
 
 ## Repo Layout
 - `src/pages/` Astro pages (routes)
