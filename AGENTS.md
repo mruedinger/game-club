@@ -23,3 +23,13 @@
 - Validate changes in the deployment environment that matches the branch (`dev` -> Pages dev, `main` -> production).
 - Baseline test command: `npm run test:e2e` (when relevant to the change).
 - Use `/tmp/` for temporary logs/files created during development.
+
+## Cloudflare Observability
+- Use `PROJECT_BRIEF.md` as the canonical source for environment topology (URLs, Pages projects, D1 databases).
+- Required local env vars for Cloudflare CLI access in agent sessions:
+  - `CLOUDFLARE_API_TOKEN`
+  - `CLOUDFLARE_ACCOUNT_ID`
+  - `WRANGLER_LOG_PATH=.wrangler-logs`
+- Never commit secrets or tokens to the repo.
+- After each push, verify deployment status for the pushed SHA via GitHub check-runs (`Cloudflare Pages: game-club-dev` and `Cloudflare Pages: game-club`).
+- If deployment or runtime issues occur, inspect Cloudflare logs with Wrangler (`pages deployment list` / `pages deployment tail`) and include relevant findings in the update.
