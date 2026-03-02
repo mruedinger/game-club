@@ -30,6 +30,7 @@
   - `CLOUDFLARE_API_TOKEN`
   - `CLOUDFLARE_ACCOUNT_ID`
   - `WRANGLER_LOG_PATH`
+- For Wrangler CLI log-file lookup, always resolve the path from `WRANGLER_LOG_PATH` in the current session; do not assume a hard-coded log directory.
 - Never commit secrets or tokens to the repo.
 - After each push, verify deployment status for the pushed SHA via GitHub check-runs (`Cloudflare Pages: game-club-dev` and `Cloudflare Pages: game-club`).
 - Cloudflare Pages builds may take several minutes; poll deployment/check status every 30-60 seconds for up to 10 minutes before treating a deployment as failed.
