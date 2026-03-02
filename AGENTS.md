@@ -29,7 +29,15 @@
 - Required local env vars for Cloudflare CLI access in agent sessions:
   - `CLOUDFLARE_API_TOKEN`
   - `CLOUDFLARE_ACCOUNT_ID`
-  - `WRANGLER_LOG_PATH=.wrangler-logs`
+  - `WRANGLER_LOG_PATH`
 - Never commit secrets or tokens to the repo.
 - After each push, verify deployment status for the pushed SHA via GitHub check-runs (`Cloudflare Pages: game-club-dev` and `Cloudflare Pages: game-club`).
+- Cloudflare Pages builds may take several minutes; poll deployment/check status every 30-60 seconds for up to 10 minutes before treating a deployment as failed.
+- After deployment success, run post-deploy smoke checks against the matching live site (`dev` or `main` target): verify `GET /` and `GET /api/games` return successful responses, then validate changed user flows.
 - If deployment or runtime issues occur, inspect Cloudflare logs with Wrangler (`pages deployment list` / `pages deployment tail`) and include relevant findings in the update.
+
+## Environment Variables (Names Only)
+- App/runtime (required): `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`, `SESSION_SECRET`
+- App/runtime (optional or feature-dependent): `SESSION_COOKIE_NAME`, `ITAD_API_KEY`, `IGDB_CLIENT_ID`, `IGDB_CLIENT_SECRET`, `IGDB_ACCESS_TOKEN`
+- Cloudflare CLI observability: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `WRANGLER_LOG_PATH`
+- Required Cloudflare binding (not an env var): `DB`
