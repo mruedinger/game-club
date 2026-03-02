@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-03-02
+1. Completed Backlog issue #13 by changing backlog rating display from numeric `x/9` to Steam review-description initials (for example, `OP`, `VP`, `N`) while keeping sorting by numeric review score and showing `-` for score `0`.
+2. Added environment topology documentation to `PROJECT_BRIEF.md` for dev/prod live URLs, Pages projects, and D1 database mapping.
+3. Expanded `AGENTS.md` Cloudflare observability guidance to include required CLI env vars, deployment polling expectations (30-60 seconds for up to 10 minutes), and post-deploy smoke-check expectations on live environments.
+4. Documented agent env-var inventory in `AGENTS.md` (names only, required vs optional) and clarified Wrangler log-file lookup via `WRANGLER_LOG_PATH` instead of assuming a fixed directory.
+
 ## 2026-02-16
 1. Fixed Backlog issue #12 by replacing favorite toggle Unicode heart glyphs with SVG hearts for cross-browser consistency (including Windows Firefox), while preserving filled-state styling for favorited games.
 2. Fixed favorite toggles after the SVG migration by broadening click-target handling to support SVG element clicks in backlog and game-detail favorite buttons.
