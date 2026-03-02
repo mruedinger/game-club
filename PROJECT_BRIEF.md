@@ -27,6 +27,12 @@ This project maintains a website that is a companion tool for a video game club 
 - Hosting: Cloudflare Pages (dev + prod)
 - Language: TS for functions; JS in Astro pages
 
+## Environment Topology
+- Dev live URL: `https://dev.gc.shindigg.ing`
+- Prod live URL: `https://gc.shindigg.ing`
+- Cloudflare Pages projects: `game-club-dev` (dev), `game-club` (prod)
+- Cloudflare D1 databases: `game-club-dev` (dev), `game-club` (prod)
+
 ## Key Decisions
 - Design for desktop first while remaining functional on mobile.
 - Prefer latest stable apps/tools/libraries/frameworks/etc. i.e., avoid version locking to an older library or software release.
