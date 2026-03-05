@@ -17,12 +17,17 @@
 - After changes, provide a short validation checklist or playbook. If the change introduces a new env var, flag it explicitly so it can be set in Cloudflare before the next deployment.
 
 ## Branching and Release
-- Work on `dev` by default. Do not commit, push, or merge to `main` unless explicitly instructed.
-- No pull requests — commit directly to `dev`. The user will request a merge to `main` when ready.
+- Work on `dev` by default. Never commit directly to `main`.
+- No pull requests — commit directly to `dev` and push regularly so the user can inspect changes on the Cloudflare Pages dev deployment.
 - Default post-change workflow (unless the user explicitly says not to commit yet): `git add .`, commit with a clear message, and push to remote `dev`.
-- Changes pushed to `dev` are automatically deployed to Cloudflare Pages dev deployment.
-- Changes pushed to `main` are automatically deployed to Cloudflare Pages production deployment.
-- Update `CHANGELOG.md` only when changes are merged to `main`.
+- Changes pushed to `dev` auto-deploy to Cloudflare Pages dev. Changes pushed to `main` auto-deploy to production.
+
+## Release Workflow
+When the user confirms a task is complete and ready for production:
+1. Update `CHANGELOG.md` on `dev` — summarize the completed work (features added/changed/removed, bugs fixed). Do not log iteration steps; summarize the outcome.
+2. Commit the changelog update to `dev` and push.
+3. Comment on and close any relevant GitHub issues.
+4. Fast-forward merge `dev` into `main`: `git checkout main && git merge --ff-only dev && git push origin main && git checkout dev`.
 - Use `CHANGELOG.md` for cross-session context on shipped changes.
 
 ## Validation and Temp Files
