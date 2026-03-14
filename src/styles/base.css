@@ -1401,7 +1401,7 @@ main {
 		--ink: #dce4ed;
 		--ink-soft: #b8c6d6;
 		--muted: #7a8da0;
-		--ink-on-accent: #0d1520;
+		--ink-on-accent: #ffffff;
 
 		/* Borders & shadows */
 		--border: rgba(160, 190, 220, 0.1);
@@ -1410,8 +1410,8 @@ main {
 		--focus-ring: rgba(90, 160, 212, 0.35);
 
 		/* Accent */
-		--accent: #4a8fd8;
-		--accent-hover: #3a7dbe;
+		--accent: #3d7ec0;
+		--accent-hover: #2e6aa8;
 		--accent-tint: rgba(90, 159, 212, 0.15);
 		--accent-highlight: rgba(40, 70, 110, 0.5);
 
