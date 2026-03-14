@@ -1410,8 +1410,8 @@ main {
 		--focus-ring: rgba(90, 160, 212, 0.35);
 
 		/* Accent */
-		--accent: #3d7ec0;
-		--accent-hover: #2e6aa8;
+		--accent: #3570b0;
+		--accent-hover: #28609a;
 		--accent-tint: rgba(90, 159, 212, 0.15);
 		--accent-highlight: rgba(40, 70, 110, 0.5);
 
