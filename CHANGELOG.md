@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-03-14
+1. Completed issue #11 by adding automatic light/dark mode support. The site now respects the user's system/browser color scheme preference and defaults to light mode when no preference is set.
+2. Refactored all hard-coded colors in `base.css` into 25 CSS custom properties, with a `@media (prefers-color-scheme: dark)` override block providing a dark blue-gray palette.
+3. Consolidated scattered one-off colors into shared variables (e.g. multiple near-identical danger reds, border shades, focus ring opacities, and translucent white overlays).
+4. Unified all non-CTA, non-danger button backgrounds to a single mid-contrast gray (`--tan`), matching the resource pill buttons that previously had the best contrast.
+5. Removed duplicate scoped `.ghost.danger` override from the admin page and converted `.member-status-inactive` to use shared danger variables.
+
 ## 2026-03-02
 1. Completed Backlog issue #13 by changing backlog rating display from numeric `x/9` to Steam review-description initials (for example, `OP`, `VP`, `N`) while keeping sorting by numeric review score and showing `-` for score `0`.
 2. Added environment topology documentation to `PROJECT_BRIEF.md` for dev/prod live URLs, Pages projects, and D1 database mapping.
