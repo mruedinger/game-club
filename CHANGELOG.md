@@ -1,7 +1,8 @@
 # Changelog
 
 ## 2026-03-14
-1. Completed issue #11 by adding automatic light/dark mode support. The site now respects the user's system/browser color scheme preference and defaults to light mode when no preference is set.
+1. Completed issue #14 by removing redundant Cancel buttons from 5 modals (user, invite member, edit member, set meeting, add game) that already have an X close button in the header.
+2. Completed issue #11 by adding automatic light/dark mode support. The site now respects the user's system/browser color scheme preference and defaults to light mode when no preference is set.
 2. Refactored all hard-coded colors in `base.css` into 25 CSS custom properties, with a `@media (prefers-color-scheme: dark)` override block providing a dark blue-gray palette.
 3. Consolidated scattered one-off colors into shared variables (e.g. multiple near-identical danger reds, border shades, focus ring opacities, and translucent white overlays).
 4. Unified all non-CTA, non-danger button backgrounds to a single mid-contrast gray (`--tan`), matching the resource pill buttons that previously had the best contrast.
