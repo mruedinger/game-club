@@ -1240,7 +1240,7 @@ main {
 	font-weight: 600;
 	font-size: 0.9rem;
 	border: 1px solid var(--border);
-	background: var(--glass);
+	background: var(--tan);
 	color: inherit;
 	text-decoration: none;
 	cursor: pointer;
@@ -1416,8 +1416,8 @@ main {
 		--accent-highlight: rgba(40, 70, 110, 0.5);
 
 		/* Neutral */
-		--tan: #243344;
-		--tan-dim: rgba(35, 55, 75, 0.5);
+		--tan: #334a60;
+		--tan-dim: rgba(50, 72, 95, 0.45);
 		--neutral-fill: rgba(160, 185, 210, 0.2);
 
 		/* Status */
