@@ -540,10 +540,10 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 									}
 									data-my-rating={typeof game.my_rating === "number" ? String(game.my_rating) : ""}
 								>
-									{game.cover_art_url ? (
+									{game.itad_boxart_url || game.cover_art_url ? (
 										<img
 											class="hall-tile-image"
-											src={game.cover_art_url}
+											src={game.itad_boxart_url || game.cover_art_url}
 											alt={`${game.title} cover art`}
 											loading="lazy"
 										/>
