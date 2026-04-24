@@ -489,11 +489,13 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 					<div class="section-head">
 						<h2>Played</h2>
 					</div>
-						<div class="games-grid">
+						<div class="hall-grid">
 							{playedGames.map((game, index) => (
-								<article
-									class="game-card"
+								<button
+									type="button"
+									class="game-card hall-tile"
 									style={`animation-delay: ${index * 70}ms`}
+									aria-label={`${game.title} — view details`}
 									data-id={game.id}
 									data-title={game.title}
 									data-tags={game.tags_json || ""}
@@ -538,40 +540,27 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 									}
 									data-my-rating={typeof game.my_rating === "number" ? String(game.my_rating) : ""}
 								>
-									<h3>{game.title}</h3>
-									<div class="game-cover">
-										{game.cover_art_url ? (
-											<img
-												src={game.cover_art_url}
-												alt={`${game.title} cover art`}
-												loading="lazy"
-											/>
-										) : (
-											<div class="cover-placeholder">Cover coming soon</div>
-										)}
-									</div>
-									<p class="muted">
-										{formatTags(game.tags_json)}
-									</p>
-									<div class="game-rating-wrap" data-game-id={game.id}>
-										<p
-											class="muted small game-rating-summary"
-											data-game-id={game.id}
-											data-rating-count={typeof game.rating_count === "number" ? String(game.rating_count) : "0"}
-											data-rating-average={
-												typeof game.rating_average === "number"
-													? String(game.rating_average)
-													: ""
-											}
-											tabindex="0"
-										>
-											Member Rating: {formatRatingSummaryText(game.rating_average, game.rating_count)}
+									{game.cover_art_url ? (
+										<img
+											class="hall-tile-image"
+											src={game.cover_art_url}
+											alt={`${game.title} cover art`}
+											loading="lazy"
+										/>
+									) : (
+										<div class="hall-tile-image cover-placeholder">Cover coming soon</div>
+									)}
+									<div class="hall-overlay">
+										<h3 class="hall-overlay-title">{game.title}</h3>
+										{game.played_month ? (
+											<p class="hall-overlay-month">{game.played_month}</p>
+										) : null}
+										<p class="hall-overlay-rating">
+											{formatRatingSummaryText(game.rating_average, game.rating_count)}
 										</p>
-										<div class="game-rating-hover">
-											<ul class="game-rating-hover-list" data-game-id={game.id}></ul>
-										</div>
+										<p class="hall-overlay-tags">{formatTags(game.tags_json)}</p>
 									</div>
-								</article>
+								</button>
 							))}
 					</div>
 				</section>
@@ -1302,6 +1291,28 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 						ensureGameRatingsLoaded(gameId);
 					});
 				});
+
+				const hoverlessTiles = window.matchMedia("(hover: none)");
+				document.addEventListener(
+					"click",
+					(event) => {
+						if (!hoverlessTiles.matches) return;
+						const target = event.target;
+						if (!(target instanceof Element)) return;
+						const tile = target.closest(".hall-tile");
+						if (!(tile instanceof HTMLElement)) return;
+						if (tile.dataset.revealed === "true") return;
+						tile.dataset.revealed = "true";
+						event.preventDefault();
+						event.stopImmediatePropagation();
+						window.setTimeout(() => {
+							if (tile.dataset.revealed === "true") {
+								tile.dataset.revealed = "";
+							}
+						}, 4000);
+					},
+					true
+				);
 
 				document.addEventListener("click", async (event) => {
 					const target = event.target;

@@ -45,6 +45,9 @@
 	--star: #b77900;
 	--favorite: #a9192e;
 
+	/* Overlays */
+	--hall-scrim: linear-gradient(to top, rgba(10, 18, 28, 0.92) 0%, rgba(10, 18, 28, 0.72) 55%, rgba(10, 18, 28, 0) 100%);
+
 	/* Layout */
 	--radius: 22px;
 	font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -342,11 +345,99 @@ main {
 	}
 }
 
-.games-grid {
+.hall-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(220px, 260px));
-	gap: 1.2rem;
-	justify-content: start;
+	grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+	gap: 0.85rem;
+}
+
+.hall-tile {
+	padding: 0;
+	border-radius: 14px;
+	border: 1px solid var(--border);
+	background: var(--tan-dim);
+	cursor: pointer;
+	position: relative;
+	overflow: hidden;
+	aspect-ratio: 2 / 3;
+	animation: rise 0.5s ease both;
+	font: inherit;
+	color: inherit;
+	text-align: left;
+	transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.hall-tile:hover,
+.hall-tile:focus-visible {
+	transform: translateY(-2px);
+	box-shadow: 0 10px 24px var(--shadow);
+	outline: none;
+	z-index: 2;
+}
+
+.hall-tile:focus-visible {
+	box-shadow: 0 10px 24px var(--shadow), 0 0 0 3px var(--focus-ring);
+}
+
+.hall-tile-image {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
+}
+
+.hall-tile .cover-placeholder.hall-tile-image {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0.8rem;
+	text-align: center;
+}
+
+.hall-overlay {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-end;
+	gap: 0.25rem;
+	padding: 0.85rem 0.85rem 0.9rem;
+	background: var(--hall-scrim);
+	color: #f4f7fb;
+	opacity: 0;
+	transition: opacity 180ms ease;
+	pointer-events: none;
+}
+
+.hall-tile:hover .hall-overlay,
+.hall-tile:focus-visible .hall-overlay,
+.hall-tile[data-revealed="true"] .hall-overlay {
+	opacity: 1;
+}
+
+.hall-overlay-title {
+	margin: 0;
+	font-size: 0.95rem;
+	line-height: 1.2;
+	font-weight: 600;
+}
+
+.hall-overlay-month,
+.hall-overlay-rating,
+.hall-overlay-tags {
+	margin: 0;
+	font-size: 0.78rem;
+	line-height: 1.3;
+	color: rgba(244, 247, 251, 0.85);
+}
+
+.hall-overlay-tags {
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
 }
 
 .table-wrapper {
@@ -488,11 +579,6 @@ main {
 }
 
 
-.games-grid .game-card {
-	width: 100%;
-	max-width: 260px;
-}
-
 .game-card {
 	padding: 1.2rem;
 	border-radius: 18px;
@@ -502,11 +588,6 @@ main {
 	animation: rise 0.5s ease both;
 	position: relative;
 	z-index: 1;
-}
-
-.games-grid .game-card:hover,
-.games-grid .game-card:focus-within {
-	z-index: 30;
 }
 
 .game-cover {
@@ -1426,5 +1507,8 @@ main {
 		--danger-border: rgba(200, 80, 90, 0.25);
 		--star: #e5b020;
 		--favorite: #e85070;
+
+		/* Overlays */
+		--hall-scrim: linear-gradient(to top, rgba(0, 4, 10, 0.94) 0%, rgba(0, 4, 10, 0.78) 55%, rgba(0, 4, 10, 0) 100%);
 	}
 }
