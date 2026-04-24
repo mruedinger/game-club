@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-04-23
+1. Completed issue #15 by rebuilding the Home "Played" section as a Hall of Fame cover-art mosaic. Tiles show box art only at rest, with a scrim overlay on hover/focus that surfaces title, played month, aggregate rating, and tags; clicking a tile still opens the existing game detail modal.
+2. Added a capture-phase click handler gated on `(hover: none)` so touch devices get a first-tap-reveals / second-tap-opens interaction for the overlay.
+3. Switched Hall of Fame tile images to prefer `itad_boxart_url` (portrait) with `cover_art_url` (Steam landscape header) as fallback, aligning with the PROJECT_BRIEF boxart sourcing policy and eliminating awkward cropping of landscape headers in the 2:3 tile.
+4. Added a `--hall-scrim` overlay token in `base.css` for both light and dark palettes; removed obsolete `.games-grid` rules now that the Played grid uses `.hall-grid`.
+
 ## 2026-03-14
 1. Completed issue #14 by removing redundant Cancel buttons from 5 modals (user, invite member, edit member, set meeting, add game) that already have an X close button in the header.
 2. Completed issue #11 by adding automatic light/dark mode support. The site now respects the user's system/browser color scheme preference and defaults to light mode when no preference is set.
