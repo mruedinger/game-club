@@ -61,8 +61,8 @@ const OAUTH_TTL_SECONDS = 60 * 10;
 const jwks = createRemoteJWKSet(new URL(GOOGLE_JWKS_URL));
 const pendingSessionCookies = new WeakMap<Request, string>();
 
-export function getRuntimeEnv(localsEnv?: AuthEnv): AuthEnv {
-	return (localsEnv ?? cloudflareEnv ?? import.meta.env) as AuthEnv;
+export function getRuntimeEnv(): AuthEnv {
+	return { ...import.meta.env, ...cloudflareEnv } as AuthEnv;
 }
 
 export async function buildGoogleAuthRedirect(
