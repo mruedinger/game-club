@@ -4,7 +4,7 @@
   "version": "0.0.1",
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
+    "build": "astro build && node scripts/ensure-cloudflare-pages-worker-entry.mjs",
     "preview": "astro preview",
     "astro": "astro",
     "test:e2e": "SESSION_SECRET=e2e-session-secret PLAYWRIGHT_BROWSERS_PATH=.cache/ms-playwright playwright test",
