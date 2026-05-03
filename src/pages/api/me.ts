@@ -5,7 +5,7 @@ import { writeAudit } from "../../lib/audit";
 export const prerender = false;
 
 export const GET: APIRoute = async ({ request, locals }) => {
-	const env = getRuntimeEnv(locals.runtime?.env);
+	const env = getRuntimeEnv();
 	const session = await readSession(request, env);
 	if (!session) {
 		return new Response("Authentication required.", { status: 401 });
@@ -26,7 +26,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 };
 
 export const PATCH: APIRoute = async ({ request, locals }) => {
-	const env = getRuntimeEnv(locals.runtime?.env);
+	const env = getRuntimeEnv();
 	const session = await readSession(request, env);
 	if (!session) {
 		return new Response("Authentication required.", { status: 401 });

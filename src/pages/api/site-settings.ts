@@ -18,7 +18,7 @@ type SettingRow = {
 export const prerender = false;
 
 export const GET: APIRoute = async ({ locals }) => {
-	const env = getRuntimeEnv(locals.runtime?.env);
+	const env = getRuntimeEnv();
 	const db = getDb(env);
 	if (!db) {
 		return new Response("Settings database not configured.", { status: 500 });
@@ -36,7 +36,7 @@ export const GET: APIRoute = async ({ locals }) => {
 };
 
 export const PATCH: APIRoute = async ({ request, locals }) => {
-	const env = getRuntimeEnv(locals.runtime?.env);
+	const env = getRuntimeEnv();
 	const session = await readSession(request, env);
 	if (!session) {
 		return new Response("Authentication required.", { status: 401 });

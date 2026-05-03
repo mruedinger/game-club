@@ -53,7 +53,7 @@ type D1Database = {
 export const prerender = false;
 
 export const GET: APIRoute = async ({ locals, request }) => {
-	const env = getRuntimeEnv(locals.runtime?.env);
+	const env = getRuntimeEnv();
 	const db = getDb(env);
 	if (!db) {
 		return new Response("Games database not configured.", { status: 500 });
@@ -109,7 +109,7 @@ export const GET: APIRoute = async ({ locals, request }) => {
 };
 
 export const POST: APIRoute = async ({ request, locals }) => {
-	const env = getRuntimeEnv(locals.runtime?.env);
+	const env = getRuntimeEnv();
 	const session = await readSession(request, env);
 	if (!session) {
 		return new Response("Authentication required.", { status: 401 });
@@ -231,7 +231,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 };
 
 export const DELETE: APIRoute = async ({ request, locals }) => {
-	const env = getRuntimeEnv(locals.runtime?.env);
+	const env = getRuntimeEnv();
 	const session = await readSession(request, env);
 	if (!session) {
 		return new Response("Authentication required.", { status: 401 });
@@ -335,7 +335,7 @@ function normalizeSteamAppId(value: unknown): number | null {
 }
 
 export const PATCH: APIRoute = async ({ request, locals }) => {
-	const env = getRuntimeEnv(locals.runtime?.env);
+	const env = getRuntimeEnv();
 	const session = await readSession(request, env);
 	if (!session) {
 		return new Response("Authentication required.", { status: 401 });

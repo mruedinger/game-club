@@ -8,7 +8,7 @@ import {
 export const prerender = false;
 
 export const GET: APIRoute = async ({ request, locals }) => {
-	const env = getRuntimeEnv(locals.runtime?.env);
+	const env = getRuntimeEnv();
 	const redirectUri = getRedirectUri(env);
 	const secureCookie = new URL(request.url).protocol === "https:";
 	const { url, cookie } = await buildGoogleAuthRedirect(env, redirectUri, secureCookie);

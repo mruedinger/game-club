@@ -29,7 +29,7 @@ type GameRow = {
 export const prerender = false;
 
 export const GET: APIRoute = async ({ locals }) => {
-	const env = getRuntimeEnv(locals.runtime?.env);
+	const env = getRuntimeEnv();
 	const db = getDb(env);
 	if (!db) {
 		return new Response("Games database not configured.", { status: 500 });

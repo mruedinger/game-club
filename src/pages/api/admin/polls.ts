@@ -196,7 +196,7 @@ async function getPollResults(db: D1Database, pollId: number) {
 }
 
 async function requireAdmin(request: Request, locals: App.Locals) {
-	const env = getRuntimeEnv(locals.runtime?.env);
+	const env = getRuntimeEnv();
 	const session = await readSession(request, env);
 	if (!session) {
 		return { session: null, db: null, env: null, error: new Response("Authentication required.", { status: 401 }) };

@@ -66,7 +66,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 };
 
 export const POST: APIRoute = async ({ request, locals }) => {
-	const env = getRuntimeEnv(locals.runtime?.env);
+	const env = getRuntimeEnv();
 	const session = await readSession(request, env);
 	if (!session) {
 		return new Response("Authentication required.", { status: 401 });
@@ -612,7 +612,7 @@ async function mapWithConcurrency<T, R>(
 }
 
 async function requireAdmin(request: Request, locals: App.Locals) {
-	const env = getRuntimeEnv(locals.runtime?.env);
+	const env = getRuntimeEnv();
 	const session = await readSession(request, env);
 	if (!session) {
 		return { session: null, db: null, error: new Response("Authentication required.", { status: 401 }) };

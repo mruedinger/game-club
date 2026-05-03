@@ -20,7 +20,7 @@ type GameRow = {
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals }) => {
-	const env = getRuntimeEnv(locals.runtime?.env);
+	const env = getRuntimeEnv();
 	const session = await readSession(request, env);
 	if (!session) {
 		return new Response("Authentication required.", { status: 401 });

@@ -24,7 +24,7 @@ const MAX_ELIGIBLE_PER_MEMBER = 2;
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals }) => {
-	const env = getRuntimeEnv(locals.runtime?.env);
+	const env = getRuntimeEnv();
 	const session = await readSession(request, env);
 	if (!session) {
 		return new Response("Authentication required.", { status: 401 });

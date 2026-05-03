@@ -37,7 +37,9 @@ test("unauthenticated game create returns 401", async ({ request }) => {
 });
 
 test("unauthenticated poll start returns 401", async ({ request }) => {
-	const response = await request.post("/api/polls");
+	const response = await request.post("/api/polls", {
+		headers: { Origin: "http://127.0.0.1:4321" }
+	});
 	expect(response.status()).toBe(401);
 	await expect(response.text()).resolves.toContain("Authentication required.");
 });

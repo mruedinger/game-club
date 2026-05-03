@@ -1,4 +1,5 @@
 import { createRemoteJWKSet, jwtVerify } from "jose";
+import { env as cloudflareEnv } from "cloudflare:workers";
 
 type AuthEnv = Record<string, unknown>;
 
@@ -61,7 +62,7 @@ const jwks = createRemoteJWKSet(new URL(GOOGLE_JWKS_URL));
 const pendingSessionCookies = new WeakMap<Request, string>();
 
 export function getRuntimeEnv(localsEnv?: AuthEnv): AuthEnv {
-	return (localsEnv ?? import.meta.env) as AuthEnv;
+	return (localsEnv ?? cloudflareEnv ?? import.meta.env) as AuthEnv;
 }
 
 export async function buildGoogleAuthRedirect(

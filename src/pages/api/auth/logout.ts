@@ -5,7 +5,7 @@ import { writeAudit } from "../../../lib/audit";
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals }) => {
-	const env = getRuntimeEnv(locals.runtime?.env);
+	const env = getRuntimeEnv();
 	const secureCookie = new URL(request.url).protocol === "https:";
 	const session = await readSession(request, env);
 	const cookie = await clearSession(env, secureCookie);
