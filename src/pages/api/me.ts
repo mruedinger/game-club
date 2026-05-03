@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { createSession, getRuntimeEnv, readSession } from "../../lib/auth";
+import { createSession, getRuntimeEnv, readSession, requireSameOrigin } from "../../lib/auth";
 import { writeAudit } from "../../lib/audit";
 
 export const prerender = false;
@@ -31,6 +31,8 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
 	if (!session) {
 		return new Response("Authentication required.", { status: 401 });
 	}
+	const sameOriginError = requireSameOrigin(request);
+	if (sameOriginError) return sameOriginError;
 
 	const body = await readJson(request);
 	if (!body || typeof body.alias !== "string") {

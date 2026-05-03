@@ -1,6 +1,9 @@
 import { expect, test } from "@playwright/test";
 import { createSessionCookie } from "./helpers/session-cookie";
 
+const SAME_ORIGIN_HEADERS = { Origin: "http://127.0.0.1:4321" };
+const CROSS_ORIGIN_HEADERS = { Origin: "https://evil.example" };
+
 function memberCookie() {
 	return createSessionCookie({
 		email: "member@example.com",
@@ -47,6 +50,7 @@ test("authenticated member cannot trigger admin game metadata refresh", async ({
 	const response = await request.post("/api/admin/games", {
 		headers: {
 			"Content-Type": "application/json",
+			...SAME_ORIGIN_HEADERS,
 			Cookie: memberCookie()
 		},
 		data: { action: "refresh-metadata-all" }
@@ -69,6 +73,7 @@ test("authenticated member cannot call admin member mutation", async ({ request 
 	const response = await request.post("/api/admin/members", {
 		headers: {
 			"Content-Type": "application/json",
+			...SAME_ORIGIN_HEADERS,
 			Cookie: memberCookie()
 		},
 		data: { email: "new-member@example.com", role: "member" }
@@ -81,6 +86,7 @@ test("favorite toggle validates payload when authenticated", async ({ request })
 	const response = await request.post("/api/games/favorite", {
 		headers: {
 			"Content-Type": "application/json",
+			...SAME_ORIGIN_HEADERS,
 			Cookie: memberCookie()
 		},
 		data: { id: "x", favorite: "yes" }
@@ -93,6 +99,7 @@ test("rating submit validates payload when authenticated", async ({ request }) =
 	const response = await request.post("/api/games/rating", {
 		headers: {
 			"Content-Type": "application/json",
+			...SAME_ORIGIN_HEADERS,
 			Cookie: memberCookie()
 		},
 		data: { id: "bad", rating: 7 }
@@ -105,6 +112,7 @@ test("admin member mutation enforces payload validation when authenticated", asy
 	const response = await request.post("/api/admin/members", {
 		headers: {
 			"Content-Type": "application/json",
+			...SAME_ORIGIN_HEADERS,
 			Cookie: adminCookie()
 		},
 		data: { email: "not-an-email", role: "member" }
@@ -117,10 +125,24 @@ test("admin game metadata refresh enforces payload validation when authenticated
 	const response = await request.post("/api/admin/games", {
 		headers: {
 			"Content-Type": "application/json",
+			...SAME_ORIGIN_HEADERS,
 			Cookie: adminCookie()
 		},
 		data: { action: "refresh-metadata" }
 	});
 	expect(response.status()).toBe(400);
 	await expect(response.text()).resolves.toContain("Game id is required.");
+});
+
+test("authenticated mutation rejects forged cross-origin requests", async ({ request }) => {
+	const response = await request.post("/api/games/favorite", {
+		headers: {
+			"Content-Type": "application/json",
+			...CROSS_ORIGIN_HEADERS,
+			Cookie: memberCookie()
+		},
+		data: { id: 1, favorite: true }
+	});
+	expect(response.status()).toBe(403);
+	await expect(response.text()).resolves.toContain("Same-origin request required.");
 });

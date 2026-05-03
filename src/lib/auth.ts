@@ -313,6 +313,26 @@ export function getSessionCookieName(env: AuthEnv): string {
 	return getEnv(env, "SESSION_COOKIE_NAME") || DEFAULT_SESSION_COOKIE;
 }
 
+export function requireSameOrigin(request: Request): Response | null {
+	const fetchSite = request.headers.get("Sec-Fetch-Site")?.toLowerCase();
+	if (fetchSite === "same-origin") {
+		return null;
+	}
+
+	const origin = request.headers.get("Origin");
+	if (origin) {
+		try {
+			if (new URL(origin).origin === new URL(request.url).origin) {
+				return null;
+			}
+		} catch {
+			return new Response("Same-origin request required.", { status: 403 });
+		}
+	}
+
+	return new Response("Same-origin request required.", { status: 403 });
+}
+
 function toSessionData(data: SessionInput, now: number): SessionData | null {
 	const email = typeof data.email === "string" ? data.email.trim().toLowerCase() : "";
 	if (!email) {

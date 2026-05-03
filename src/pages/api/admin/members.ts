@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { getRuntimeEnv, readSession } from "../../../lib/auth";
+import { getRuntimeEnv, readSession, requireSameOrigin } from "../../../lib/auth";
 import { writeAudit } from "../../../lib/audit";
 
 type MemberRow = {
@@ -58,6 +58,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 	if (!session) {
 		return new Response("Authentication required.", { status: 401 });
 	}
+	const sameOriginError = requireSameOrigin(request);
+	if (sameOriginError) return sameOriginError;
 	if (session.role !== "admin") {
 		return new Response("Admin access required.", { status: 403 });
 	}
@@ -111,6 +113,8 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
 	if (!session) {
 		return new Response("Authentication required.", { status: 401 });
 	}
+	const sameOriginError = requireSameOrigin(request);
+	if (sameOriginError) return sameOriginError;
 	if (session.role !== "admin") {
 		return new Response("Admin access required.", { status: 403 });
 	}
@@ -207,6 +211,8 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
 	if (!session) {
 		return new Response("Authentication required.", { status: 401 });
 	}
+	const sameOriginError = requireSameOrigin(request);
+	if (sameOriginError) return sameOriginError;
 	if (session.role !== "admin") {
 		return new Response("Admin access required.", { status: 403 });
 	}

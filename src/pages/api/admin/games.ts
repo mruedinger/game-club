@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { getRuntimeEnv, readSession } from "../../../lib/auth";
+import { getRuntimeEnv, readSession, requireSameOrigin } from "../../../lib/auth";
 import { writeAudit } from "../../../lib/audit";
 import { fetchExternalGameMetadata, type ExternalGameMetadata } from "../../../lib/game-metadata";
 
@@ -71,6 +71,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 	if (!session) {
 		return new Response("Authentication required.", { status: 401 });
 	}
+	const sameOriginError = requireSameOrigin(request);
+	if (sameOriginError) return sameOriginError;
 	if (session.role !== "admin") {
 		return new Response("Admin access required.", { status: 403 });
 	}
@@ -616,6 +618,12 @@ async function requireAdmin(request: Request, locals: App.Locals) {
 	const session = await readSession(request, env);
 	if (!session) {
 		return { session: null, db: null, error: new Response("Authentication required.", { status: 401 }) };
+	}
+	if (request.method !== "GET" && request.method !== "HEAD") {
+		const sameOriginError = requireSameOrigin(request);
+		if (sameOriginError) {
+			return { session: null, db: null, error: sameOriginError };
+		}
 	}
 	if (session.role !== "admin") {
 		return { session: null, db: null, error: new Response("Admin access required.", { status: 403 }) };
