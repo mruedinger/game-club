@@ -69,6 +69,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
 export const PATCH: APIRoute = async ({ request, locals }) => {
 	const { session, db, env, error } = await requireAdmin(request, locals);
 	if (!session || !db || !env) return error!;
+	const sameOriginError = requireSameOrigin(request);
+	if (sameOriginError) return sameOriginError;
 
 	const body = await readJson(request);
 	const id = normalizeId(body?.id);
@@ -105,6 +107,8 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
 export const DELETE: APIRoute = async ({ request, locals }) => {
 	const { session, db, env, error } = await requireAdmin(request, locals);
 	if (!session || !db || !env) return error!;
+	const sameOriginError = requireSameOrigin(request);
+	if (sameOriginError) return sameOriginError;
 
 	const body = await readJson(request);
 	const id = normalizeId(body?.id);
@@ -200,12 +204,6 @@ async function requireAdmin(request: Request, locals: App.Locals) {
 	const session = await readSession(request, env);
 	if (!session) {
 		return { session: null, db: null, env: null, error: new Response("Authentication required.", { status: 401 }) };
-	}
-	if (request.method !== "GET" && request.method !== "HEAD") {
-		const sameOriginError = requireSameOrigin(request);
-		if (sameOriginError) {
-			return { session: null, db: null, env: null, error: sameOriginError };
-		}
 	}
 	if (session.role !== "admin") {
 		return { session: null, db: null, env: null, error: new Response("Admin access required.", { status: 403 }) };
