@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { getRuntimeEnv, readSession } from "../../../lib/auth";
+import { getRuntimeEnv, readSession, requireSameOrigin } from "../../../lib/auth";
 import { writeAudit } from "../../../lib/audit";
 
 type MemberRow = {
@@ -61,6 +61,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 	if (session.role !== "admin") {
 		return new Response("Admin access required.", { status: 403 });
 	}
+	const csrf = requireSameOrigin(request);
+	if (csrf) return csrf;
 
 	const body = await readJson(request);
 	const email = normalizeEmail(body?.email);
@@ -114,6 +116,8 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
 	if (session.role !== "admin") {
 		return new Response("Admin access required.", { status: 403 });
 	}
+	const csrf = requireSameOrigin(request);
+	if (csrf) return csrf;
 
 	const body = await readJson(request);
 	const email = normalizeEmail(body?.email);
@@ -210,6 +214,8 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
 	if (session.role !== "admin") {
 		return new Response("Admin access required.", { status: 403 });
 	}
+	const csrf = requireSameOrigin(request);
+	if (csrf) return csrf;
 
 	const body = await readJson(request);
 	const email = normalizeEmail(body?.email);

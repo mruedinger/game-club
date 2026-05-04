@@ -300,6 +300,24 @@ export function consumePendingSessionCookie(request: Request) {
 	return cookie;
 }
 
+export function requireSameOrigin(request: Request): Response | null {
+	const fetchSite = request.headers.get("Sec-Fetch-Site");
+	if (fetchSite === "same-origin" || fetchSite === "same-site") {
+		return null;
+	}
+	const origin = request.headers.get("Origin");
+	if (origin) {
+		try {
+			if (origin === new URL(request.url).origin) {
+				return null;
+			}
+		} catch {
+			// fall through
+		}
+	}
+	return new Response("Forbidden.", { status: 403 });
+}
+
 export function getRedirectUri(env: AuthEnv): string {
 	const redirectUri = getEnv(env, "GOOGLE_REDIRECT_URI");
 	if (!redirectUri) {
