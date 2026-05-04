@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { createSessionCookie } from "./helpers/session-cookie";
 
 test("unauthenticated /api/me returns 401", async ({ request }) => {
 	const response = await request.get("/api/me");
@@ -76,4 +77,22 @@ test("unauthenticated member admin mutation returns 401", async ({ request }) =>
 	});
 	expect(response.status()).toBe(401);
 	await expect(response.text()).resolves.toContain("Authentication required.");
+});
+
+test("authenticated mutation from a forged Origin returns 403", async ({ request }) => {
+	const cookie = createSessionCookie({
+		email: "member@example.com",
+		role: "member",
+		name: "Member User"
+	});
+	const response = await request.post("/api/games/favorite", {
+		headers: {
+			"Content-Type": "application/json",
+			Cookie: cookie,
+			Origin: "https://evil.example"
+		},
+		data: { id: 1, favorite: true }
+	});
+	expect(response.status()).toBe(403);
+	await expect(response.text()).resolves.toContain("Forbidden.");
 });

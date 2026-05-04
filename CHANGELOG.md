@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-05-04
+1. Fixed issue #18 by adding a shared same-origin CSRF guard for authenticated state-changing API requests.
+2. Applied the guard to authenticated `POST`, `PATCH`, and `DELETE` handlers under `src/pages/api/**`, while leaving read-only requests and OAuth redirects unchanged.
+3. Added e2e regression coverage for forged-origin authenticated mutations.
+
 ## 2026-04-23
 1. Completed issue #15 by rebuilding the Home "Played" section as a Hall of Fame cover-art mosaic. Tiles show box art only at rest, with a scrim overlay on hover/focus that surfaces title, played month, aggregate rating, and tags; clicking a tile still opens the existing game detail modal.
 2. Added a capture-phase click handler gated on `(hover: none)` so touch devices get a first-tap-reveals / second-tap-opens interaction for the overlay.

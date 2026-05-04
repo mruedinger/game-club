@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { getRuntimeEnv, readSession } from "../../lib/auth";
+import { getRuntimeEnv, readSession, requireSameOrigin } from "../../lib/auth";
 import { writeAudit } from "../../lib/audit";
 
 type D1Database = {
@@ -44,6 +44,8 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
 	if (session.role !== "admin") {
 		return new Response("Admin access required.", { status: 403 });
 	}
+	const csrf = requireSameOrigin(request);
+	if (csrf) return csrf;
 
 	const body = await readJson(request);
 	const value = typeof body?.next_meeting === "string" ? body.next_meeting.trim() : "";

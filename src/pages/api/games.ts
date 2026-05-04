@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { getRuntimeEnv, readSession } from "../../lib/auth";
+import { getRuntimeEnv, readSession, requireSameOrigin } from "../../lib/auth";
 import { writeAudit } from "../../lib/audit";
 import { fetchExternalGameMetadata } from "../../lib/game-metadata";
 
@@ -114,6 +114,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 	if (!session) {
 		return new Response("Authentication required.", { status: 401 });
 	}
+	const csrf = requireSameOrigin(request);
+	if (csrf) return csrf;
 
 	const db = getDb(env);
 	if (!db) {
@@ -236,6 +238,8 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
 	if (!session) {
 		return new Response("Authentication required.", { status: 401 });
 	}
+	const csrf = requireSameOrigin(request);
+	if (csrf) return csrf;
 
 	const db = getDb(env);
 	if (!db) {
@@ -343,6 +347,8 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
 	if (session.role !== "admin") {
 		return new Response("Not authorized.", { status: 403 });
 	}
+	const csrf = requireSameOrigin(request);
+	if (csrf) return csrf;
 
 	const db = getDb(env);
 	if (!db) {

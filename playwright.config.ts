@@ -8,7 +8,10 @@ export default defineConfig({
 	},
 	use: {
 		baseURL: process.env.PLAYWRIGHT_BASE_URL || "http://127.0.0.1:4321",
-		headless: true
+		headless: true,
+		extraHTTPHeaders: {
+			Origin: process.env.PLAYWRIGHT_BASE_URL || "http://127.0.0.1:4321"
+		}
 	},
 	webServer: {
 		command:

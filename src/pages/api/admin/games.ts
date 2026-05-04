@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { getRuntimeEnv, readSession } from "../../../lib/auth";
+import { getRuntimeEnv, readSession, requireSameOrigin } from "../../../lib/auth";
 import { writeAudit } from "../../../lib/audit";
 import { fetchExternalGameMetadata, type ExternalGameMetadata } from "../../../lib/game-metadata";
 
@@ -74,6 +74,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 	if (session.role !== "admin") {
 		return new Response("Admin access required.", { status: 403 });
 	}
+	const csrf = requireSameOrigin(request);
+	if (csrf) return csrf;
 
 	const body = await readJson(request);
 
@@ -223,6 +225,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 export const PATCH: APIRoute = async ({ request, locals }) => {
 	const { session, db, error } = await requireAdmin(request, locals);
 	if (!session || !db) return error!;
+	const csrf = requireSameOrigin(request);
+	if (csrf) return csrf;
 
 	const body = await readJson(request);
 	const id = normalizeId(body?.id);
@@ -412,6 +416,8 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
 export const DELETE: APIRoute = async ({ request, locals }) => {
 	const { session, db, error } = await requireAdmin(request, locals);
 	if (!session || !db) return error!;
+	const csrf = requireSameOrigin(request);
+	if (csrf) return csrf;
 
 	const body = await readJson(request);
 	const id = normalizeId(body?.id);

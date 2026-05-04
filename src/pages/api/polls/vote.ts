@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { getRuntimeEnv, readSession } from "../../../lib/auth";
+import { getRuntimeEnv, readSession, requireSameOrigin } from "../../../lib/auth";
 import { writeAudit } from "../../../lib/audit";
 
 type D1Database = {
@@ -20,6 +20,8 @@ export const POST: APIRoute = async ({ locals, request }) => {
 	if (!session) {
 		return new Response("Authentication required.", { status: 401 });
 	}
+	const csrf = requireSameOrigin(request);
+	if (csrf) return csrf;
 
 	const db = getDb(env);
 	if (!db) {
