@@ -1,13 +1,4 @@
 ---
-type HeaderUser = {
-	email: string;
-	name?: string;
-	alias?: string;
-	picture?: string;
-	role: "admin" | "member";
-};
-
-const initialUser = (Astro.props.initialUser ?? null) as HeaderUser | null;
 ---
 
 <header class="site-header">
@@ -52,7 +43,7 @@ const initialUser = (Astro.props.initialUser ?? null) as HeaderUser | null;
 	</form>
 </dialog>
 
-<script define:vars={{ initialUser }}>
+<script>
 	const signIn = document.querySelector(".auth-signin");
 	const signOut = document.querySelector(".auth-signout");
 	const adminLink = document.querySelector(".admin-link");
@@ -63,7 +54,7 @@ const initialUser = (Astro.props.initialUser ?? null) as HeaderUser | null;
 	const userRole = document.querySelector("#user-role");
 	const userAlias = document.querySelector("#user-alias");
 	const userModalError = document.querySelector("#user-modal-error");
-	let currentUser = initialUser || null;
+	let currentUser = null;
 	const placeholder = document.querySelector(".user-placeholder");
 
 	function firstName(value) {
@@ -119,21 +110,17 @@ const initialUser = (Astro.props.initialUser ?? null) as HeaderUser | null;
 	}
 
 	applySignedOutState();
-	if (currentUser) {
-		applySignedInState(currentUser);
-	} else {
-		fetch("/api/me")
-			.then((response) => {
-				if (!response.ok) throw new Error("Not authenticated");
-				return response.json();
-			})
-			.then((data) => {
-				applySignedInState(data);
-			})
-			.catch(() => {
-				applySignedOutState();
-			});
-	}
+	fetch("/api/me")
+		.then((response) => {
+			if (!response.ok) throw new Error("Not authenticated");
+			return response.json();
+		})
+		.then((data) => {
+			applySignedInState(data);
+		})
+		.catch(() => {
+			applySignedOutState();
+		});
 
 	document.addEventListener("click", (event) => {
 		const target = event.target;

@@ -1,8 +1,9 @@
 ---
 import AppHeader from "../components/AppHeader.astro";
 import AppFooter from "../components/AppFooter.astro";
-import { getRuntimeEnv, readSession } from "../lib/auth";
 import "../styles/base.css";
+
+Astro.response.headers.set("Cache-Control", "private, no-store");
 
 type Game = {
 	id: number;
@@ -30,18 +31,6 @@ type Game = {
 	rating_average?: number;
 	my_rating?: number;
 };
-
-const env = getRuntimeEnv(Astro.locals.runtime?.env);
-const session = await readSession(Astro.request, env);
-const initialUser = session
-	? {
-			email: session.email,
-			name: session.name,
-			alias: session.alias,
-			picture: session.picture,
-			role: session.role
-		}
-	: null;
 
 const [pollResponse, settingsResponse, gamesResponse] = await Promise.all([
 	fetch(new URL("/api/polls", Astro.url), {
@@ -192,7 +181,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 		<title>Game Club</title>
 		</head>
 		<body>
-			<AppHeader initialUser={initialUser} />
+			<AppHeader />
 
 		<main>
 			<div class="container">
@@ -730,7 +719,13 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 					</footer>
 				</form>
 			</dialog>
-			<script define:vars={{ initialPollState: pollState ?? null, initialUser }}>
+			<script define:vars={{ initialPollState: pollState ?? null }}>
+			(async () => {
+			let initialUser = null;
+			try {
+				const meResponse = await fetch("/api/me");
+				if (meResponse.ok) initialUser = await meResponse.json();
+			} catch {}
 			const pollChip = document.querySelector("#poll-chip");
 			const pollStatus = document.querySelector("#poll-status");
 			const pollResults = document.querySelector("#poll-results");
@@ -2537,6 +2532,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 						return `${day}th`;
 				}
 			}
+			})();
 			</script>
 		</body>
 	</html>
