@@ -1,8 +1,9 @@
 ---
 import AppHeader from "../components/AppHeader.astro";
 import AppFooter from "../components/AppFooter.astro";
-import { getRuntimeEnv, readSession } from "../lib/auth";
 import "../styles/base.css";
+
+Astro.response.headers.set("Cache-Control", "private, no-store");
 
 type Game = {
 	id: number;
@@ -31,22 +32,7 @@ type Game = {
 	my_rating?: number;
 };
 
-const env = getRuntimeEnv(Astro.locals.runtime?.env);
-const session = await readSession(Astro.request, env);
-const initialUser = session
-	? {
-			email: session.email,
-			name: session.name,
-			alias: session.alias,
-			picture: session.picture,
-			role: session.role
-		}
-	: null;
-
-const [pollResponse, settingsResponse, gamesResponse] = await Promise.all([
-	fetch(new URL("/api/polls", Astro.url), {
-		headers: Astro.request.headers
-	}),
+const [settingsResponse, gamesResponse] = await Promise.all([
 	fetch(new URL("/api/site-settings", Astro.url), {
 		headers: Astro.request.headers
 	}),
@@ -55,7 +41,6 @@ const [pollResponse, settingsResponse, gamesResponse] = await Promise.all([
 	})
 ]);
 
-const pollState = pollResponse.ok ? await pollResponse.json() : null;
 const settingsPayload = settingsResponse.ok ? await settingsResponse.json() : { next_meeting: null };
 const nextMeeting = typeof settingsPayload.next_meeting === "string" ? settingsPayload.next_meeting : null;
 const gamesPayload = gamesResponse.ok
@@ -192,7 +177,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 		<title>Game Club</title>
 		</head>
 		<body>
-			<AppHeader initialUser={initialUser} />
+			<AppHeader />
 
 		<main>
 			<div class="container">
@@ -730,7 +715,18 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 					</footer>
 				</form>
 			</dialog>
-			<script define:vars={{ initialPollState: pollState ?? null, initialUser }}>
+			<script>
+			(async () => {
+			let initialUser = null;
+			let initialPollState = null;
+			try {
+				const [meResponse, pollResponse] = await Promise.all([
+					fetch("/api/me"),
+					fetch("/api/polls", { cache: "no-store" })
+				]);
+				if (meResponse.ok) initialUser = await meResponse.json();
+				if (pollResponse.ok) initialPollState = await pollResponse.json();
+			} catch {}
 			const pollChip = document.querySelector("#poll-chip");
 			const pollStatus = document.querySelector("#poll-status");
 			const pollResults = document.querySelector("#poll-results");
@@ -2537,6 +2533,7 @@ const meetingLabel = nextMeeting ? "Next meeting: Loading..." : "Next meeting: T
 						return `${day}th`;
 				}
 			}
+			})();
 			</script>
 		</body>
 	</html>
