@@ -17,23 +17,44 @@
 - After changes, provide a short validation checklist or playbook. If the change introduces a new env var, flag it explicitly so it can be set in Cloudflare before the next deployment.
 
 ## Branching and Release
-- Work on `dev` by default. Never commit directly to `main`.
-- No pull requests — commit directly to `dev` and push regularly so the user can inspect changes on the Cloudflare Pages dev deployment.
-- Default post-change workflow (unless the user explicitly says not to commit yet): `git add .`, commit with a clear message, and push to remote `dev`.
-- Changes pushed to `dev` auto-deploy to Cloudflare Pages dev. Changes pushed to `main` auto-deploy to production.
+- Work on `dev` by default. Never commit or merge directly to `main`. `main` only ever advances by fast-forward from `dev`.
+- Sync local `dev` with remote `dev` before starting work.
+- Two workflows apply depending on the task. Default to Mode A. Switch to Mode B when the user says "submit a pr", explicitly asks for cross-agent review, or for non-trivial bug fixes that benefit from independent verification. If unsure, ask.
+- Changes pushed to `dev` auto-deploy to Cloudflare Pages dev; changes pushed to `main` auto-deploy to production. Mode B PR branches also get a Cloudflare Pages preview deploy.
+
+### Mode A — Direct-to-dev iteration (default, UI/UX work)
+- Use for changes the user will verify by interacting with the dev site (visual, interactive, content).
+- Default post-change workflow (unless the user says not to commit yet): `git add .`, commit with a clear message, push to remote `dev`.
+- No PR. Iterate on `dev` and validate on the dev Pages deploy.
+
+### Mode B — Cross-agent review via PR (bug fixes / second-opinion work)
+- Trigger: user says "submit a pr" or similar, explicitly asks for cross-agent review, or asks for a non-trivial bug fix.
+- Precondition: `dev` must be in sync with `main` before opening the PR. If there are unshipped Mode A commits on `dev`, surface that and ask the user before proceeding (typically: ship the pending Mode A work first via the Mode A release).
+- Branch off `dev`. Naming: `bug/<slug>` for bug fixes, `feature/<slug>` for everything else.
+- **Author agent:** commit, push the branch, open a PR targeting `dev`, ready for review (not draft unless the user asks for draft). Do not merge your own PR.
+- **Reviewer agent** (invoked separately by the user): review the PR on the merits. Outcomes:
+  - Approve: update `CHANGELOG.md` on the PR branch, commit and push, merge the PR into `dev`, then run the Mode B release workflow below.
+  - Request changes: leave specific actionable feedback as a PR comment. The author agent addresses it on the same branch; the user re-invokes the reviewer.
 
 ## Release Workflow
-When the user confirms a task is complete and ready for production:
-1. Update `CHANGELOG.md` on `dev` — summarize the completed work (features added/changed/removed, bugs fixed). Do not log iteration steps; summarize the outcome.
+
+### Mode A release (when the user confirms the task is done and ready for production)
+1. Update `CHANGELOG.md` on `dev` — summarize the shipped work (features added/changed/removed, bugs fixed). Do not log iteration steps; summarize the outcome.
 2. Commit the changelog update to `dev` and push.
 3. Comment on and close any relevant GitHub issues.
 4. Fast-forward merge `dev` into `main`: `git checkout main && git merge --ff-only dev && git push origin main && git checkout dev`.
+
+### Mode B release (reviewer agent runs this immediately after merging the approved PR into `dev`)
+1. `CHANGELOG.md` was already updated on the PR branch as part of approval and is now on `dev` via the merge.
+2. Comment on and close any relevant GitHub issues.
+3. Fast-forward merge `dev` into `main`: `git checkout main && git merge --ff-only dev && git push origin main && git checkout dev`.
+
 - Use `CHANGELOG.md` for cross-session context on shipped changes.
 
 ## Validation and Temp Files
 - Validate changes in the deployment environment that matches the branch (`dev` -> Pages dev, `main` -> production).
 - Run `npm run test:e2e` for major changes (significant new features, large refactors). Use judgment for smaller changes. If tests fail, note it and continue.
-- Use `/tmp/` for temporary logs/files created during development.
+- Use the repo's `tmp/` directory for temporary log/file storage.
 
 ## Cloudflare Observability
 - Use `PROJECT_BRIEF.md` as the canonical source for environment topology (URLs, Pages projects, D1 databases).

@@ -35,3 +35,6 @@ test-results/
 
 # jetbrains setting folder
 .idea/
+
+# temp storage
+tmp/
